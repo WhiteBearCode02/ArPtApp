@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color> 
+    // 블랙
+    <color name="white">#FFFFFFFF</color> 
+    // 화이트
+
+    <color name="color_background">#1A1A1F</color>
+    // 딥메트그레이
+
+    <color name="color_surface">#25252D</color>
+    // 서피스그레이
+
+    <color name="color_primary">#3182F6</color>
+    // 딥블루
+
+    <color name="text_secondary">#8E8E93</color>
+    // 라이트그레이
 </resources>
