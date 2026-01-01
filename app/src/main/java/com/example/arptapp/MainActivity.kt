@@ -34,5 +34,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "${email}님, 오늘도 멋지게 운동해봐요!", Toast.LENGTH_SHORT).show()
             }
         }
+
+        binding.btnLogin.setOnClickListener {
+            val email = binding.etEmail.text.toString()
+
+            if (email.isEmpty()) {
+                Toast.makeText(this, "이메일을 입력해 주세요!", Toast.LENGTH_SHORT).show()
+            } else {
+                // 성공 시 대시보드 화면으로 전환
+                // 1. Intent 생성: 현재 화면(this)에서 이동할 화면(DashboardActivity) 지정
+                val intent = Intent(this, DashboardActivity::class.java)
+                
+                // 2. 화면 전환 실행
+                startActivity(intent)
+                
+                // 3. 현재 화면 종료: 뒤로가기 버튼을 눌러도 다시 로그인 화면이 나오지 않게 스택 정리
+                finish() 
+                
+                Toast.makeText(this, "${email}님, 환영합니다!", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
