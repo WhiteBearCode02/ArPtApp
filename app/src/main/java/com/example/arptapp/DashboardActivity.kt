@@ -26,6 +26,10 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker // 포즈
 import com.google.mediapipe.tasks.vision.core.BaseOptions             // AI 모델 경로 및 옵션 설정
 import com.google.mediapipe.tasks.vision.core.RunningMode             // 실시간 스트림 분석 모드 설정
 
+// 운동 횟수 및 상태 관리 변수
+private var squatCount = 0
+private var isDown = false // 사용자가 앉아있는 상태인지 확인하는 플래그
+
 /**
  * [ArPtApp - 대시보드 모듈]
  * 역할: 카메라 권한 획득, 실시간 영상 송출, AI 관절 분석 엔진 구동 및 결과 전달
@@ -71,20 +75,41 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     /**
-     * [AI 엔진 초기화] assets 폴더에 배치한 인공지능 모델을 불러옵니다.
+     * [AI 엔진 초기화] assets 폴더의 모델을 로드하고 실시간 운동 분석 로직을 수행합니다.
      */
     private fun setupPoseLandmarker() {
         val baseOptionsBuilder = BaseOptions.builder()
-            .setModelAssetPath("pose_landmarker_lite.task") // AI 모델 파일 이름
+            .setModelAssetPath("pose_landmarker_lite.task") 
 
         val optionsBuilder = PoseLandmarker.PoseLandmarkerOptions.builder()
             .setBaseOptions(baseOptionsBuilder.build())
-            .setRunningMode(RunningMode.LIVE_STREAM) // 실시간 비디오 스트림 모드
+            .setRunningMode(RunningMode.LIVE_STREAM) 
             .setResultListener { result, _ ->
-                // AI 분석 결과가 나오면 UI 스레드에서 시각화 레이어로 전달
+                // 분석 결과가 수신되면 UI 스레드에서 처리
                 runOnUiThread {
                     if (result.landmarks().isNotEmpty()) {
-                        // OverlayView에 분석된 관절 좌표 전달
+                        // 33개의 관절 좌표 중 첫 번째 사람의 데이터를 가져옴
+                        val landmarks = result.landmarks()[0]
+                        
+                        // [알고리즘] 왼쪽 무릎 각도 계산 (골반: 23, 무릎: 25, 발목: 27)
+                        val kneeAngle = calculateAngle(landmarks[23], landmarks[25], landmarks[27])
+                        
+                        // [상태 머신] 스쿼트 판별 로직
+                        // 1. 무릎 각도가 100도 미만으로 내려가면 '앉음' 상태로 인지
+                        if (kneeAngle < 100.0) {
+                            isDown = true
+                        } 
+                        // 2. 앉은 상태였다가 다시 160도 이상으로 몸을 펴면 1회 카운트
+                        else if (isDown && kneeAngle > 160.0) {
+                            squatCount++
+                            isDown = false // 상태 초기화
+                            
+                            // UI 업데이트: 타이틀에 현재 횟수 표시
+                            binding.tvDashboardTitle.text = "현재 스쿼트: ${squatCount}회"
+                            Toast.makeText(this, "정확한 자세입니다! ${squatCount}회", Toast.LENGTH_SHORT).show()
+                        }
+                        
+                        // 시각화 레이어에 분석 결과 전달
                         binding.overlayView.setResults(result)
                     }
                 }
@@ -171,5 +196,24 @@ class DashboardActivity : AppCompatActivity() {
         super.onDestroy()
         cameraExecutor.shutdown()
         poseLandmarker?.close()
+    }
+
+    /**
+    * 세 개의 관절 좌표를 이용하여 사잇각을 계산합니다.
+    * 계산 결과는 0도에서 180도 사이의 값으로 반환됩니다.
+    */
+    private fun calculateAngle(
+        firstPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
+        midPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
+        lastPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+    ): Double {
+        val radians = Math.atan2((lastPoint.y() - midPoint.y()).toDouble(), (lastPoint.x() - midPoint.x()).toDouble()) -
+                  Math.atan2((firstPoint.y() - midPoint.y()).toDouble(), (firstPoint.x() - midPoint.x()).toDouble())
+        var angle = Math.abs(radians * 180.0 / Math.PI)
+
+        if (angle > 180.0) {
+            angle = 360.0 - angle
+        }
+        return angle
     }
 }
