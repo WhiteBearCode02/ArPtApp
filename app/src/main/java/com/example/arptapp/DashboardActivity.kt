@@ -1,7 +1,7 @@
 package com.example.arptapp
 
 import android.Manifest     // 안드로이드 시스템 권한 목록
-import android.content.content.pm.PackageManager    // 권한 상태 확인용 도구
+import android.content.pm.PackageManager    // 권한 상태 확인용 도구
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts    // 최신 권한 요청 계약 객체
@@ -10,12 +10,19 @@ import androidx.core.content.ContextCompat      // 구버전 호환성을 위한
 import com.example.arptapp.databinding.ActivityDashboardBinding
 
 
- // ArPtApp -> Module: Dashboard
- // 운동 시작 및 개인 맞춤형 데이터 요약 화면 제어 및 권한 획득 관리
- // ViewBinding을 통한 안전한 UI 참조 및 인터랙션 처리
- // 최신 Jetpack Activity Result API를 사용하여 권한 로직을 모듈화
+ /** 
+ *ArPtApp -> Module: Dashboard
+ * 운동 시작 및 개인 맞춤형 데이터 요약 화면 제어 및 권한 획득 관리
+ * ViewBinding을 통한 안전한 UI 참조 및 인터랙션 처리
+ * 최신 Jetpack Activity Result API를 사용하여 권한 로직을 모듈화
+*/
 
-// [1. 추가] 권한 요청 실행기 (Launcher)
+class DashboardActivity : AppCompatActivity() {
+
+    // 메모리 누수 방지 및 널 안정성을 위한 뷰 바인딩 객체 지연 초기화
+    private lateinit var binding: ActivityDashboardBinding
+
+ // [1. 추가] 권한 요청 실행기
     // 사용자의 승인/거절 결과를 비동기로 받아서 처리하는 콜백 객체
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -58,3 +65,4 @@ import com.example.arptapp.databinding.ActivityDashboardBinding
             }
         }
     }
+}
