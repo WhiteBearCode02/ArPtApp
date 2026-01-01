@@ -38,8 +38,7 @@ class DashboardActivity : AppCompatActivity() {
     
     // AI 분석 엔진 변수 (MediaPipe Pose Landmarker)
     private var poseLandmarker: PoseLandmarker? = null
-    // 운동 횟수 및 상태 관리 변수
-    private var squatCount = 0
+    private var squatCount = 0 // 운동 횟수 및 상태 관리 변수
     private var isDown = false // 사용자가 앉아있는 상태인지 확인하는 플래그
 
 
