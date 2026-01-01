@@ -48,6 +48,12 @@ Architecture: Android Jetpack (Lifecycle, Intent, Activity Result API)
 
 Hardware Interface: CameraX (Core, Lifecycle, View)
 
+AI Engine: MediaPipe Tasks Vision 0.10.x
+
+Mathematical Logic: Vector Trigonometry (Atan2 based)
+
+Graphics API: Android Canvas API (Custom Drawing)
+
 🚀 주요 개발 성과
 1. UI/UX 디자인 시스템 구축
 Branding: Deep Matte Dark 테마와 Action Blue 포인트를 통한 고대비 UI 설계로 시인성 확보.
@@ -66,3 +72,25 @@ Manifest Optimization: 카메라 하드웨어 필수 조건(uses-feature) 선언
 
 4. AI 카메라 인프라 준비
 CameraX Integration: 구글의 최신 카메라 라이브러리(CameraX) 의존성 설정 및 하드웨어 가속 준비 완료.
+
+5. 온디바이스 AI 포즈 추정 엔진 최적화 (AI Core)
+
+MediaPipe Pose Landmarker: 하드웨어 가속(GPU)을 활용한 .task 바이너리 모델을 성공적으로 통합하여 실시간(30FPS+) 전신 트래킹 구현.
+
+Asynchronous Image Analysis: ImageAnalysis 유즈케이스와 백그라운드 스레드(Executor)를 분리 설계하여 프레임 드랍 없는 안정적인 분석 환경 구축.
+
+6. 실시간 모션 시각화 및 좌표 매핑 (Visualization)
+
+Custom Overlay System: 카메라 프리뷰 레이어 위에 독립적인 OverlayView를 설계하여 AI가 분석한 관절 좌표와 스켈레톤 라인을 실시간 렌더링.
+
+Coordinate Normalization: AI 모델의 정규화 좌표(0.0~1.0)를 디바이스 해상도에 맞춰 픽셀 단위로 정밀하게 변환하는 매핑 알고리즘 적용.
+
+7. 벡터 기반 지능형 운동 알고리즘 (Exercise Logic)
+
+Trigonometric Angle Calculation: 골반-무릎-발목 세 점의 벡터를 분석하여 관절 사잇각을 산출하는 calculateAngle 수학 로직 구현.
+
+State Machine Counting: '앉음(Down)'과 '일어남(Up)'의 상태 변화를 추적하는 상태 머신(State Machine) 설계를 통해 중복 없는 정확한 스쿼트 카운팅 시스템 탑재.
+
+8. 실시간 사용자 피드백 시스템 (UX/UI)
+
+Interactive UI Update: 운동 횟수 달성 시 상단 타이틀 텍스트 실시간 변경 및 토스트 메시지를 통한 즉각적인 동기부여 피드백 제공.
