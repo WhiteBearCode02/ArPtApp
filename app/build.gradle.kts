@@ -49,4 +49,18 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    // [CameraX Core Library] 카메라의 핵심 엔진입니다. 
+    val cameraxVersion = "1.3.0" // 안정화된 최신 버전을 사용합니다.
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    
+    // [Lifecycle Library] 앱이 꺼지면 카메라도 자동으로 꺼지게 관리해 줍니다.
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    
+    // [View Library] 화면에 영상을 뿌려주는 PreviewView를 사용하기 위함입니다.
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // [MediaPipe Library] AI 자세 분석을 위한 핵심 엔진입니다.
+    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 }
