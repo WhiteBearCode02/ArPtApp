@@ -26,10 +26,6 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker // 포즈
 import com.google.mediapipe.tasks.vision.core.BaseOptions             // AI 모델 경로 및 옵션 설정
 import com.google.mediapipe.tasks.vision.core.RunningMode             // 실시간 스트림 분석 모드 설정
 
-// 운동 횟수 및 상태 관리 변수
-private var squatCount = 0
-private var isDown = false // 사용자가 앉아있는 상태인지 확인하는 플래그
-
 /**
  * [ArPtApp - 대시보드 모듈]
  * 역할: 카메라 권한 획득, 실시간 영상 송출, AI 관절 분석 엔진 구동 및 결과 전달
@@ -42,6 +38,10 @@ class DashboardActivity : AppCompatActivity() {
     
     // AI 분석 엔진 변수 (MediaPipe Pose Landmarker)
     private var poseLandmarker: PoseLandmarker? = null
+    // 운동 횟수 및 상태 관리 변수
+    private var squatCount = 0
+    private var isDown = false // 사용자가 앉아있는 상태인지 확인하는 플래그
+
 
     // [기능 1: 권한 요청 실행기] 
     // 사용자에게 권한을 요청하고 승인 여부에 따라 카메라 구동을 결정합니다.
