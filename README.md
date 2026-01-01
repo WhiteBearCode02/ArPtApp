@@ -33,3 +33,36 @@
 1. AI 자세 분석: MediaPipe/YOLO를 이용한 실시간 모션 트래킹
 2. 다정한 UX: 사용자 친화적인 피드백 메시지 제공
 3. 운동 기록 관리: 데이터 기반의 체계적인 신체 변화 추적
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+ArPtApp: AI Motion Analysis PT Solution
+Current Status: Milestone 2 - Camera Infrastructure Completed
+
+🛠 기술 스택
+Language: Kotlin 1.9.x
+
+UI Framework: XML (View-based) with ViewBinding
+
+Architecture: Android Jetpack (Lifecycle, Intent, Activity Result API)
+
+Hardware Interface: CameraX (Core, Lifecycle, View)
+
+🚀 주요 개발 성과
+1. UI/UX 디자인 시스템 구축
+Branding: Deep Matte Dark 테마와 Action Blue 포인트를 통한 고대비 UI 설계로 시인성 확보.
+
+Components: 12dp의 라운드 코너가 적용된 입력 필드 및 버튼 디자인 시스템화.
+
+2. 사용자 인증 및 화면 전환 아키텍처
+Security Flow: 로그인 성공 시 MainActivity를 종료(finish)하여 보안 스택을 관리하는 현업 수준의 로직 적용.
+
+Navigation: Intent 메신저를 활용한 액티비티 간 데이터 흐름 및 화면 전환 구현.
+
+3. 보안 및 하드웨어 권한 시스템 (Critical)
+Runtime Permission: 안드로이드 6.0 이상 정책에 대응하는 Activity Result API 기반 실시간 카메라 권한 요청 로직 탑재.
+
+Manifest Optimization: 카메라 하드웨어 필수 조건(uses-feature) 선언을 통한 앱 안정성 강화.
+
+4. AI 카메라 인프라 준비
+CameraX Integration: 구글의 최신 카메라 라이브러리(CameraX) 의존성 설정 및 하드웨어 가속 준비 완료.
