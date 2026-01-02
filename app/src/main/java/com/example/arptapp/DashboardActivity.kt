@@ -1,216 +1,213 @@
 package com.example.arptapp
 
-// [안드로이드 기본 및 프레임워크 도구]
-import android.Manifest     // 카메라 권한 등 시스템 권한 명칭 관리
-import android.content.pm.PackageManager    // 현재 앱의 권한 승인 상태 확인
-import android.os.Bundle    // 액티비티 간 데이터 전달 및 상태 보존
-import android.widget.Toast // 사용자 알림용 메시지 출력
-import androidx.appcompat.app.AppCompatActivity // 호환성을 고려한 기본 액티비티 클래스
+// [Imports: 안드로이드 프레임워크 유틸리티]
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
-// [Jetpack & CameraX 하드웨어 제어 도구]
-import androidx.activity.result.contract.ActivityResultContracts // 비동기 권한 요청 시스템
-import androidx.core.content.ContextCompat      // 시스템 리소스 및 기능 접근 유틸리티
-import androidx.camera.lifecycle.ProcessCameraProvider // 카메라와 액티비티 생명주기 결합
-import androidx.camera.core.Preview            // 실시간 카메라 프리뷰 유즈케이스
-import androidx.camera.core.CameraSelector     // 전면/후면 카메라 선택
-import androidx.camera.core.ImageAnalysis      // AI 분석용 이미지 추출 유즈케이스
-import androidx.camera.core.ImageProxy          // 추출된 개별 이미지 데이터 객체
-import com.example.arptapp.databinding.ActivityDashboardBinding // UI 컴포넌트 접근용 바인딩 클래스
+// [Imports: CameraX 및 MediaPipe AI 라이브러리]
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import com.google.mediapipe.tasks.vision.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import com.example.arptapp.databinding.ActivityDashboardBinding
 
-// [자바 동시성 및 백그라운드 처리 도구]
-import java.util.concurrent.ExecutorService    // 비동기 작업을 위한 스레드 관리자
-import java.util.concurrent.Executors          // 스레드 풀 생성 유틸리티
-
-// [MediaPipe AI 분석 엔진 도구]
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker // 포즈 분석 엔진 핵심 클래스
-import com.google.mediapipe.tasks.vision.core.BaseOptions             // AI 모델 경로 및 옵션 설정
-import com.google.mediapipe.tasks.vision.core.RunningMode             // 실시간 스트림 분석 모드 설정
+// [Imports: 비동기 처리를 위한 자바 유틸리티]
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
- * [ArPtApp - 대시보드 모듈]
- * 역할: 카메라 권한 획득, 실시간 영상 송출, AI 관절 분석 엔진 구동 및 결과 전달
+ * [ArPtApp - Dashboard Module]
+ * 본 클래스는 카메라 제어, AI 모델 구동, 운동 상태 판단 및 결과 전송의 핵심 제어부(Controller)입니다.
  */
 class DashboardActivity : AppCompatActivity() {
 
-    // [Architecture] 뷰 바인딩 및 백그라운드 스레드 선언
-    private lateinit var binding: ActivityDashboardBinding  
+    // [Architecture: ViewBinding & Threading]
+    // XML 뷰 인스턴스에 안전하게 접근하기 위한 바인딩 객체
+    private lateinit var binding: ActivityDashboardBinding
+    // 카메라 분석 데이터 처리를 위한 단일 스레드 풀
     private lateinit var cameraExecutor: ExecutorService
     
-    // AI 분석 엔진 변수 (MediaPipe Pose Landmarker)
+    // [AI Engine: MediaPipe]
+    // 포즈 분석 및 관절 랜드마크 추출 엔진
     private var poseLandmarker: PoseLandmarker? = null
-    private var squatCount = 0 // 운동 횟수 및 상태 관리 변수
-    private var isDown = false // 사용자가 앉아있는 상태인지 확인하는 플래그
+    
+    // [Business Logic: State Management]
+    // 누적 운동 횟수 (스쿼트 개수)
+    private var squatCount = 0
+    // 하강 상태 여부를 판단하는 플래그 (스쿼트 횟수 중복 카운팅 방지)
+    private var isDown = false
+    // 운동 시작 버튼 클릭 시점의 타임스탬프 (ms 단위)
+    private var startTime: Long = 0
 
-
-    // [기능 1: 권한 요청 실행기] 
-    // 사용자에게 권한을 요청하고 승인 여부에 따라 카메라 구동을 결정합니다.
+    // [Permission: 카메라 권한 요청 핸들러]
+    // 비동기적으로 카메라 권한 승인 여부를 확인하고 콜백을 실행함
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // 권한 허용 시 즉시 카메라 시동
+            // 권한 승인 시 즉시 하드웨어 카메라 구동
             startCamera()
         } else {
-            // 거부 시 사용자에게 기능 제한 안내 (UX 최적화)
-            Toast.makeText(this, "카메라 권한이 없으면 AI 분석을 시작할 수 없습니다.", Toast.LENGTH_LONG).show()
+            // 거부 시 UX 가이드 제공
+            Toast.makeText(this, "카메라 권한이 승인되어야 AI 자세 분석이 가능합니다.", Toast.LENGTH_LONG).show()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 1. UI 초기화: ViewBinding을 통해 레이아웃을 메모리에 로드
+        // 1. 레이아웃 인플레이션: XML 코드를 메모리 상의 View 객체로 변환
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2. 상호작용 설정: 버튼 클릭 시 카메라 권한 체크 로직 실행
+        // 2. [Event] 운동 시작 버튼 리스너
         binding.btnStartExercise.setOnClickListener {
+            // 시작 시점 기록 (측정 시작)
+            startTime = System.currentTimeMillis()
+            // 런타임 권한 확인 및 카메라 시동
             checkCameraPermission()
+            
+            // UX 업데이트: 시작 버튼 제거 및 종료 버튼 노출 (상태 전이)
+            binding.btnStartExercise.visibility = View.GONE
+            binding.btnEndExercise.visibility = View.VISIBLE
         }
 
-        // 3. 엔진 초기화: 분석용 백그라운드 스레드와 AI 모델 세팅
+        // 3. [Event] 운동 종료 버튼 리스너
+        binding.btnEndExercise.setOnClickListener {
+            // 현재 시간과 시작 시간을 비교하여 소요 시간(초) 계산
+            val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
+
+            // [Intent] ResultActivity로 데이터 패키징 전송
+            val intent = Intent(this, ResultActivity::class.java).apply {
+                putExtra("TOTAL_COUNT", squatCount)    // 누적 횟수 데이터 삽입
+                putExtra("EXERCISE_TIME", elapsedTime) // 소요 시간 데이터 삽입
+            }
+            
+            // 결과 화면 전환 및 현재 대시보드 스택에서 제거 (보안 및 UX 최적화)
+            startActivity(intent)
+            finish()
+        }
+
+        // 4. 리소스 초기화: 백그라운드 스레드 및 AI 분석 엔진 세팅
         cameraExecutor = Executors.newSingleThreadExecutor()
         setupPoseLandmarker()
-
-        // 운동 시작 시간 기록용 변수
-        private var startTime: Long = 0
-
-        binding.btnEndExercise.setOnClickListener {
-        // 1. 운동 시간 계산 (현재 시간 - 시작 시간) / 1000 = 초 단위
-        val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-
-        // 2. Intent 생성: 현재 화면(this)에서 결과 화면(ResultActivity)으로 이동
-        val intent = Intent(this, ResultActivity::class.java).apply {
-            // "통로 이름"과 "전달할 값"을 짝지어 담음.
-            putExtra("TOTAL_COUNT", squatCount)
-            putExtra("EXERCISE_TIME", elapsedTime)
-        }
-
-        // 3. 화면 전환 실행
-        startActivity(intent)
-
-        // 4. 현재 대시보드 화면 종료 (뒤로가기 눌렀을 때 다시 운동 화면으로 오는 걸 방지)
-        finish()
-        }
     }
 
     /**
-     * [AI 엔진 초기화] assets 폴더의 모델을 로드하고 실시간 운동 분석 로직을 수행합니다.
+     * [AI 설정] MediaPipe Pose Landmarker 엔진의 옵션을 설정하고 모델을 로드합니다.
      */
     private fun setupPoseLandmarker() {
+        // AI 모델 파일(assets) 경로 설정
         val baseOptionsBuilder = BaseOptions.builder()
-            .setModelAssetPath("pose_landmarker_lite.task") 
+            .setModelAssetPath("pose_landmarker_lite.task")
 
+        // 엔진 가동 옵션 (실시간 스트림 모드, 결과 리스너 등록)
         val optionsBuilder = PoseLandmarker.PoseLandmarkerOptions.builder()
             .setBaseOptions(baseOptionsBuilder.build())
-            .setRunningMode(RunningMode.LIVE_STREAM) 
+            .setRunningMode(RunningMode.LIVE_STREAM)
             .setResultListener { result, _ ->
-                // 분석 결과가 수신되면 UI 스레드에서 처리
+                // AI 분석 결과는 별도 스레드에서 반환되므로 UI 업데이트를 위해 메인 스레드로 전환
                 runOnUiThread {
                     if (result.landmarks().isNotEmpty()) {
-                        // 33개의 관절 좌표 중 첫 번째 사람의 데이터를 가져옴
+                        // 첫 번째 감지된 인원의 관절 좌표 리스트 획득
                         val landmarks = result.landmarks()[0]
                         
-                        // [알고리즘] 왼쪽 무릎 각도 계산 (골반: 23, 무릎: 25, 발목: 27)
+                        // [알고리즘: 사잇각 산출] 골반-무릎-발목 사이의 각도를 벡터로 계산
                         val kneeAngle = calculateAngle(landmarks[23], landmarks[25], landmarks[27])
                         
-                        // [상태 머신] 스쿼트 판별 로직
-                        // 1. 무릎 각도가 100도 미만으로 내려가면 '앉음' 상태로 인지
+                        // [상태 머신: 카운팅 로직]
+                        // 1. 각도가 100도 미만일 때 '앉음' 상태로 판단
                         if (kneeAngle < 100.0) {
                             isDown = true
                         } 
-                        // 2. 앉은 상태였다가 다시 160도 이상으로 몸을 펴면 1회 카운트
+                        // 2. 이전에 앉은 상태였고, 현재 다시 일어서서 각도가 160도를 넘으면 1회 성공
                         else if (isDown && kneeAngle > 160.0) {
                             squatCount++
                             isDown = false // 상태 초기화
-                            
-                            // UI 업데이트: 타이틀에 현재 횟수 표시
                             binding.tvDashboardTitle.text = "현재 스쿼트: ${squatCount}회"
-                            Toast.makeText(this, "정확한 자세입니다! ${squatCount}회", Toast.LENGTH_SHORT).show()
                         }
                         
-                        // 시각화 레이어에 분석 결과 전달
+                        // 시각화 레이어(OverlayView)에 최신 좌표 데이터 전달하여 드로잉 요청
                         binding.overlayView.setResults(result)
                     }
                 }
             }
 
+        // 설정된 옵션으로 엔진 객체 생성
         poseLandmarker = PoseLandmarker.createFromOptions(this, optionsBuilder.build())
     }
 
     /**
-     * [권한 상태 체크] 현재 앱의 카메라 접근 권한 유무를 판단합니다.
+     * [수학 연산] 세 관절의 랜드마크 좌표를 이용하여 유클리드 사잇각을 도(Degree) 단위로 반환합니다.
      */
-    private fun checkCameraPermission() {
-        when {
-            // 이미 승인된 경우 바로 카메라 실행
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-                    == PackageManager.PERMISSION_GRANTED -> {
-                startCamera()
-            }
-            // 미승인 시 권한 요청 팝업 출력
-            else -> {
-                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
-            }
-        }
+    private fun calculateAngle(
+        first: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
+        mid: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
+        last: com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+    ): Double {
+        // 아크탄젠트 연산을 이용한 두 벡터 사이의 라디안 차이 계산
+        val radians = Math.atan2((last.y() - mid.y()).toDouble(), (last.x() - mid.x()).toDouble()) -
+                      Math.atan2((first.y() - mid.y()).toDouble(), (first.x() - mid.x()).toDouble())
+        var angle = Math.abs(radians * 180.0 / Math.PI)
+        
+        // 180도를 초과할 경우 내각 산출을 위한 보정
+        if (angle > 180.0) angle = 360.0 - angle
+        return angle
     }
 
     /**
-     * [CameraX 엔진 구동] 카메라 렌즈를 활성화하고 영상 출력과 분석 데이터를 연결합니다.
+     * [카메라 시동] CameraX API를 활용하여 하드웨어 렌즈와 이미지 분석 파이프라인을 바인딩합니다.
      */
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
-            // 액티비티 생명주기에 종속된 카메라 공급자 획득
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            // [Step A] 프리뷰 설정: 화면 송출용 유즈케이스 연결
+            
+            // 1. 영상 송출 레이어 설정
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
-
-            // [Step B] 이미지 분석 설정: AI 엔진에 실시간 데이터를 공급하는 통로
+            
+            // 2. 실시간 프레임 분석 레이어 설정
             val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // 지연 없는 최신 프레임 처리
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // 최신 프레임 우선순위 전략
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        // 분석 전용 함수로 데이터 전달
-                        analyzeImage(imageProxy)
-                    }
+                    it.setAnalyzer(cameraExecutor) { imageProxy -> analyzeImage(imageProxy) }
                 }
 
-            // [Step C] 카메라 선택: 본인 자세 체크용 전면 카메라 기본값 설정
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
             try {
-                // 기존 바인딩 해제 후 프리뷰와 분석 유즈케이스를 동시에 결합
+                // 기존의 카메라 연결을 모두 해제하고 전면 카메라를 수명 주기에 바인딩
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
-                
-            } catch(exc: Exception) {
+                cameraProvider.bindToLifecycle(this, CameraSelector.DEFAULT_FRONT_CAMERA, preview, imageAnalyzer)
+            } catch (exc: Exception) {
                 Toast.makeText(this, "카메라 연결에 실패했습니다.", Toast.LENGTH_SHORT).show()
             }
-
         }, ContextCompat.getMainExecutor(this))
     }
 
     /**
-     * [실시간 AI 분석] 카메라의 각 프레임을 AI 엔진이 이해할 수 있는 형식으로 변환합니다.
+     * [이미지 처리] 카메라 프레임을 비트맵으로 변환하여 AI 분석 엔진에 실시간으로 공급합니다.
      */
     private fun analyzeImage(imageProxy: ImageProxy) {
         poseLandmarker?.detectAsync(
-            // ImageProxy 데이터를 비트맵으로 변환하여 분석기에 전달
             com.google.mediapipe.framework.image.BitmapImageBuilder(imageProxy.toBitmap()).build(),
             System.currentTimeMillis()
         )
-        // 분석이 완료된 프레임은 즉시 해제하여 메모리 관리 (필수)
+        // 메모리 누수 방지를 위해 분석 완료 후 프레임 객체 해제
         imageProxy.close()
     }
 
     /**
-     * [자원 정리] 앱 종료 시 백그라운드 엔진들을 안전하게 폐기하여 메모리 누수를 방지합니다.
+     * [리소스 해제] 액티비티가 소멸될 때 백그라운드 스레드 및 AI 엔진을 안전하게 종료합니다.
      */
     override fun onDestroy() {
         super.onDestroy()
@@ -219,21 +216,13 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     /**
-    * 세 개의 관절 좌표를 이용하여 사잇각을 계산합니다.
-    * 계산 결과는 0도에서 180도 사이의 값으로 반환됩니다.
-    */
-    private fun calculateAngle(
-        firstPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
-        midPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark,
-        lastPoint: com.google.mediapipe.tasks.components.containers.NormalizedLandmark
-    ): Double {
-        val radians = Math.atan2((lastPoint.y() - midPoint.y()).toDouble(), (lastPoint.x() - midPoint.x()).toDouble()) -
-                  Math.atan2((firstPoint.y() - midPoint.y()).toDouble(), (firstPoint.x() - midPoint.x()).toDouble())
-        var angle = Math.abs(radians * 180.0 / Math.PI)
-
-        if (angle > 180.0) {
-            angle = 360.0 - angle
+     * [권한 체크] 런타임에 카메라 권한 상태를 확인합니다.
+     */
+    private fun checkCameraPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            startCamera()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
-        return angle
     }
 }
