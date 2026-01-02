@@ -33,7 +33,7 @@ import com.google.mediapipe.tasks.vision.core.RunningMode             // 실시�
 class DashboardActivity : AppCompatActivity() {
 
     // [Architecture] 뷰 바인딩 및 백그라운드 스레드 선언
-    private lateinit var binding: ActivityDashboardBinding
+    private lateinit var binding: ActivityDashboardBinding  
     private lateinit var cameraExecutor: ExecutorService
     
     // AI 분석 엔진 변수 (MediaPipe Pose Landmarker)
@@ -71,6 +71,27 @@ class DashboardActivity : AppCompatActivity() {
         // 3. 엔진 초기화: 분석용 백그라운드 스레드와 AI 모델 세팅
         cameraExecutor = Executors.newSingleThreadExecutor()
         setupPoseLandmarker()
+
+        // 운동 시작 시간 기록용 변수
+        private var startTime: Long = 0
+
+        binding.btnEndExercise.setOnClickListener {
+        // 1. 운동 시간 계산 (현재 시간 - 시작 시간) / 1000 = 초 단위
+        val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+
+        // 2. Intent 생성: 현재 화면(this)에서 결과 화면(ResultActivity)으로 이동
+        val intent = Intent(this, ResultActivity::class.java).apply {
+            // "통로 이름"과 "전달할 값"을 짝지어 담습니다.
+            putExtra("TOTAL_COUNT", squatCount)
+            putExtra("EXERCISE_TIME", elapsedTime)
+        }
+
+        // 3. 화면 전환 실행
+        startActivity(intent)
+
+        // 4. 현재 대시보드 화면 종료 (뒤로가기 눌렀을 때 다시 운동 화면으로 오는 걸 방지)
+        finish()
+        }
     }
 
     /**

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#121212" 
+    android:gravity="center_horizontal">
+
+    // 제목 텍스트뷰
+    <TextView
+        android:id="@+id/tvResultTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="오늘 정말 고생하셨어요!"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginTop="40dp"/>
+
+    // 스쿼트 횟수 카드뷰
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        app:cardBackgroundColor="#1E1E1E"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp">
+        
+        // 내부 레이아웃
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:gravity="center">
+            // 총 스쿼트 횟수 텍스트뷰
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="총 스쿼트 횟수"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp"/>
+            // 최종 스쿼트 횟수 텍스트뷰
+            <TextView
+                android:id="@+id/tvFinalCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0회"
+                android:textColor="#2979FF" 
+                android:textSize="48sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    // 홈으로 돌아가기 버튼
+    <Button
+        android:id="@+id/btnBackToMain"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="auto"
+        android:text="홈으로 돌아가기"
+        android:backgroundTint="#2979FF"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        app:cornerRadius="12dp"/>
+
+</LinearLayout>
