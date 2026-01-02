@@ -81,7 +81,7 @@ class DashboardActivity : AppCompatActivity() {
 
         // 2. Intent 생성: 현재 화면(this)에서 결과 화면(ResultActivity)으로 이동
         val intent = Intent(this, ResultActivity::class.java).apply {
-            // "통로 이름"과 "전달할 값"을 짝지어 담습니다.
+            // "통로 이름"과 "전달할 값"을 짝지어 담음.
             putExtra("TOTAL_COUNT", squatCount)
             putExtra("EXERCISE_TIME", elapsedTime)
         }
