@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
 }
 
 android {
@@ -60,11 +60,11 @@ dependencies {
     // MediaPipe
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
-    // Room Database
+    // Room Database (KSP 사용)
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     // Gson (JSON 파싱)
     implementation("com.google.code.gson:gson:2.10.1")
