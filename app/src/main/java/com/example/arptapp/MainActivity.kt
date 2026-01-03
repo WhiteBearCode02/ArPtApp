@@ -22,7 +22,9 @@ class MainActivity : AppCompatActivity() {
         // 로그인 버튼
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
+            val password = binding.etPassword.text.toString().trim()
 
+            // 입력값 검증
             when {
                 email.isEmpty() -> {
                     binding.tilEmail.error = "이메일을 입력해주세요"
@@ -32,8 +34,20 @@ class MainActivity : AppCompatActivity() {
                     binding.tilEmail.error = "올바른 이메일 형식이 아닙니다"
                     binding.etEmail.requestFocus()
                 }
-                else -> {
+                password.isEmpty() -> {
                     binding.tilEmail.error = null
+                    binding.tilPassword.error = "비밀번호를 입력해주세요"
+                    binding.etPassword.requestFocus()
+                }
+                password.length < 6 -> {
+                    binding.tilPassword.error = "비밀번호는 6자 이상이어야 합니다"
+                    binding.etPassword.requestFocus()
+                }
+                else -> {
+                    // 모든 검증 통과
+                    binding.tilEmail.error = null
+                    binding.tilPassword.error = null
+                    
                     Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
                     
                     // HomeActivity로 이동
