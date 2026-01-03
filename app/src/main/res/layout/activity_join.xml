@@ -8,53 +8,46 @@
     android:padding="28dp"
     android:gravity="center_horizontal">
 
-    <ImageView
-        android:id="@+id/ivLogo"
-        android:layout_width="140dp"
-        android:layout_height="140dp"
-        android:layout_marginTop="60dp"
-        android:src="@mipmap/ic_launcher_round" />
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="반갑습니다!\n완벽한 자세를 향해 함께해요!"
+        android:text="회원가입"
         android:textColor="@color/text_primary"
-        android:textSize="24sp"
+        android:textSize="28sp"
         android:textStyle="bold"
-        android:layout_marginTop="24dp"
-        android:gravity="center" />
+        android:layout_marginTop="40dp"
+        android:layout_marginBottom="40dp"/>
 
     <EditText
-        android:id="@+id/etEmail"
+        android:id="@+id/etJoinName"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:layout_marginTop="40dp"
         android:background="@drawable/bg_input_field"
-        android:hint="이메일 주소를 입력하세요"
+        android:hint="성함을 입력하세요"
         android:textColorHint="@color/text_secondary"
         android:textColor="@color/text_primary"
         android:paddingHorizontal="16dp"
-        android:inputType="textEmailAddress" />
+        android:layout_marginBottom="16dp"/>
 
-    <Button
-        android:id="@+id/btnLogin"
+    <EditText
+        android:id="@+id/etJoinPassword"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="@color/color_primary"
-        android:text="로그인"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        app:cornerRadius="12dp" />
+        android:background="@drawable/bg_input_field"
+        android:hint="비밀번호 (6자 이상)"
+        android:textColorHint="@color/text_secondary"
+        android:textColor="@color/text_primary"
+        android:paddingHorizontal="16dp"
+        android:inputType="textPassword"
+        android:layout_marginBottom="24dp"/>
 
-    <TextView
-        android:id="@+id/tvSignUp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="아직 계정이 없으신가요? 회원가입"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp" />
+    <Button
+        android:id="@+id/btnJoinSubmit"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:backgroundTint="@color/color_primary"
+        android:text="가입 완료"
+        android:textColor="@color/white"
+        app:cornerRadius="12dp" />
 
 </LinearLayout>
