@@ -42,9 +42,6 @@ AI Pose Estimation 기술을 활용하여 실시간으로 운동 자세를 교�
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
-ArPtApp: AI Motion Analysis PT Solution
-Current Status: Milestone 2 - Camera Infrastructure Completed
-
 🛠 기술 스택
 Language: Kotlin 1.9.x
 
