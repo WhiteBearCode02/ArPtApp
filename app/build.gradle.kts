@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt") // 어노테이션 프로세싱 지원
 }
 
 android {
@@ -26,6 +27,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -33,34 +35,47 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
-        viewBinding = true
+        viewBinding = true // XML 뷰 바인딩 기능 활성화
     }
 }
 
 dependencies {
-
+    // 안드로이드 기본 라이브러리
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+
+    // 생명주기 및 코루틴 확장 기능 (DB 비동기 작업용)
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+
+    // 이미지 로딩 및 캐싱 라이브러리 (피그마 UI 이미지용)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    // CameraX: 카메라 제어 엔진
+    val cameraxVersion = "1.3.0"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // MediaPipe: AI 포즈 인식 엔진
+    implementation("com.google.mediapipe:tasks-vision:0.10.0")
+
+    // Room: 로컬 데이터베이스 엔진
+    val room_version = "2.6.1"
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
+
+    // 테스트 라이브러리
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-    // [CameraX Core Library] 카메라의 핵심 엔진입니다. 
-    val cameraxVersion = "1.3.0" // 안정화된 최신 버전을 사용합니다.
-    implementation("androidx.camera:camera-core:$cameraxVersion")
-    implementation("androidx.camera:camera-camera2:$cameraxVersion")
-    
-    // [Lifecycle Library] 앱이 꺼지면 카메라도 자동으로 꺼지게 관리해 줍니다.
-    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
-    
-    // [View Library] 화면에 영상을 뿌려주는 PreviewView를 사용하기 위함입니다.
-    implementation("androidx.camera:camera-view:$cameraxVersion")
-
-    // [MediaPipe Library] AI 자세 분석을 위한 핵심 엔진입니다.
-    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 }
