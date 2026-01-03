@@ -37,7 +37,6 @@ android {
         jvmTarget = "11"
     }
     
-    // ✅ 이 부분이 핵심입니다!
     buildFeatures {
         viewBinding = true
     }
@@ -51,9 +50,6 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
-    // Activity KTX (추가 확인)
-    implementation("androidx.activity:activity-ktx:1.9.3")
-
     // CameraX
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -64,16 +60,16 @@ dependencies {
     // MediaPipe
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
-    // Room Database (KSP 사용)
+    // Room Database
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // Gson (JSON 파싱)
+    // Gson
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // MPAndroidChart (차트 라이브러리)
+    // MPAndroidChart
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
     // Coroutines
