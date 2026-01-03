@@ -1,53 +1,183 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/color_background"
-    android:padding="28dp"
-    android:gravity="center_horizontal">
+    android:background="#1E1E1E"
+    android:fillViewport="true"
+    tools:context=".JoinActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="회원가입"
-        android:textColor="@color/text_primary"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginTop="40dp"
-        android:layout_marginBottom="40dp"/>
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:gravity="center_horizontal">
 
-    <EditText
-        android:id="@+id/etJoinName"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/bg_input_field"
-        android:hint="성함을 입력하세요"
-        android:textColorHint="@color/text_secondary"
-        android:textColor="@color/text_primary"
-        android:paddingHorizontal="16dp"
-        android:layout_marginBottom="16dp"/>
+        <!-- 상단 여백 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="40dp" />
 
-    <EditText
-        android:id="@+id/etJoinPassword"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/bg_input_field"
-        android:hint="비밀번호 (6자 이상)"
-        android:textColorHint="@color/text_secondary"
-        android:textColor="@color/text_primary"
-        android:paddingHorizontal="16dp"
-        android:inputType="textPassword"
-        android:layout_marginBottom="24dp"/>
+        <!-- 로고 또는 아이콘 (선택 사항) -->
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@mipmap/ic_launcher_round"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="앱 로고" />
 
-    <Button
-        android:id="@+id/btnJoinSubmit"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:backgroundTint="@color/color_primary"
-        android:text="가입 완료"
-        android:textColor="@color/white"
-        app:cornerRadius="12dp" />
+        <!-- 제목 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="회원가입"
+            android:textColor="#FFFFFF"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02"
+            android:layout_marginBottom="12dp" />
 
-</LinearLayout>
+        <!-- 부제목 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI PT와 함께 시작하세요"
+            android:textColor="#B0B0B0"
+            android:textSize="16sp"
+            android:layout_marginBottom="48dp" />
+
+        <!-- 입력 필드 컨테이너 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 이름 입력 라벨 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="이름"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 이름 입력 필드 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="#2C2C2C"
+                app:boxStrokeColor="#2196F3"
+                app:boxStrokeWidth="2dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:hintTextColor="#B0B0B0"
+                app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+                app:startIconTint="#2196F3">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etJoinName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="성함을 입력하세요"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#666666"
+                    android:inputType="textPersonName"
+                    android:maxLines="1"
+                    android:paddingVertical="16dp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 비밀번호 입력 라벨 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="비밀번호"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 비밀번호 입력 필드 -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="#2C2C2C"
+                app:boxStrokeColor="#2196F3"
+                app:boxStrokeWidth="2dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:hintTextColor="#B0B0B0"
+                app:startIconDrawable="@android:drawable/ic_lock_lock"
+                app:startIconTint="#2196F3"
+                app:endIconMode="password_toggle"
+                app:endIconTint="#B0B0B0">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etJoinPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="비밀번호 (6자 이상)"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#666666"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:paddingVertical="16dp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 가입 완료 버튼 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnJoinSubmit"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:text="가입 완료"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:backgroundTint="#2196F3"
+                app:cornerRadius="16dp"
+                app:elevation="4dp"
+                app:icon="@android:drawable/ic_menu_send"
+                app:iconGravity="textEnd"
+                app:iconTint="#FFFFFF"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 로그인으로 돌아가기 -->
+            <TextView
+                android:id="@+id/tvBackToLogin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="이미 계정이 있으신가요? 로그인"
+                android:textColor="#2196F3"
+                android:textSize="14sp"
+                android:padding="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground" />
+
+        </LinearLayout>
+
+        <!-- 하단 여백 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="40dp" />
+
+    </LinearLayout>
+
+</ScrollView>
