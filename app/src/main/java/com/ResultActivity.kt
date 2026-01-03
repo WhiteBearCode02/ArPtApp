@@ -4,12 +4,19 @@ package com.example.arptapp
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.arptapp.databinding.ActivityResultBinding
+import androidx.lifecycle.lifecycleScope // 액티비티 생명주기에 종속된 비동기 작업 지원
+import com.example.arptapp.data.AppDatabase // Room DB 관리 클래스
+import com.example.arptapp.data.ExerciseRecord // DB 엔티티(테이블 설계도)
+import com.example.arptapp.databinding.ActivityResultBinding // 뷰 바인딩
+import kotlinx.coroutines.launch // 비동기 코루틴 실행 도구
+import java.text.SimpleDateFormat // 날짜 형식 가공 도구
+import java.util.* // 자바 유틸리티 (날짜 등)
 
 /**
- * [ArPtApp - 운동 결과 리포트 모듈]
- * 역할: DashboardActivity로부터 전달받은 운동 데이터를 분석하여 
- * 사용자에게 소모 칼로리 및 운동 시간을 시각화하여 보고함.
+ * [ArPtApp - 운동 결과 분석 및 영속성 저장 모듈]
+ * 역할: 
+ * 1. DashboardActivity로부터 전달받은 운동 데이터를 분석하여 시각화합니다.
+ * 2. 분석된 최종 데이터를 로컬 데이터베이스(Room)에 비동기적으로 저장하여 기록을 보존합니다.
  */
 class ResultActivity : AppCompatActivity() {
 
@@ -24,30 +31,61 @@ class ResultActivity : AppCompatActivity() {
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2. [Data Retrieval] Intent를 통해 전달된 운동 데이터 수신
-        // DashboardActivity에서 설정한 Key값("TOTAL_COUNT", "EXERCISE_TIME")과 정확히 일치해야 함.
+        // 2. [Data Retrieval] Intent를 통해 전달된 원천 운동 데이터 수신
+        // DashboardActivity에서 설정한 Key값과 정확히 일치해야 데이터를 정상 수신함
         val finalCount = intent.getIntExtra("TOTAL_COUNT", 0)
         val exerciseTimeInSeconds = intent.getLongExtra("EXERCISE_TIME", 0L)
 
-        // 3. [Logic: 데이터 가공] 원천 데이터를 사용자 친화적인 정보로 변환
-        // [변경점] 단순히 데이터 수신에서 그치지 않고, 포맷팅과 칼로리 계산 로직을 거침
+        // 3. [Logic: 데이터 가공] 수신된 데이터를 사용자 친화적인 정보(시간 포맷, 칼로리)로 변환
         val formattedTime = formatElapsedTime(exerciseTimeInSeconds)
         val burnedCalories = calculateCalories(finalCount)
 
-        // 4. [UI Update] 가공된 데이터를 화면의 TextView들에 매핑
+        // 4. [UI Update] 가공된 최종 데이터를 화면의 TextView들에 매핑하여 전시
         displayExerciseSummary(finalCount, formattedTime, burnedCalories)
 
-        // 5. [Event] 홈으로 돌아가기 버튼 클릭 리스너 (Main 화면으로 복귀)
+        // 5. [Persistence: 데이터베이스 저장] 
+        // 결과 화면이 생성되는 시점에 자동으로 DB에 운동 기록을 영구 저장함
+        saveWorkoutToDatabase(finalCount, exerciseTimeInSeconds, burnedCalories)
+
+        // 6. [Event] 홈으로 돌아가기 버튼 클릭 리스너 (Main 화면으로 복귀)
         binding.btnBackToMain.setOnClickListener {
             returnToHome()
         }
     }
 
     /**
+     * [Database Logic] 수신된 운동 데이터를 Room DB에 비동기적으로 저장합니다.
+     * @param count 최종 횟수
+     * @param duration 소요 시간(초)
+     * @param calories 소모 칼로리
+     */
+    private fun saveWorkoutToDatabase(count: Int, duration: Long, calories: Double) {
+        // 현재 날짜 및 시간을 "yyyy-MM-dd HH:mm" 형식의 문자열로 생성
+        val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+
+        // DB에 삽입할 행(Row) 객체 생성
+        val record = ExerciseRecord(
+            date = currentDate,
+            totalCount = count,
+            duration = duration,
+            burnedCalories = calories
+        )
+
+        /**
+         * [Coroutines: 비동기 처리]
+         * DB 작업은 메인 UI 스레드를 차단(Block)할 수 있으므로 반드시 백그라운드에서 수행해야 합니다.
+         * lifecycleScope.launch는 액티비티가 파괴되면 작업도 자동으로 취소해주는 안전한 코루틴 블록입니다.
+         */
+        lifecycleScope.launch {
+            // DB 인스턴스 획득 및 데이터 삽입(Insert) 실행
+            val db = AppDatabase.getDatabase(applicationContext)
+            db.exerciseDao().insertRecord(record)
+        }
+    }
+
+    /**
      * [수학적 계산] 운동 횟수를 기반으로 예상 소모 칼로리를 산출합니다.
      * 공식: 스쿼트 1회당 약 0.5kcal 소모 (일반적인 성인 평균치 적용)
-     * @param count 총 스쿼트 횟수
-     * @return 계산된 칼로리 (Double)
      */
     private fun calculateCalories(count: Int): Double {
         return count * 0.5
@@ -55,8 +93,6 @@ class ResultActivity : AppCompatActivity() {
 
     /**
      * [데이터 가공] 초(Long) 단위의 소요 시간을 "00분 00초" 형식의 문자열로 포맷팅합니다.
-     * @param seconds 초 단위 시간
-     * @return 포맷팅된 시간 문자열
      */
     private fun formatElapsedTime(seconds: Long): String {
         val minutes = seconds / 60
@@ -66,7 +102,7 @@ class ResultActivity : AppCompatActivity() {
     }
 
     /**
-     * [UI 매핑] 최종 분석 결과를 화면에 전시하고 사용자의 성취도에 따라 다정한 피드백을 제공합니다.
+     * [UI 매핑] 최종 분석 결과를 화면에 전시하고 사용자의 성취도에 따라 동적 피드백을 제공합니다.
      */
     private fun displayExerciseSummary(count: Int, time: String, calories: Double) {
         // [핵심] 총 횟수 텍스트 뷰 업데이트
@@ -81,7 +117,7 @@ class ResultActivity : AppCompatActivity() {
             binding.tvResultTitle.text = "시작이 반이에요! 내일은 더 많이 해봐요. 😊"
         }
         
-        // 참고: 시간(time)과 칼로리(calories) 데이터는 현재 로그나 추가 UI가 있다면 여기에 연결 가능합니다.
+        // 참고: 필요 시 가공된 time과 calories 데이터를 레이아웃의 추가 뷰에 연결할 수 있습니다.
     }
 
     /**
@@ -89,7 +125,7 @@ class ResultActivity : AppCompatActivity() {
      */
     private fun returnToHome() {
         val intent = Intent(this, MainActivity::class.java).apply {
-            // FLAG_ACTIVITY_CLEAR_TOP: 이동할 액티비티 위에 쌓인 다른 액티비티를 모두 제거
+            // FLAG_ACTIVITY_CLEAR_TOP: 이동할 액티비티 위에 쌓인 다른 액티비티를 모두 제거하여 앱 흐름을 초기화함
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         startActivity(intent)
