@@ -99,19 +99,16 @@ Vector Trigonometry (Atan2-based angle calculation)
 📱 Presentation Layer
 
    └── Activities, Fragments, ViewBinding
-
        │
 
 🧠 Business Logic Layer  
 
    └── Exercise Algorithm, State Machine, Counter
-
        │
 
 🤖 AI Engine Layer
 
    └── MediaPipe Pose Landmarker (GPU Accelerated)
-
        │
 
 💾 Data Layer
