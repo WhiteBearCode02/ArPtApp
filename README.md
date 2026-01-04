@@ -95,19 +95,17 @@ Android Canvas API
 Vector Trigonometry (Atan2-based angle calculation)
 
 아키텍처 패턴
-┌─────────────────────────────────────┐
-│         Presentation Layer          │
-│    (Activities, Fragments, UI)      │
-├─────────────────────────────────────┤
-│          Business Logic             │
-│   (Exercise Algorithm, Counter)     │
-├─────────────────────────────────────┤
-│            AI Engine                │
-│  (MediaPipe Pose Landmarker)        │
-├─────────────────────────────────────┤
-│         Data Layer                  │
-│   (Room DB, SharedPreferences)      │
-└─────────────────────────────────────┘
+mermaidgraph TB
+    A[Presentation Layer<br/>Activities, Fragments, UI] --> B[Business Logic<br/>Exercise Algorithm, Counter]
+    B --> C[AI Engine<br/>MediaPipe Pose Landmarker]
+    B --> D[Data Layer<br/>Room DB, SharedPreferences]
+    C --> E[CameraX<br/>Image Analysis]
+    
+    style A fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style B fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    style C fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style D fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style E fill:#607D8B,stroke:#455A64,stroke-width:2px,color:#fff
 
 💡 핵심 구현 사항
 1. 실시간 포즈 추정 엔진
