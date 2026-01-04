@@ -97,15 +97,25 @@ Vector Trigonometry (Atan2-based angle calculation)
 아키텍처 패턴
 
 📱 Presentation Layer
+
    └── Activities, Fragments, ViewBinding
+
        │
+
 🧠 Business Logic Layer  
+
    └── Exercise Algorithm, State Machine, Counter
+
        │
+
 🤖 AI Engine Layer
+
    └── MediaPipe Pose Landmarker (GPU Accelerated)
+
        │
+
 💾 Data Layer
+
    └── Room Database, SharedPreferences
 
 💡 핵심 구현 사항
@@ -120,6 +130,7 @@ val options = PoseLandmarkerOptions.Builder()
     .setMinPoseDetectionConfidence(0.5f)
     .setMinTrackingConfidence(0.5f)
     .build()
+
 2. 각도 계산 알고리즘
 kotlinfun calculateAngle(
     firstPoint: NormalizedLandmark,
@@ -134,6 +145,7 @@ kotlinfun calculateAngle(
     if (angle > 180.0) angle = 360.0 - angle
     return angle
 }
+
 3. 상태 머신 기반 운동 카운팅
 kotlinwhen (currentState) {
     "UP" -> {
@@ -149,6 +161,7 @@ kotlinwhen (currentState) {
         }
     }
 }
+
 4. 비동기 이미지 분석
 kotlin// CameraX 이미지 분석 파이프라인
 val imageAnalysis = ImageAnalysis.Builder()
