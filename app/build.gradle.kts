@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
     // MediaPipe
-    implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 
     // Room Database
     val roomVersion = "2.6.1"

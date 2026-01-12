@@ -2,7 +2,12 @@
     <style name="Theme.ArPtApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/color_primary</item>
         <item name="colorPrimaryVariant">@color/color_primary_variant</item>
+        <item name="colorOnPrimary">@color/white</item>
+        
+        <item name="colorSecondary">@color/color_accent</item>
+        <item name="android:windowBackground">@color/color_background</item>
         
         <item name="android:statusBarColor">@color/color_background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
     </style>
 </resources>
