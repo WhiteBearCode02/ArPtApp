@@ -102,7 +102,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             // 카운트 시 음성 피드백 제공
                             speakOut(squatCount.toString())
                         }
-                        binding.overlayView.setResults(result)
+                        // 480, 640은 CameraX의 기본 분석 해상도입니다. 나중에 실제 영상 크기에 맞춰 보정되도록 값을 전달하는 것
+                        binding.overlayView.setResults(result, 480, 640, RunningMode.LIVE_STREAM)
                     }
                 }
             }

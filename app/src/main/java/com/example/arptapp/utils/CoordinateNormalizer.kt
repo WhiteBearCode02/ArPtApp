@@ -50,8 +50,7 @@ class CoordinateNormalizer {
                 x = (landmark.x() - hipCenterX) / bodyScale,
                 y = (landmark.y() - hipCenterY) / bodyScale,
                 z = (landmark.z() - hipCenterZ) / bodyScale,
-                visibility = landmark.visibility().orElse(0f)
-            )
+                visibility = 0f)
         }
         
         // 4. 주요 관절 각도 계산
