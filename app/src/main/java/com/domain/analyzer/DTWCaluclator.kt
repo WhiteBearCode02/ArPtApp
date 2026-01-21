@@ -1,6 +1,5 @@
 package com.example.arptapp.domain.analyzer
 
-import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.math.pow
 
