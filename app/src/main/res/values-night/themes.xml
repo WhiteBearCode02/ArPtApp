@@ -1,8 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<resources>
     <style name="Base.Theme.ArPtApp" parent="Theme.MaterialComponents.DayNight.NoActionBar.Bridge">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
     <style name="Theme.ArPtApp" parent="Base.Theme.ArPtApp" />
 </resources>
