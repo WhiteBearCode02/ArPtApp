@@ -23,6 +23,7 @@ import com.example.arptapp.data.model.NormalizedPoseData
 import com.example.arptapp.presentation.report.ReportActivity
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
+// [수정] MediaPipe 최신 버전의 BaseOptions 경로를 정확히 지정합니다.
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
@@ -130,7 +131,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarker.PoseLandmarkerListene
      * RunningMode.LIVE_STREAM: 저지연 실시간 분석을 위한 스트리밍 모드
      */
     private fun setupPoseLandmarker() {
-        // [수정] 실제 assets 폴더에 있는 파일명 'pose_landmarker_lite.task'로 변경했습니다.
+        // [수정] 실제 assets 폴더에 있는 파일명 'pose_landmarker_lite.task'로 경로를 구성합니다.
         val baseOptions = BaseOptions.builder()
             .setModelAssetPath("pose_landmarker_lite.task")
             .build()
@@ -218,15 +219,16 @@ class CameraActivity : AppCompatActivity(), PoseLandmarker.PoseLandmarkerListene
      */
     override fun onResults(result: PoseLandmarkerResult, input: MPImage) {
         runOnUiThread {
-            // [수정] 랜드마크 존재 여부를 안전하게 체크합니다.
-            if (result.landmarks() != null && result.landmarks().isNotEmpty()) {
-                val landmarks = result.landmarks()[0]
+            // [수정] 랜드마크 데이터 리스트가 null이 아니고 비어있지 않은지 안전하게 확인합니다.
+            val allLandmarks = result.landmarks()
+            if (!allLandmarks.isNullOrEmpty()) {
+                val landmarks = allLandmarks[0]
 
                 // 좌표 정규화 프로세스 (신체 크기에 관계없는 분석 보장)
                 val normalizedPose = coordinateNormalizer.normalize(result)
                 if (isRecording && normalizedPose != null) userPoseSequence.add(normalizedPose)
 
-                // 운동역학적 각도 계산 (무릎 굴곡도 - 인덱스 번호 확인 필요)
+                // 운동역학적 각도 계산 (무릎 굴곡도 - 힙(23), 무릎(25), 발목(27))
                 val angle = calculateAngle(
                     landmarks[23].x(), landmarks[23].y(),
                     landmarks[25].x(), landmarks[25].y(),
