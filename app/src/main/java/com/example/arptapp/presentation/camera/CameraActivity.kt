@@ -296,7 +296,7 @@ import androidx.core.graphics.createBitmap
         currentScore = dtwCalculator.convertToScore(dtwDistance)
         scoreHistory.add(currentScore)
 
-        binding.tvScore.text = "정확도: ${currentScore.toInt()}%"
+        binding.tvScore.text = getString(R.string.accuracy_format, currentScore.toInt())
         binding.tvScore.setTextColor(
             when {
                 currentScore >= 90 -> getColor(android.R.color.holo_green_light)
@@ -323,7 +323,7 @@ import androidx.core.graphics.createBitmap
     }
 
     private fun updateCountUI() {
-        binding.tvCount.text = "$squatCount / $targetCount"
+        binding.tvCount.text = getString(R.string.count_format, squatCount, targetCount)
     }
 
     private fun showResultDialog() {

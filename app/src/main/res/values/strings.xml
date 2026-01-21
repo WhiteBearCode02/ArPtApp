@@ -7,6 +7,10 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
+    // CarmeraActivity.kt의 문자열 결합으로 인해 발생하는 경고를 해결하기 위해 추가 -> 리소스 분리
+    <string name="count_format">%1$d / %2$d</string>
+    <string name="accuracy_format">정확도: %1$d%%</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
