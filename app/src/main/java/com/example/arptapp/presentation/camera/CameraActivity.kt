@@ -106,7 +106,7 @@ import com.google.mediapipe.tasks.core.ErrorListener
             // [주의] R.drawable.ic_pause 리소스가 프로젝트에 추가되어 있어야 합니다.
             try {
                 binding.btnPause.setImageResource(if (isRecording) R.drawable.ic_pause else R.drawable.ic_play_arrow)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Log.e("UI_ERROR", "Drawable missing: ic_pause or ic_play_arrow")
             }
             val msg = if (isRecording) "운동 재개" else "일시정지"
