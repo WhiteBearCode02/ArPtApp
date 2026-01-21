@@ -26,6 +26,7 @@ xmlns:tools="http://schemas.android.com/tools">
     <!-- 스플래시 화면 (앱 시작점) -->
     <activity
         android:name=".SplashActivity"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:exported="true">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
@@ -56,6 +57,7 @@ xmlns:tools="http://schemas.android.com/tools">
     <!-- 카메라 Activity (운동 촬영) -->
     <activity
         android:name=".presentation.camera.CameraActivity"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:exported="false"
         android:screenOrientation="portrait" />
 
