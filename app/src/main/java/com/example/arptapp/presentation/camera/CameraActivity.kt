@@ -34,6 +34,7 @@ import kotlin.math.atan2
 import com.google.mediapipe.tasks.core.OutputHandler
 // onError 해결을 위한 선언
 import com.google.mediapipe.tasks.core.ErrorListener
+import androidx.core.graphics.createBitmap
 
 /**
  * CameraActivity: AI 실시간 자세 교정 및 운동 카운팅 엔진
@@ -193,8 +194,8 @@ import com.google.mediapipe.tasks.core.ErrorListener
         val frameTime = SystemClock.uptimeMillis()
 
         try {
-            // 1. 비트맵 변환 (RGBA_8888)
-            val bitmapBuffer = Bitmap.createBitmap(imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888)
+            // 1. 비트맵 변환 (RGBA_8888) -> KTX 확장 함수 적용
+            val bitmapBuffer = createBitmap(imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888)
             imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
 
             // 2. 디바이스 회전값 및 전면 카메라 좌우 반전 처리
