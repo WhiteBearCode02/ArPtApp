@@ -31,6 +31,9 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.atan2
+import com.google.mediapipe.tasks.core.OutputHandler
+// onError 해결을 위한 선언
+import com.google.mediapipe.tasks.core.ErrorListener
 
 /**
  * CameraActivity: AI 실시간 자세 교정 및 운동 카운팅 엔진
@@ -39,7 +42,7 @@ import kotlin.math.atan2
  * - DTW Algorithm: 표준 시퀀스와 사용자 시퀀스 간의 동적 시간 왜곡 유사도 측정
  */
 // [수정] PoseLandmarker 내부의 인터페이스인 PoseLandmarkerListener를 명시적으로 상속합니다.
-class CameraActivity : AppCompatActivity(), PoseLandmarker.PoseLandmarkerListener {
+    class CameraActivity : AppCompatActivity(), OutputHandler.ResultListener<PoseLandmarkerResult, MPImage>, ErrorListener {
 
     private lateinit var binding: ActivityCameraBinding
 
@@ -217,7 +220,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarker.PoseLandmarkerListene
     /**
      * AI 추론 결과 콜백 (비동기 호출)
      */
-    override fun onResults(result: PoseLandmarkerResult, input: MPImage) {
+    override fun run(result: PoseLandmarkerResult, input: MPImage) {
         runOnUiThread {
             // [수정] 랜드마크 데이터 리스트가 null이 아니고 비어있지 않은지 안전하게 확인합니다.
             val allLandmarks = result.landmarks()
