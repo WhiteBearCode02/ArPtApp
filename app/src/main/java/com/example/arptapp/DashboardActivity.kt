@@ -16,24 +16,19 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
-import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions // [추가] 이미지 처리 옵션을 위한 임포트
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/**
- * 실시간 카메라 분석을 통한 운동 카운팅 및 음성 피드백 제어부입니다.
- */
 class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     companion object {
         init {
             try {
-                // 시스템에게 명시적으로 라이브러리 로드를 명령합니다.
                 System.loadLibrary("mediapipe_tasks_vision_jni")
             } catch (e: UnsatisfiedLinkError) {
-                // 에러 발생 시 로그를 통해 원인을 파악합니다.
                 Log.e("JNI_ERROR", "라이브러리를 찾을 수 없습니다: ${e.message}")
             }
         }
@@ -47,6 +42,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var isDown = false
     private var startTime: Long = 0
 
+    // [추가] 실시간 회전 정보를 저장할 변수입니다.
+    private var currentRotation = 0
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -57,8 +55,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // 음성 출력 엔진 초기화
         tts = TextToSpeech(this, this)
 
         binding.btnStartExercise.setOnClickListener {
@@ -83,14 +79,12 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setupPoseLandmarker()
     }
 
-    // TTS 초기화 완료 시 호출되는 콜백
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.KOREAN
         }
     }
 
-    // 텍스트를 음성으로 변환하여 출력
     private fun speakOut(text: String) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
@@ -100,7 +94,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val optionsBuilder = PoseLandmarker.PoseLandmarkerOptions.builder()
             .setBaseOptions(baseOptionsBuilder.build())
             .setRunningMode(RunningMode.LIVE_STREAM)
-            // [수정] 두 번째 파라미터인 inputImage를 활용하여 실제 분석된 이미지의 크기를 가져옵니다.
             .setResultListener { result, inputImage ->
                 runOnUiThread {
                     if (result.landmarks().isNotEmpty()) {
@@ -113,16 +106,19 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             squatCount++
                             isDown = false
                             binding.tvCount.text = squatCount.toString()
-                            // 카운트 시 음성 피드백 제공
                             speakOut(squatCount.toString())
                         }
 
-                        // [수정] 480, 640 고정값 대신 분석 엔진이 실제로 처리한 이미지의 너비와 높이를 전달합니다.
-                        // 이를 통해 OverlayView가 뼈대를 정확한 비율로 화면에 그릴 수 있게 됩니다.
+                        // [수정] inputImage.imageInfo 대신 멤버 변수 currentRotation을 사용합니다.
+                        // MPImage 객체에는 imageInfo가 없으므로 발생하는 에러를 해결합니다.
+                        val isRotated = currentRotation == 90 || currentRotation == 270
+                        val rotatedWidth = if (isRotated) inputImage.height else inputImage.width
+                        val rotatedHeight = if (isRotated) inputImage.width else inputImage.height
+
                         binding.overlayView.setResults(
                             result,
-                            inputImage.height,
-                            inputImage.width,
+                            rotatedHeight,
+                            rotatedWidth,
                             RunningMode.LIVE_STREAM
                         )
                     }
@@ -163,25 +159,20 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun analyzeImage(imageProxy: ImageProxy) {
-        // [추가] 카메라 센서의 물리적 회전 각도를 가져옵니다 (세로 모드 시 보통 270도).
-        val imageRotation = imageProxy.imageInfo.rotationDegrees
+        // [수정] 여기서 실시간 회전 각도를 업데이트하여 멤버 변수에 저장합니다.
+        currentRotation = imageProxy.imageInfo.rotationDegrees
 
         val bitmap = imageProxy.toBitmap()
         val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(bitmap).build()
-
-        // [추가] MediaPipe 분석 엔진에게 "이 이미지는 회전되어 있다"는 정보를 전달할 옵션을 구성합니다.
-        // 이 과정이 없으면 엔진은 이미지가 누워있다고 판단하여 좌표를 거꾸로 계산합니다.
         val imageProcessingOptions = ImageProcessingOptions.builder()
-            .setRotationDegrees(imageRotation)
+            .setRotationDegrees(currentRotation)
             .build()
 
-        // [수정] 회전 옵션을 포함하여 비동기 분석을 요청합니다.
         poseLandmarker?.detectAsync(
             mpImage,
             imageProcessingOptions,
             System.currentTimeMillis()
         )
-
         imageProxy.close()
     }
 
