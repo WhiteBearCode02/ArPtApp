@@ -21,7 +21,9 @@ xmlns:tools="http://schemas.android.com/tools">
     android:roundIcon="@mipmap/ic_launcher_round"
     android:supportsRtl="true"
     android:theme="@style/Theme.ArPtApp"
-    tools:targetApi="31">
+    tools:targetApi="31"
+    android:extractNativeLibs="true"  tools:replace="android:extractNativeLibs">
+    <!--시스템이 라이브러리를 강제로 압축 해제하여 읽도록 설정하는 옵션을 추가-->
 
     <!-- 스플래시 화면 (앱 시작점) -->
     <activity

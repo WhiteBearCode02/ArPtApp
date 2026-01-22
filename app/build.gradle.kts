@@ -17,6 +17,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -42,6 +46,16 @@ android {
         // ViewBinding: XML 레이아웃의 ID를 안전하게 참조하기 위한 기능
         viewBinding = true
     }
+
+    packaging{
+        jniLibs{
+            // 라이브러리 추출 설정과 충돌 방지를 위해 추가
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
@@ -66,7 +80,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
     // --- MediaPipe Tasks: AI 비전 기능 (Pose Landmarker 등) ---
-    implementation("com.google.mediapipe:tasks-vision:0.10.0")
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
     // --- Room Database: 로컬 SQLite 데이터베이스 라이브러리 ---
     val roomVersion = "2.6.1"
