@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000">
 
+    <!-- 카메라 프리뷰 -->
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="0dp"
@@ -15,6 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 포즈 오버레이 -->
     <com.example.arptapp.OverlayView
         android:id="@+id/overlay"
         android:layout_width="0dp"
@@ -24,7 +26,9 @@
         app:layout_constraintStart_toStartOf="@id/viewFinder"
         app:layout_constraintEnd_toEndOf="@id/viewFinder" />
 
+    <!-- 상단 정보 영역 -->
     <LinearLayout
+        android:id="@+id/layoutTopInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -32,6 +36,7 @@
         android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- 운동 이름 -->
         <TextView
             android:id="@+id/tvExerciseName"
             android:layout_width="wrap_content"
@@ -41,6 +46,7 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
+        <!-- 정확도 점수 -->
         <TextView
             android:id="@+id/tvScore"
             android:layout_width="wrap_content"
@@ -51,6 +57,7 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- 실시간 피드백 (숨김 상태) -->
         <TextView
             android:id="@+id/tvFeedback"
             android:layout_width="match_parent"
@@ -65,6 +72,33 @@
 
     </LinearLayout>
 
+    <!-- 닫기 버튼 (왼쪽 위) - 새로 추가 -->
+    <ImageButton
+        android:id="@+id/btnClose"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_input_field"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:contentDescription="닫기"
+        app:tint="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- 카메라 전환 버튼 (오른쪽 위) - 새로 추가 -->
+    <ImageButton
+        android:id="@+id/btnSwitchCamera"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_input_field"
+        android:src="@android:drawable/ic_menu_camera"
+        android:contentDescription="카메라 전환"
+        app:tint="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 중앙 카운트 표시 -->
     <TextView
         android:id="@+id/tvCount"
         android:layout_width="wrap_content"
@@ -82,6 +116,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 하단 컨트롤 버튼 영역 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -91,6 +126,7 @@
         android:background="#80000000"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- 일시정지 버튼 -->
         <ImageButton
             android:id="@+id/btnPause"
             android:layout_width="56dp"
@@ -100,6 +136,7 @@
             android:src="@android:drawable/ic_media_pause"
             android:contentDescription="일시정지" />
 
+        <!-- 종료 버튼 -->
         <ImageButton
             android:id="@+id/btnStop"
             android:layout_width="56dp"
@@ -108,6 +145,7 @@
             android:src="@android:drawable/ic_delete"
             android:contentDescription="종료" />
 
+        <!-- 카메라 전환 버튼 (하단용) - 기존 유지 -->
         <ImageButton
             android:id="@+id/btnFlipCamera"
             android:layout_width="56dp"
