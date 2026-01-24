@@ -20,24 +20,43 @@
         android:layout_height="match_parent"
         android:padding="24dp">
 
+        <!-- X 버튼 (왼쪽 위) -->
         <ImageButton
             android:id="@+id/btnClose"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
             android:background="@drawable/bg_input_field"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="닫기"
             app:tint="@color/white" />
-        
+
+        <!-- 카메라 전환 버튼 (오른쪽 위) - 새로 추가 -->
+        <ImageButton
+            android:id="@+id/btnSwitchCamera"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:background="@drawable/bg_input_field"
+            android:src="@android:drawable/ic_menu_camera"
+            android:contentDescription="카메라 전환"
+            app:tint="@color/white" />
+
+        <!-- 제목 -->
         <TextView
             android:id="@+id/tvDashboardTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
+            android:layout_alignParentTop="true"
             android:text="운동 준비"
             android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- 카운트 표시 -->
         <LinearLayout
             android:id="@+id/layoutCount"
             android:layout_width="wrap_content"
@@ -69,6 +88,7 @@
                 android:letterSpacing="0.1" />
         </LinearLayout>
 
+        <!-- 운동 시작 버튼 -->
         <Button
             android:id="@+id/btnStartExercise"
             android:layout_width="match_parent"
@@ -80,6 +100,7 @@
             android:textColor="@color/white"
             app:cornerRadius="12dp" />
 
+        <!-- 운동 종료 버튼 -->
         <Button
             android:id="@+id/btnEndExercise"
             android:layout_width="match_parent"
@@ -93,4 +114,5 @@
             app:cornerRadius="12dp" />
 
     </RelativeLayout>
+
 </FrameLayout>
