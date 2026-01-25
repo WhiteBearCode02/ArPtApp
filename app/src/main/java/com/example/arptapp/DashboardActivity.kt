@@ -3,6 +3,8 @@ package com.example.arptapp
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -29,6 +31,7 @@ import java.util.concurrent.Executors
  * - 가로/세로 자동 대응
  * - 다중 인식 필터링 (가장 큰 사람만 추적)
  * - MediaPipe Pose Landmarker 실시간 추론
+ * - [방법1] 프레임 회전 정규화: 270도/90도 프레임을 0도로 변환하여 MediaPipe에 전달
  */
 class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
@@ -177,6 +180,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             processLandmarks(mainPersonLandmarks)
                         }
                         // 오버레이 업데이트 (필터링된 결과 전달)
+                        // [방법1] 이미 정규화된 비트맵으로 처리되었으므로
+                        // imageWidth, imageHeight는 회전 후의 최종 크기
                         updateOverlay(mainPersonLandmarks, inputImage)
                     }
                 }
@@ -266,13 +271,16 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     /**
      * 오버레이 업데이트
      *
-     * [중요] 가로/세로 자동 대응을 위해 원본 이미지 크기 그대로 전달
+     * [중요] 방법1: 이미 회전된 비트맵으로 처리되었으므로
+     * inputImage의 width, height는 회전 후의 최종 크기입니다.
+     * OverlayView에서는 단순한 좌표 변환만 수행하면 됩니다.
      */
     private fun updateOverlay(
         landmarks: List<NormalizedLandmark>,
         inputImage: com.google.mediapipe.framework.image.MPImage
     ) {
         // 필터링된 단일 사람 데이터를 OverlayView에 전달
+        // rotationDegrees 파라미터 제거 - 이미 정규화됨
         binding.overlayView.setResults(
             landmarks,
             inputImage.width,
@@ -353,20 +361,61 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     /**
      * 프레임 분석
      *
-     * [중요] 회전 정보 없이 전달 → MediaPipe 자동 처리 비활성화
+     * [방법1 핵심] 여기서 회전된 프레임을 정규화(0도)로 변환하여 MediaPipe에 전달
+     * - 전면 카메라: 270도 회전 프레임 → 0도로 정규화
+     * - 후면 카메라: 90도 회전 프레임 → 0도로 정규화
      */
     private fun analyzeImage(imageProxy: ImageProxy) {
         val bitmap = imageProxy.toBitmap()
-        val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(bitmap).build()
+        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
 
-        // [로그 추가] 센서가 이미지를 몇 도 돌려서 보내주는지 확인합니다.
-        android.util.Log.d("ARPT_DEBUG", "3. 프레임 회전 각도: ${bitmap}도")
+        Log.d("ARPT_METHOD1", "원본 프레임 회전 각도: ${rotationDegrees}도")
 
-        // 회전 정보 없이 전달 (MediaPipe가 원본 그대로 처리)
+        // [방법1 핵심] 비트맵을 회전하여 0도로 정규화
+        val rotatedBitmap = if (rotationDegrees != 0) {
+            rotateMatrix(bitmap, rotationDegrees)
+        } else {
+            bitmap
+        }
+
+        Log.d("ARPT_METHOD1", "정규화 후 비트맵 크기: ${rotatedBitmap.width}x${rotatedBitmap.height}")
+
+        // 정규화된 비트맵으로 MPImage 생성
+        val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(rotatedBitmap).build()
+
+        // MediaPipe에 전달 (회전 정보 없음 - 이미 0도)
         val frameTime = System.currentTimeMillis()
         poseLandmarker?.detectAsync(mpImage, frameTime)
 
         imageProxy.close()
+    }
+
+    /**
+     * 비트맵 회전 함수
+     *
+     * @param bitmap 원본 비트맵
+     * @param degrees 회전 각도 (270 또는 90)
+     * @return 회전된 비트맵
+     */
+    private fun rotateMatrix(bitmap: Bitmap, degrees: Int): Bitmap {
+        if (degrees == 0) return bitmap
+
+        val matrix = Matrix().apply {
+            // 비트맵 중심을 기준으로 회전
+            postRotate(degrees.toFloat(), bitmap.width / 2f, bitmap.height / 2f)
+        }
+
+        // 회전된 비트맵 생성
+        val rotatedBitmap = Bitmap.createBitmap(
+            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+        )
+
+        // 원본 비트맵과 다른 객체면 메모리 정리
+        if (rotatedBitmap != bitmap) {
+            bitmap.recycle()
+        }
+
+        return rotatedBitmap
     }
 
     override fun onDestroy() {

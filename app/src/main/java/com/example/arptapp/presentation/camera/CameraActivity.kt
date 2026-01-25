@@ -37,6 +37,8 @@ import com.google.mediapipe.tasks.core.ErrorListener
 
 /**
  * 실시간 AI 기반 운동 자세 분석 및 교정 액티비티
+ *
+ * [방법1] 프레임을 정규화(0도)하여 MediaPipe에 전달
  */
 class CameraActivity : AppCompatActivity(),
     OutputHandler.ResultListener<PoseLandmarkerResult, MPImage>,
@@ -71,16 +73,11 @@ class CameraActivity : AppCompatActivity(),
     // === 표준 자세 데이터 (벤치마크) ===
     private var standardPoseData: List<FloatArray> = listOf()
 
-    // === 카메라 권한 요청 결과 처리 (Jetpack Activity Result API) ===
+    // === 카메라 권한 요청 결과 처리 (Activity Result API) ===
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            setupCamera()
-        } else {
-            Toast.makeText(this, "카메라 권한이 필요합니다", Toast.LENGTH_SHORT).show()
-            finish()
-        }
+        if (isGranted) setupCamera() else finish()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,35 +98,21 @@ class CameraActivity : AppCompatActivity(),
 
     // === UI 버튼 이벤트 바인딩 ===
     private fun setupButtons() {
-        binding.btnClose?.setOnClickListener {
-            finish()
-        }
-
+        binding.btnClose?.setOnClickListener { finish() }
         binding.btnSwitchCamera?.setOnClickListener {
             isFrontCamera = !isFrontCamera
             setupCamera()
         }
-
         binding.btnPause?.setOnClickListener {
             isRecording = !isRecording
-            try {
-                binding.btnPause.setImageResource(
-                    if (isRecording) R.drawable.ic_pause else R.drawable.ic_play_arrow
-                )
-            } catch (e: Exception) {
-                Log.e("UI_ERROR", "아이콘 리소스 없음: ${e.message}")
-            }
+            binding.btnPause.setImageResource(if (isRecording) R.drawable.ic_pause else R.drawable.ic_play_arrow)
         }
-
-        binding.btnStop?.setOnClickListener {
-            showResultDialog()
-        }
+        binding.btnStop?.setOnClickListener { showResultDialog() }
     }
 
     // === 카메라 권한 확인 및 요청 ===
     private fun checkCameraPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             setupCamera()
         } else {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -138,17 +121,13 @@ class CameraActivity : AppCompatActivity(),
 
     // === MediaPipe Pose Landmarker 초기화 ===
     private fun setupPoseLandmarker() {
-        val baseOptions = BaseOptions.builder()
-            .setModelAssetPath("pose_landmarker_lite.task")
-            .build()
-
+        val baseOptions = BaseOptions.builder().setModelAssetPath("pose_landmarker_lite.task").build()
         val options = PoseLandmarker.PoseLandmarkerOptions.builder()
             .setBaseOptions(baseOptions)
             .setRunningMode(RunningMode.LIVE_STREAM)
             .setResultListener(this)
             .setErrorListener(this)
             .build()
-
         poseLandmarker = PoseLandmarker.createFromOptions(this, options)
     }
 
@@ -160,7 +139,7 @@ class CameraActivity : AppCompatActivity(),
                 cameraProvider = cameraProviderFuture.get()
                 bindCameraUseCases()
             } catch (e: Exception) {
-                Log.e("CAMERA_X", "카메라 프로바이더 초기화 실패", e)
+                Log.e("CAMERA_X", "초기화 실패", e)
             }
         }, ContextCompat.getMainExecutor(this))
     }
@@ -170,29 +149,21 @@ class CameraActivity : AppCompatActivity(),
         val cameraProvider = cameraProvider ?: return
         val cameraSelector = if (isFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
 
-        preview = Preview.Builder()
-            .setTargetRotation(binding.viewFinder.display.rotation)
-            .build()
-            .also {
-                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-            }
+        preview = Preview.Builder().setTargetRotation(binding.viewFinder.display.rotation).build()
+            .also { it.setSurfaceProvider(binding.viewFinder.surfaceProvider) }
 
         imageAnalyzer = ImageAnalysis.Builder()
             .setTargetRotation(binding.viewFinder.display.rotation)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
-            .also {
-                it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    detectPose(imageProxy)
-                }
-            }
+            .also { it.setAnalyzer(cameraExecutor) { imageProxy -> detectPose(imageProxy) } }
 
         try {
             cameraProvider.unbindAll()
             camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
         } catch (e: Exception) {
-            Log.e("CAMERA_X", "카메라 바인딩 실패", e)
+            Log.e("CAMERA_X", "바인딩 실패", e)
         }
     }
 
@@ -203,16 +174,49 @@ class CameraActivity : AppCompatActivity(),
             val bitmapBuffer = createBitmap(imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888)
             imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
 
-            val matrix = Matrix().apply {
-                postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+
+            Log.d("ARPT_METHOD1", "원본 프레임 회전 각도: ${rotationDegrees}도")
+
+            // [방법1 핵심] 비트맵을 회전하여 정규화
+            val rotatedBitmap = if (rotationDegrees != 0) {
+                rotateMatrix(bitmapBuffer, rotationDegrees)
+            } else {
+                bitmapBuffer
             }
 
-            val rotatedBitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+            Log.d("ARPT_METHOD1", "정규화 후 비트맵 크기: ${rotatedBitmap.width}x${rotatedBitmap.height}")
+
             val mpImage = BitmapImageBuilder(rotatedBitmap).build()
             poseLandmarker.detectAsync(mpImage, frameTime)
         } finally {
             imageProxy.close()
         }
+    }
+
+    /**
+     * 비트맵 회전 함수
+     *
+     * @param bitmap 원본 비트맵
+     * @param degrees 회전 각도 (270 또는 90)
+     * @return 회전된 비트맵
+     */
+    private fun rotateMatrix(bitmap: Bitmap, degrees: Int): Bitmap {
+        if (degrees == 0) return bitmap
+
+        val matrix = Matrix().apply {
+            postRotate(degrees.toFloat(), bitmap.width / 2f, bitmap.height / 2f)
+        }
+
+        val rotatedBitmap = Bitmap.createBitmap(
+            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+        )
+
+        if (rotatedBitmap != bitmap) {
+            bitmap.recycle()
+        }
+
+        return rotatedBitmap
     }
 
     // === MediaPipe 추론 결과 콜백 (비동기 호출) ===
@@ -223,10 +227,7 @@ class CameraActivity : AppCompatActivity(),
                 val landmarks = allLandmarks[0]
 
                 val normalizedPose = coordinateNormalizer.normalize(result, isMirrored = isFrontCamera)
-
-                if (isRecording && normalizedPose != null) {
-                    userPoseSequence.add(normalizedPose)
-                }
+                if (isRecording && normalizedPose != null) userPoseSequence.add(normalizedPose)
 
                 val kneeAngle = calculateAngle(
                     landmarks[23].x(), landmarks[23].y(),
@@ -236,8 +237,8 @@ class CameraActivity : AppCompatActivity(),
 
                 handleSquatLogic(kneeAngle)
 
-                // [중요 수정] XML ID와 일치하도록 binding.overlay를 확인하세요.
-                // 만약 에러가 계속된다면 XML 파일에서 OverlayView의 ID를 android:id="@+id/overlay"로 설정해야 합니다.
+                // [방법1] 프레임이 이미 정규화되었으므로
+                // input.width, input.height는 회전 후의 최종 크기
                 binding.overlay?.setResults(
                     landmarks,
                     input.width,
@@ -253,35 +254,20 @@ class CameraActivity : AppCompatActivity(),
     // === 스쿼트 상태 머신 (Finite State Machine) ===
     private fun handleSquatLogic(angle: Float) {
         when (currentState) {
-            ExerciseState.STANDING -> {
-                if (angle < 100) {
-                    currentState = ExerciseState.GOING_DOWN
-                    isRecording = true
-                }
-            }
-            ExerciseState.GOING_DOWN -> {
-                if (angle < 70) currentState = ExerciseState.DOWN
-            }
-            ExerciseState.DOWN -> {
-                if (angle > 100) currentState = ExerciseState.GOING_UP
-            }
-            ExerciseState.GOING_UP -> {
-                if (angle > 160) {
-                    currentState = ExerciseState.STANDING
-                    squatCount++
-                    updateCountUI()
-                    if (userPoseSequence.size >= 10) calculateSimilarityScore()
-                    if (squatCount >= targetCount) showResultDialog()
-                    isRecording = false
-                }
+            ExerciseState.STANDING -> if (angle < 100) { currentState = ExerciseState.GOING_DOWN; isRecording = true }
+            ExerciseState.GOING_DOWN -> if (angle < 70) currentState = ExerciseState.DOWN
+            ExerciseState.DOWN -> if (angle > 100) currentState = ExerciseState.GOING_UP
+            ExerciseState.GOING_UP -> if (angle > 160) {
+                currentState = ExerciseState.STANDING; squatCount++; updateCountUI()
+                if (userPoseSequence.size >= 10) calculateSimilarityScore()
+                if (squatCount >= targetCount) showResultDialog()
+                isRecording = false
             }
         }
     }
 
     // === MediaPipe 런타임 에러 핸들러 ===
-    override fun onError(error: RuntimeException) {
-        Log.e("AI_ENGINE", "MediaPipe 런타임 오류: ${error.message}")
-    }
+    override fun onError(error: RuntimeException) { Log.e("AI_ENGINE", "오류: ${error.message}") }
 
     // === 3점 기반 관절 각도 계산 ===
     private fun calculateAngle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float): Float {
@@ -306,11 +292,7 @@ class CameraActivity : AppCompatActivity(),
 
     // === 실시간 자세 피드백 제공 ===
     private fun provideFeedback(kneeAngle: Float) {
-        val feedback = when {
-            kneeAngle < 50 -> "조금만 덜 앉으세요"
-            kneeAngle in 50f..90f && currentState == ExerciseState.DOWN -> "완벽한 깊이입니다!"
-            else -> null
-        }
+        val feedback = if (kneeAngle < 50) "조금만 덜 앉으세요" else if (kneeAngle in 50f..90f && currentState == ExerciseState.DOWN) "완벽한 깊이입니다!" else null
         feedback?.let {
             binding.tvFeedback?.text = it
             binding.tvFeedback?.visibility = View.VISIBLE
@@ -319,9 +301,7 @@ class CameraActivity : AppCompatActivity(),
     }
 
     // === 카운트 UI 업데이트 ===
-    private fun updateCountUI() {
-        binding.tvCount?.text = getString(R.string.count_format, squatCount, targetCount)
-    }
+    private fun updateCountUI() { binding.tvCount?.text = getString(R.string.count_format, squatCount, targetCount) }
 
     // === 운동 결과 리포트 화면 표시 ===
     private fun showResultDialog() {
@@ -334,11 +314,7 @@ class CameraActivity : AppCompatActivity(),
     }
 
     // === 표준 자세 데이터 로드 ===
-    private fun loadStandardPoseData() {
-        standardPoseData = List(15) { index ->
-            floatArrayOf(180f - (index * 10f), 180f - (index * 10f), 180f - (index * 8f), 180f - (index * 8f))
-        }
-    }
+    private fun loadStandardPoseData() { standardPoseData = List(15) { index -> floatArrayOf(180f - (index * 10f), 180f - (index * 10f), 180f - (index * 8f), 180f - (index * 8f)) } }
 
     // === 액티비티 종료 시 리소스 정리 ===
     override fun onDestroy() {
@@ -349,6 +325,4 @@ class CameraActivity : AppCompatActivity(),
 }
 
 // === 운동 상태 열거형 ===
-enum class ExerciseState {
-    STANDING, GOING_DOWN, DOWN, GOING_UP
-}
+enum class ExerciseState { STANDING, GOING_DOWN, DOWN, GOING_UP }
