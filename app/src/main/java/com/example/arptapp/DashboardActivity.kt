@@ -19,6 +19,8 @@ import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
+import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
+import com.example.arptapp.domain.analyzer.SquatAnalyzer
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -54,9 +56,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     // 운동 카운팅 상태
     private var squatCount = 0
-    private var isDown = false
     private var startTime: Long = 0
     private var isExercising = false
+    // BaseExerciseAnalyzer 규격을 따르는 SquatAnalyzer를 기본값으로 세팅합니다.
+    private var exerciseAnalyzer: BaseExerciseAnalyzer = SquatAnalyzer()
 
     // 카메라 관련
     private var camera: Camera? = null
@@ -127,6 +130,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         isExercising = true
         startTime = System.currentTimeMillis()
         squatCount = 0
+
+        exerciseAnalyzer.reset()
         binding.tvCount.text = "0"
 
         binding.tvDashboardTitle.text = "운동 중"
@@ -250,19 +255,12 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
      * 운동 동작 분석 (스쿼트 카운팅)
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>) {
-        // 무릎 각도 계산 (힙-무릎-발목)
-        val kneeAngle = calculateAngle(
-            landmarks[23], // 왼쪽 힙
-            landmarks[25], // 왼쪽 무릎
-            landmarks[27]  // 왼쪽 발목
-        )
+        // 1. 전문가(Analyzer)에게 분석을 시키고 최신 카운트 숫자를 받아옵니다.
+        val currentCount = exerciseAnalyzer.analyze(landmarks)
 
-        // 상태 머신 기반 카운팅
-        if (kneeAngle < 100.0) {
-            isDown = true
-        } else if (isDown && kneeAngle > 160.0) {
-            squatCount++
-            isDown = false
+        // 2. 숫자가 올라갔다면 (운동 1번 성공), 화면을 갱신하고 목소리로 알려줍니다.
+        if (currentCount > squatCount) {
+            squatCount = currentCount
             binding.tvCount.text = squatCount.toString()
             speakOut(squatCount.toString())
         }
@@ -287,21 +285,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             inputImage.height,
             lensFacing == CameraSelector.LENS_FACING_FRONT
         )
-    }
-
-    /**
-     * 3점 기반 각도 계산
-     */
-    private fun calculateAngle(
-        first: NormalizedLandmark,
-        mid: NormalizedLandmark,
-        last: NormalizedLandmark
-    ): Double {
-        val radians = Math.atan2((last.y() - mid.y()).toDouble(), (last.x() - mid.x()).toDouble()) -
-                Math.atan2((first.y() - mid.y()).toDouble(), (first.x() - mid.x()).toDouble())
-        var angle = Math.abs(radians * 180.0 / Math.PI)
-        if (angle > 180.0) angle = 360.0 - angle
-        return angle
     }
 
     private fun checkCameraPermission() {
