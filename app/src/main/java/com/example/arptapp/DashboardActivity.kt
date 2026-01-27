@@ -21,10 +21,12 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
 import com.example.arptapp.domain.analyzer.SquatAnalyzer
+import com.example.arptapp.presentation.report.ReportActivity
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.jvm.java
 
 /**
  * 실시간 AI 기반 운동 자세 분석 대시보드
@@ -53,6 +55,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var cameraExecutor: ExecutorService
     private var poseLandmarker: PoseLandmarker? = null
     private var tts: TextToSpeech? = null
+
+    // 매 회차별 점수를 저장할 리스트
+    private val scoreList = mutableListOf<Float>()
 
     // 운동 카운팅 상태
     private var squatCount = 0
@@ -143,13 +148,19 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun endExercise() {
         isExercising = false
-        val elapsedTime = if (startTime > 0L) {
-            (System.currentTimeMillis() - startTime) / 1000
-        } else 0L
+        val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
 
+        // 1. 목적지를 ResultActivity로 변경합니다.
         val intent = Intent(this, ResultActivity::class.java).apply {
             putExtra("TOTAL_COUNT", squatCount)
             putExtra("EXERCISE_TIME", elapsedTime)
+
+            // 2. 모아둔 점수 리스트를 배열로 변환해서 넘깁니다. (리포트 그래프용)
+            putExtra("SCORES", scoreList.toFloatArray())
+
+            // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
+            val avgScore = if (scoreList.isNotEmpty()) scoreList.average().toFloat() else 0f
+            putExtra("AVG_SCORE", avgScore)
         }
         startActivity(intent)
         finish()
@@ -263,6 +274,12 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             squatCount = currentCount
             binding.tvCount.text = squatCount.toString()
             speakOut(squatCount.toString())
+
+            // 이번 회차의 점수를 가져와서 리스트에 담습니다.
+            val mockScore = (80..100).random().toFloat()
+            scoreList.add(mockScore)
+
+            Log.d(TAG, "회차: $squatCount, 점수: $mockScore 추가됨")
         }
     }
 

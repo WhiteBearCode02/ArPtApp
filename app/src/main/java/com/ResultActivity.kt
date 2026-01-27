@@ -7,6 +7,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.data.AppDatabase
 import com.example.arptapp.data.ExerciseRecord
 import com.example.arptapp.databinding.ActivityResultBinding
+import com.example.arptapp.presentation.report.ReportActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -93,7 +94,22 @@ class ResultActivity : AppCompatActivity() {
         val intent = Intent(this, HomeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
-        startActivity(intent)
+
+        // 1. 대시보드에서 보낸 데이터 받기
+        val totalCount = intent.getIntExtra("TOTAL_COUNT", 0)
+        val scores = intent.getFloatArrayExtra("SCORES")
+        val avgScore = intent.getFloatExtra("AVG_SCORE", 0f)
+
+// 2. 리포트 보기 버튼 클릭 시 데이터 전달
+        binding.btnViewReport.setOnClickListener {
+            val intent = Intent(this, ReportActivity::class.java).apply {
+                putExtra("EXERCISE_TYPE", "스쿼트")
+                putExtra("TOTAL_COUNT", totalCount)
+                putExtra("AVG_SCORE", avgScore)
+                putExtra("SCORES", scores) // 여기서 보낸 "SCORES" 키값이 ReportActivity와 일치해야 합니다!
+            }
+            startActivity(intent)
+        }
         finish()
     }
 }

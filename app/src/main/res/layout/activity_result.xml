@@ -72,4 +72,16 @@
         app:cornerRadius="12dp"
         android:layout_marginBottom="16dp"/>
 
+    <!-- 상세 리포트 보기 버튼 -->
+    <Button
+        android:id="@+id/btnViewReport"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:text="상세 리포트 보기"
+        android:backgroundTint="#4CAF50"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
 </LinearLayout>
