@@ -68,6 +68,11 @@ xmlns:tools="http://schemas.android.com/tools">
         android:name=".presentation.report.ReportActivity"
         android:exported="false"
         android:screenOrientation="portrait" />
+    <!-- 프로필 수정 Activity (신규) -->
+    <activity
+        android:name=".ProfileActivity"
+        android:exported="false"
+        android:theme="@style/Theme.ArPtApp" />
 
     <!-- 알림 수신기 -->
     <receiver
