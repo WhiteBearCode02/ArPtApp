@@ -13,11 +13,20 @@ import androidx.room.RoomDatabase
  * - 데이터베이스 인스턴스를 생성하고, 정의한 DAO(ExerciseDao)를 외부에 제공합니다.
  * - @Database: 이 클래스가 데이터베이스임을 선언하고, 포함될 엔티티와 버전을 명시합니다.
  */
-@Database(entities = [ExerciseRecord::class], version = 1, exportSchema = false)
+@Database(
+    entities = [
+        ExerciseRecord::class,
+        UserEntity::class,
+        HealthProfile::class // 반드시 ::class (코틀린 문법) 사용
+    ],
+    version = 2, // 기존 1에서 2로 상향
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
     // [DAO 연결] 외부에서 이 함수를 통해 운동 기록 데이터에 접근할 수 있게 합니다.
     abstract fun exerciseDao(): ExerciseDao
+    abstract fun userDao(): UserDao
 
     /**
      * [싱글톤 패턴 구현 부분]

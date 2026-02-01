@@ -97,6 +97,41 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <EditText
+                android:id="@+id/etJoinEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="이메일"
+                android:inputType="textEmailAddress" />
+
+            <EditText
+                android:id="@+id/etJoinWeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="몸무게 (kg)"
+                android:inputType="numberDecimal" />
+
+            <EditText
+                android:id="@+id/etJoinMuscle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="골격근량 (kg)"
+                android:inputType="numberDecimal" />
+
+            <EditText
+                android:id="@+id/etJoinFatMass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="체지방량 (kg)"
+                android:inputType="numberDecimal" />
+
+            <EditText
+                android:id="@+id/etJoinFatPercent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="체지방률 (%)"
+                android:inputType="numberDecimal" />
+
             <!-- 비밀번호 입력 라벨 -->
             <TextView
                 android:layout_width="wrap_content"
