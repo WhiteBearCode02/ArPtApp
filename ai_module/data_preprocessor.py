@@ -3,43 +3,48 @@ import mediapipe as mp
 import pandas as pd
 import os
 
-# 1. MediaPipe 설정 (우리 앱과 동일한 관절 추출 엔진)
+# MediaPipe Pose 초기화
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5)
 
-def extract_landmarks(video_path):
-    cap = cv2.VideoCapture(video_path)
-    data = []
+def process_videos():
+    base_path = "./data"
+    exercise_types = ['SQUAT', 'LUNGE', 'READY']
+    all_rows = []
 
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success: break
+    for label in exercise_types:
+        folder_path = os.path.join(base_path, label)
+        if not os.path.exists(folder_path): continue
 
-        # AI 추론을 위해 이미지 색상 변환 (BGR -> RGB)
-        results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        for video_name in os.listdir(folder_path):
+            if not video_name.endswith(('.mp4', '.avi')): continue
+            
+            video_path = os.path.join(folder_path, video_name)
+            cap = cv2.VideoCapture(video_path)
+            print(f"[{label}] 분석 중: {video_name}")
 
-        if results.pose_landmarks:
-            # 33개 관절의 x, y, z, visibility 데이터를 추출합니다.
-            landmarks = []
-            for lm in results.pose_landmarks.landmark:
-                landmarks.extend([lm.x, lm.y, lm.z, lm.visibility])
-            data.append(landmarks)
+            while cap.isOpened():
+                success, frame = cap.read()
+                if not success: break
 
-    cap.release()
-    return data
+                # RGB 변환 및 포즈 추출
+                results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-# [메인 실행] data 폴더 안의 영상들을 읽어 CSV로 저장합니다.
+                if results.pose_landmarks:
+                    # 33개 관절의 x, y, z, visibility 추출 (총 132개 숫자)
+                    landmarks = []
+                    for lm in results.pose_landmarks.landmark:
+                        landmarks.extend([lm.x, lm.y, lm.z, lm.visibility])
+                    
+                    # 데이터 한 줄에 [라벨, 좌표들...] 형태로 저장
+                    all_rows.append([label] + landmarks)
+
+            cap.release()
+
+    # 데이터프레임 생성 및 CSV 저장
+    df = pd.DataFrame(all_rows)
+    df.to_csv("raw_data.csv", index=False)
+    print(f"--- 전처리 완료! 총 {len(all_rows)}프레임의 데이터가 raw_data.csv에 저장되었습니다. ---")
+
 if __name__ == "__main__":
-    # 영상이 들어있는 경로 설정
-    video_folder = "./data/SQUAT" 
-    all_features = []
-
-    for file_name in os.listdir(video_folder):
-        if file_name.endswith((".mp4", ".avi")):
-            print(f"분석 중: {file_name}")
-            path = os.path.join(video_folder, file_name)
-            landmarks_sequence = extract_landmarks(path)
-            all_features.append(landmarks_sequence)
-
-    # 추출된 데이터를 나중에 학습하기 좋게 저장합니다.
-    print("전처리 완료! 이제 이 데이터를 AI 모델 학습에 사용합니다.")
+    process_videos()
