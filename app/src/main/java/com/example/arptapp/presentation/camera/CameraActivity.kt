@@ -31,14 +31,13 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.atan2
 import com.google.mediapipe.tasks.core.OutputHandler
 import com.google.mediapipe.tasks.core.ErrorListener
+import kotlin.math.*
 
 /**
  * 실시간 AI 기반 운동 자세 분석 및 교정 액티비티
- *
- * [방법1] 프레임을 정규화(0도)하여 MediaPipe에 전달
+ * 개선 내용: 측면 인식률 향상을 위한 3D 좌표 및 가시성(Visibility) 필터링 적용
  */
 class CameraActivity : AppCompatActivity(),
     OutputHandler.ResultListener<PoseLandmarkerResult, MPImage>,
@@ -46,7 +45,11 @@ class CameraActivity : AppCompatActivity(),
 
     private lateinit var binding: ActivityCameraBinding
 
-    // === 카메라 하드웨어 리소스 ===
+    private lateinit var exerciseClassifier: ExerciseClassifier // 안내 데스크 직원
+    private var currentAnalyzer: BaseExerciseAnalyzer? = null // 현재 일하고 있는 트레이너
+    private var currentExerciseName = "READY" // 현재 감지된 운동 이름
+
+    // === 카메라 및 실행 환경 리소스 ===
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var imageAnalyzer: ImageAnalysis? = null
@@ -65,7 +68,7 @@ class CameraActivity : AppCompatActivity(),
     private var currentScore = 0f
     private val scoreHistory = mutableListOf<Float>()
 
-    // === 운동 카운팅 상태 머신 ===
+    // === 운동 카운팅 상태 머신 (FSM) ===
     private var squatCount = 0
     private var targetCount = 10
     private var currentState = ExerciseState.STANDING
@@ -73,7 +76,7 @@ class CameraActivity : AppCompatActivity(),
     // === 표준 자세 데이터 (벤치마크) ===
     private var standardPoseData: List<FloatArray> = listOf()
 
-    // === 카메라 권한 요청 결과 처리 (Activity Result API) ===
+    // === 권한 요청 처리 ===
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -94,9 +97,10 @@ class CameraActivity : AppCompatActivity(),
         checkCameraPermission()
         setupButtons()
         loadStandardPoseData()
+
+        exerciseClassifier = ExerciseClassifier() // 분류기 객체 생성
     }
 
-    // === UI 버튼 이벤트 바인딩 ===
     private fun setupButtons() {
         binding.btnClose?.setOnClickListener { finish() }
         binding.btnSwitchCamera?.setOnClickListener {
@@ -110,7 +114,6 @@ class CameraActivity : AppCompatActivity(),
         binding.btnStop?.setOnClickListener { showResultDialog() }
     }
 
-    // === 카메라 권한 확인 및 요청 ===
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             setupCamera()
@@ -119,7 +122,6 @@ class CameraActivity : AppCompatActivity(),
         }
     }
 
-    // === MediaPipe Pose Landmarker 초기화 ===
     private fun setupPoseLandmarker() {
         val baseOptions = BaseOptions.builder().setModelAssetPath("pose_landmarker_lite.task").build()
         val options = PoseLandmarker.PoseLandmarkerOptions.builder()
@@ -131,7 +133,6 @@ class CameraActivity : AppCompatActivity(),
         poseLandmarker = PoseLandmarker.createFromOptions(this, options)
     }
 
-    // === CameraX 초기화 및 라이프사이클 바인딩 ===
     private fun setupCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -144,7 +145,6 @@ class CameraActivity : AppCompatActivity(),
         }, ContextCompat.getMainExecutor(this))
     }
 
-    // === 카메라 UseCase 바인딩 ===
     private fun bindCameraUseCases() {
         val cameraProvider = cameraProvider ?: return
         val cameraSelector = if (isFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -167,7 +167,6 @@ class CameraActivity : AppCompatActivity(),
         }
     }
 
-    // === 프레임별 포즈 감지 로직 ===
     private fun detectPose(imageProxy: ImageProxy) {
         val frameTime = SystemClock.uptimeMillis()
         try {
@@ -175,17 +174,11 @@ class CameraActivity : AppCompatActivity(),
             imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
 
             val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-
-            Log.d("ARPT_METHOD1", "원본 프레임 회전 각도: ${rotationDegrees}도")
-
-            // [방법1 핵심] 비트맵을 회전하여 정규화
             val rotatedBitmap = if (rotationDegrees != 0) {
                 rotateMatrix(bitmapBuffer, rotationDegrees)
             } else {
                 bitmapBuffer
             }
-
-            Log.d("ARPT_METHOD1", "정규화 후 비트맵 크기: ${rotatedBitmap.width}x${rotatedBitmap.height}")
 
             val mpImage = BitmapImageBuilder(rotatedBitmap).build()
             poseLandmarker.detectAsync(mpImage, frameTime)
@@ -194,70 +187,74 @@ class CameraActivity : AppCompatActivity(),
         }
     }
 
-    /**
-     * 비트맵 회전 함수
-     *
-     * @param bitmap 원본 비트맵
-     * @param degrees 회전 각도 (270 또는 90)
-     * @return 회전된 비트맵
-     */
     private fun rotateMatrix(bitmap: Bitmap, degrees: Int): Bitmap {
         if (degrees == 0) return bitmap
-
         val matrix = Matrix().apply {
             postRotate(degrees.toFloat(), bitmap.width / 2f, bitmap.height / 2f)
         }
-
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-        )
-
-        if (rotatedBitmap != bitmap) {
-            bitmap.recycle()
-        }
-
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotatedBitmap != bitmap) bitmap.recycle()
         return rotatedBitmap
     }
 
-    // === MediaPipe 추론 결과 콜백 (비동기 호출) ===
-    override fun run(result: PoseLandmarkerResult, input: MPImage) {
-        runOnUiThread {
-            val allLandmarks = result.landmarks()
-            if (!allLandmarks.isNullOrEmpty()) {
-                val landmarks = allLandmarks[0]
+// === MediaPipe 추론 결과 콜백 (지능형 동적 스위칭 버전) ===
+override fun run(result: PoseLandmarkerResult, input: MPImage) {
+    runOnUiThread {
+        val allLandmarks = result.landmarks()
+        if (!allLandmarks.isNullOrEmpty()) {
+            val landmarks = allLandmarks[0]
 
-                val normalizedPose = coordinateNormalizer.normalize(result, isMirrored = isFrontCamera)
-                if (isRecording && normalizedPose != null) userPoseSequence.add(normalizedPose)
+            // 1. [좌표 정규화] 기존 로직 유지
+            val normalizedPose = coordinateNormalizer.normalize(result, isMirrored = isFrontCamera)
+            if (isRecording && normalizedPose != null) userPoseSequence.add(normalizedPose)
 
-                val kneeAngle = calculateAngle(
-                    landmarks[23].x(), landmarks[23].y(),
-                    landmarks[25].x(), landmarks[25].y(),
-                    landmarks[27].x(), landmarks[27].y()
-                )
+            // 2. [운동 종목 분류] AI가 현재 무슨 운동을 하는지 스스로 판단합니다.
+            // (주의: 이전에 만든 ExerciseClassifier.kt의 함수를 호출합니다.)
+            val detectedExercise = exerciseClassifier.classify(landmarks)
 
-                handleSquatLogic(kneeAngle)
+            // 3. [동적 분석기 스위칭] 운동 종목이 바뀌었다면 분석기를 즉시 교체합니다.
+            if (detectedExercise != "ANALYZING..." && detectedExercise != currentExerciseName) {
+                currentExerciseName = detectedExercise
+                
+                // 매니저(Factory)에게 현재 운동에 맞는 트레이너(Analyzer)를 요청합니다.
+                currentAnalyzer = AnalyzerFactory.getAnalyzer(detectedExercise)
 
-                // [방법1] 프레임이 이미 정규화되었으므로
-                // input.width, input.height는 회전 후의 최종 크기
-                binding.overlay?.setResults(
-                    landmarks,
-                    input.width,
-                    input.height,
-                    isFrontCamera
-                )
+                // UI에 현재 어떤 운동을 AI가 감지했는지 실시간으로 보여줍니다.
+                binding.tvExerciseType?.text = "감지된 운동: $currentExerciseName"
+            }
 
-                provideFeedback(kneeAngle)
+            // 4. [분석 및 카운팅] 현재 배정된 분석기(스쿼트, 런지 등)가 자세를 분석합니다.
+            // 이제 개별적인 각도 계산 수식은 각 Analyzer 내부로 숨겨집니다(캡슐화).
+            val count = currentAnalyzer?.analyze(landmarks) ?: 0
+            
+            // 5. [피드백 및 결과 출력]
+            updateCountUI(count) // 횟수 업데이트
+            binding.overlay?.setResults(landmarks, input.width, input.height, isFrontCamera)
+            
+            // 자세가 올바른지 체크하여 피드백 제공
+            if (currentAnalyzer?.isProperForm() == false) {
+                provideFeedback("자세를 조금 더 신경 써주세요!")
             }
         }
     }
+}
 
-    // === 스쿼트 상태 머신 (Finite State Machine) ===
-    private fun handleSquatLogic(angle: Float) {
+    // === 스쿼트 상태 머신 (Adaptive Thresholds 적용) ===
+    private fun handleSquatLogic(angle: Float, landmarks: List<NormalizedLandmark>) {
+        // [추론 로직] 양쪽 어깨의 x축 거리가 좁으면 측면(Side View)으로 판단
+        val shoulderWidth = abs(landmarks[11].x() - landmarks[12].x())
+        val isSideView = shoulderWidth < 0.16f 
+
+        // 측면 인식률을 위해 앉는 각도 기준(Down)을 정면보다 소폭 완화
+        val downThreshold = if (isSideView) 105f else 100f
+
         when (currentState) {
-            ExerciseState.STANDING -> if (angle < 100) { currentState = ExerciseState.GOING_DOWN; isRecording = true }
-            ExerciseState.GOING_DOWN -> if (angle < 70) currentState = ExerciseState.DOWN
-            ExerciseState.DOWN -> if (angle > 100) currentState = ExerciseState.GOING_UP
-            ExerciseState.GOING_UP -> if (angle > 160) {
+            ExerciseState.STANDING -> if (angle < downThreshold) { 
+                currentState = ExerciseState.GOING_DOWN; isRecording = true 
+            }
+            ExerciseState.GOING_DOWN -> if (angle < 75f) currentState = ExerciseState.DOWN
+            ExerciseState.DOWN -> if (angle > downThreshold) currentState = ExerciseState.GOING_UP
+            ExerciseState.GOING_UP -> if (angle > 160f) {
                 currentState = ExerciseState.STANDING; squatCount++; updateCountUI()
                 if (userPoseSequence.size >= 10) calculateSimilarityScore()
                 if (squatCount >= targetCount) showResultDialog()
@@ -266,19 +263,24 @@ class CameraActivity : AppCompatActivity(),
         }
     }
 
-    // === MediaPipe 런타임 에러 핸들러 ===
-    override fun onError(error: RuntimeException) { Log.e("AI_ENGINE", "오류: ${error.message}") }
+    /**
+     * 기능 설명: 3차원 공간상의 벡터 내적(Dot Product)을 통해 원근 왜곡 없는 관절 각도를 산출합니다.
+     */
+    private fun calculate3DAngle(p1: NormalizedLandmark, p2: NormalizedLandmark, p3: NormalizedLandmark): Double {
+        // 무릎(p2)을 원점으로 하는 상퇴(v1) 및 하퇴(v2) 벡터 생성
+        val v1x = p1.x() - p2.x(); val v1y = p1.y() - p2.y(); val v1z = p1.z() - p2.z()
+        val v2x = p3.x() - p2.x(); val v2y = p3.y() - p2.y(); val v2z = p3.z() - p2.z()
 
-    // === 3점 기반 관절 각도 계산 ===
-    private fun calculateAngle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float): Float {
-        val radians = atan2(y3 - y2, x3 - x2) - atan2(y1 - y2, x1 - x2)
-        var angle = Math.toDegrees(radians.toDouble()).toFloat()
-        if (angle < 0) angle += 360f
-        if (angle > 180) angle = 360f - angle
-        return angle
+        // 코사인 유사도 공식: cos(θ) = (A·B) / (|A||B|)
+        val dotProduct = v1x * v2x + v1y * v2y + v1z * v2z
+        val mag1 = sqrt(v1x * v1x + v1y * v1y + v1z * v1z)
+        val mag2 = sqrt(v2x * v2x + v2y * v2y + v2z * v2z)
+
+        val cosTheta = dotProduct / (mag1 * mag2)
+        // 수치 안정성을 위해 -1~1 사이로 고정 후 acos 연산
+        return Math.toDegrees(acos(cosTheta.coerceIn(-1.0f, 1.0f).toDouble()))
     }
 
-    // === DTW 알고리즘 기반 자세 유사도 점수 계산 ===
     private fun calculateSimilarityScore() {
         if (standardPoseData.isEmpty() || userPoseSequence.isEmpty()) return
         val userSequence = userPoseSequence.map { it.angles.values.toFloatArray() }
@@ -290,9 +292,10 @@ class CameraActivity : AppCompatActivity(),
         userPoseSequence.clear()
     }
 
-    // === 실시간 자세 피드백 제공 ===
     private fun provideFeedback(kneeAngle: Float) {
-        val feedback = if (kneeAngle < 50) "조금만 덜 앉으세요" else if (kneeAngle in 50f..90f && currentState == ExerciseState.DOWN) "완벽한 깊이입니다!" else null
+        val feedback = if (kneeAngle < 50) "조금만 덜 앉으세요" 
+                       else if (kneeAngle in 50f..95f && currentState == ExerciseState.DOWN) "완벽한 깊이입니다!" 
+                       else null
         feedback?.let {
             binding.tvFeedback?.text = it
             binding.tvFeedback?.visibility = View.VISIBLE
@@ -300,10 +303,8 @@ class CameraActivity : AppCompatActivity(),
         }
     }
 
-    // === 카운트 UI 업데이트 ===
     private fun updateCountUI() { binding.tvCount?.text = getString(R.string.count_format, squatCount, targetCount) }
 
-    // === 운동 결과 리포트 화면 표시 ===
     private fun showResultDialog() {
         val intent = Intent(this, ReportActivity::class.java).apply {
             putExtra("TOTAL_COUNT", squatCount)
@@ -313,16 +314,15 @@ class CameraActivity : AppCompatActivity(),
         finish()
     }
 
-    // === 표준 자세 데이터 로드 ===
-    private fun loadStandardPoseData() { standardPoseData = List(15) { index -> floatArrayOf(180f - (index * 10f), 180f - (index * 10f), 180f - (index * 8f), 180f - (index * 8f)) } }
+    private fun loadStandardPoseData() { 
+        standardPoseData = List(15) { index -> floatArrayOf(180f - (index * 10f), 180f - (index * 10f), 180f - (index * 8f), 180f - (index * 8f)) } 
+    }
 
-    // === 액티비티 종료 시 리소스 정리 ===
+    override fun onError(error: RuntimeException) { Log.e("AI_ENGINE", "오류: ${error.message}") }
+
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
         if (::poseLandmarker.isInitialized) poseLandmarker.close()
     }
 }
-
-// === 운동 상태 열거형 ===
-enum class ExerciseState { STANDING, GOING_DOWN, DOWN, GOING_UP }
