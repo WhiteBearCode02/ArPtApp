@@ -41,8 +41,14 @@ def process_videos():
 
             cap.release()
 
+    # 헤더 생성
+    landmark_names = [landmark.name for landmark in mp_pose.PoseLandmark]
+    header = ['label']
+    for landmark_name in landmark_names:
+        header.extend([f'{landmark_name}_x', f'{landmark_name}_y', f'{landmark_name}_z', f'{landmark_name}_visibility'])
+
     # 데이터프레임 생성 및 CSV 저장
-    df = pd.DataFrame(all_rows)
+    df = pd.DataFrame(all_rows, columns=header)
     df.to_csv("raw_data.csv", index=False)
     print(f"--- 전처리 완료! 총 {len(all_rows)}프레임의 데이터가 raw_data.csv에 저장되었습니다. ---")
 
