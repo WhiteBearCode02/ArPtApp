@@ -20,7 +20,11 @@ import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
+import com.example.arptapp.domain.analyzer.DTWCalculator
+import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.analyzer.SquatAnalyzer
+import com.example.arptapp.data.model.toAngleSequence
+import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
@@ -58,6 +62,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     // 매 회차별 점수를 저장할 리스트
     private val scoreList = mutableListOf<Float>()
+    private val currentRepAngles = mutableListOf<FloatArray>()
+    private val dtwCalculator = DTWCalculator()
+    private lateinit var standardSquatSequence: List<FloatArray>
 
     // 운동 카운팅 상태
     private var squatCount = 0
@@ -90,6 +97,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         tts = TextToSpeech(this, this)
         cameraExecutor = Executors.newSingleThreadExecutor()
+        standardSquatSequence = ExerciseRepository(this)
+            .loadStandardPose("SQUAT")
+            ?.toAngleSequence()
+            .orEmpty()
         setupPoseLandmarker()
         checkCameraPermission()
         setupButtons()
@@ -135,6 +146,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         isExercising = true
         startTime = System.currentTimeMillis()
         squatCount = 0
+        scoreList.clear()
+        currentRepAngles.clear()
 
         exerciseAnalyzer.reset()
         binding.tvCount.text = "0"
@@ -266,6 +279,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
      * 운동 동작 분석 (스쿼트 카운팅)
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>) {
+        PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
+
         // 1. 전문가(Analyzer)에게 분석을 시키고 최신 카운트 숫자를 받아옵니다.
         val currentCount = exerciseAnalyzer.analyze(landmarks)
 
@@ -275,12 +290,24 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             binding.tvCount.text = squatCount.toString()
             speakOut(squatCount.toString())
 
-            // 이번 회차의 점수를 가져와서 리스트에 담습니다.
-            val mockScore = (80..100).random().toFloat()
-            scoreList.add(mockScore)
-
-            Log.d(TAG, "회차: $squatCount, 점수: $mockScore 추가됨")
+            scoreCurrentRep()
         }
+    }
+
+    private fun scoreCurrentRep() {
+        if (standardSquatSequence.isEmpty() || currentRepAngles.isEmpty()) {
+            currentRepAngles.clear()
+            return
+        }
+
+        val score = dtwCalculator.calculateAverageScore(
+            userSequence = currentRepAngles,
+            standardSequence = standardSquatSequence,
+            weights = dtwCalculator.getExerciseWeights("SQUAT")
+        )
+        scoreList.add(score)
+        currentRepAngles.clear()
+        Log.d(TAG, "회차: $squatCount, 자세 점수: $score")
     }
 
     /**

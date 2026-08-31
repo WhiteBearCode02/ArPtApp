@@ -13,24 +13,9 @@ import kotlin.math.pow
 class DTWCalculator {
     
     companion object {
-        // 운동별 가중치 맵
+        // The feature order must match PoseAngleExtractor and the standard-pose assets.
         private val EXERCISE_WEIGHTS = mapOf(
-            "SQUAT" to mapOf(
-                "hip_angle" to 1.5f,      // 엉덩이 각도 (중요)
-                "knee_angle" to 2.0f,     // 무릎 각도 (가장 중요)
-                "ankle_angle" to 1.0f,    // 발목 각도
-                "back_angle" to 1.5f      // 등 각도 (자세)
-            ),
-            "PUSHUP" to mapOf(
-                "elbow_angle" to 2.0f,
-                "shoulder_angle" to 1.5f,
-                "back_angle" to 1.5f
-            ),
-            "PLANK" to mapOf(
-                "back_angle" to 2.0f,
-                "hip_angle" to 1.5f,
-                "shoulder_angle" to 1.0f
-            )
+            "SQUAT" to floatArrayOf(2.0f, 2.0f, 1.5f, 1.5f)
         )
         
         // DTW 거리의 최대값 (정규화용)
@@ -44,11 +29,8 @@ class DTWCalculator {
     /**
      * 운동 종류에 따른 가중치 반환
      */
-    fun getExerciseWeights(exerciseType: String): Map<String, Float> {
-        return EXERCISE_WEIGHTS[exerciseType.uppercase()] ?: mapOf(
-            "default" to 1.0f
-        )
-    }
+    fun getExerciseWeights(exerciseType: String): FloatArray =
+        EXERCISE_WEIGHTS[exerciseType.uppercase()]?.copyOf() ?: floatArrayOf(1.0f)
     
     /**
      * DTW 거리 계산 (메인 함수)
@@ -61,7 +43,7 @@ class DTWCalculator {
     fun calculateDTWDistance(
         userSequence: List<FloatArray>,
         standardSequence: List<FloatArray>,
-        weights: Map<String, Float>
+        weights: FloatArray
     ): Float {
         if (userSequence.isEmpty() || standardSequence.isEmpty()) {
             return MAX_DTW_DISTANCE
@@ -101,7 +83,7 @@ class DTWCalculator {
     private fun calculateFrameDistance(
         frame1: FloatArray,
         frame2: FloatArray,
-        weights: Map<String, Float>
+        weights: FloatArray
     ): Float {
         if (frame1.size != frame2.size) {
             return Float.MAX_VALUE
@@ -111,7 +93,7 @@ class DTWCalculator {
         var totalWeight = 0f
         
         frame1.indices.forEach { i ->
-            val weight = weights.values.elementAtOrNull(i) ?: 1.0f
+            val weight = weights.getOrElse(i) { 1.0f }
             val diff = frame1[i] - frame2[i]
             totalDistance += weight * diff * diff
             totalWeight += weight
@@ -166,7 +148,7 @@ class DTWCalculator {
     fun calculateFrameScore(
         userAngles: FloatArray,
         standardAngles: FloatArray,
-        weights: Map<String, Float>
+        weights: FloatArray
     ): Float {
         val distance = calculateFrameDistance(userAngles, standardAngles, weights)
         
@@ -183,7 +165,7 @@ class DTWCalculator {
     fun calculateAverageScore(
         userSequence: List<FloatArray>,
         standardSequence: List<FloatArray>,
-        weights: Map<String, Float>
+        weights: FloatArray
     ): Float {
         if (userSequence.isEmpty() || standardSequence.isEmpty()) {
             return 0f
