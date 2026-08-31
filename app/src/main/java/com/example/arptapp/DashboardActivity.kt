@@ -20,9 +20,11 @@ import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
+import com.example.arptapp.domain.analyzer.AnalyzerFactory
 import com.example.arptapp.domain.analyzer.DTWCalculator
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
-import com.example.arptapp.domain.analyzer.SquatAnalyzer
+import com.example.arptapp.domain.classifier.ExerciseClassifier
+import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.data.model.toAngleSequence
 import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
@@ -67,11 +69,12 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var standardSquatSequence: List<FloatArray>
 
     // 운동 카운팅 상태
-    private var squatCount = 0
+    private var repetitionCount = 0
     private var startTime: Long = 0
     private var isExercising = false
-    // BaseExerciseAnalyzer 규격을 따르는 SquatAnalyzer를 기본값으로 세팅합니다.
-    private var exerciseAnalyzer: BaseExerciseAnalyzer = SquatAnalyzer()
+    private val exerciseClassifier = ExerciseClassifier()
+    private var currentExerciseType = ExerciseType.UNKNOWN
+    private var exerciseAnalyzer: BaseExerciseAnalyzer? = null
 
     // 카메라 관련
     private var camera: Camera? = null
@@ -145,11 +148,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun startExercise() {
         isExercising = true
         startTime = System.currentTimeMillis()
-        squatCount = 0
+        repetitionCount = 0
         scoreList.clear()
         currentRepAngles.clear()
 
-        exerciseAnalyzer.reset()
+        exerciseClassifier.reset()
+        currentExerciseType = ExerciseType.UNKNOWN
+        exerciseAnalyzer = null
         binding.tvCount.text = "0"
 
         binding.tvDashboardTitle.text = "운동 중"
@@ -165,8 +170,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // 1. 목적지를 ResultActivity로 변경합니다.
         val intent = Intent(this, ResultActivity::class.java).apply {
-            putExtra("TOTAL_COUNT", squatCount)
+            putExtra("TOTAL_COUNT", repetitionCount)
             putExtra("EXERCISE_TIME", elapsedTime)
+            putExtra("EXERCISE_TYPE", currentExerciseType.displayName)
 
             // 2. 모아둔 점수 리스트를 배열로 변환해서 넘깁니다. (리포트 그래프용)
             putExtra("SCORES", scoreList.toFloatArray())
@@ -279,19 +285,33 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
      * 운동 동작 분석 (스쿼트 카운팅)
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>) {
-        PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
-
-        // 1. 전문가(Analyzer)에게 분석을 시키고 최신 카운트 숫자를 받아옵니다.
-        val currentCount = exerciseAnalyzer.analyze(landmarks)
-
-        // 2. 숫자가 올라갔다면 (운동 1번 성공), 화면을 갱신하고 목소리로 알려줍니다.
-        if (currentCount > squatCount) {
-            squatCount = currentCount
-            binding.tvCount.text = squatCount.toString()
-            speakOut(squatCount.toString())
-
-            scoreCurrentRep()
+        updateDetectedExercise(landmarks)
+        if (currentExerciseType == ExerciseType.SQUAT) {
+            PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
         }
+
+        val currentCount = exerciseAnalyzer?.analyze(landmarks) ?: return
+
+        if (currentCount > repetitionCount) {
+            repetitionCount = currentCount
+            binding.tvCount.text = repetitionCount.toString()
+            speakOut(repetitionCount.toString())
+
+            if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep()
+        }
+    }
+
+    private fun updateDetectedExercise(landmarks: List<NormalizedLandmark>) {
+        val detectedType = exerciseClassifier.detectExercise(landmarks)
+        if (detectedType == ExerciseType.UNKNOWN || detectedType == currentExerciseType) return
+
+        currentExerciseType = detectedType
+        exerciseAnalyzer = AnalyzerFactory.getAnalyzer(detectedType)
+        repetitionCount = 0
+        currentRepAngles.clear()
+        binding.tvCount.text = "0"
+        binding.tvDashboardTitle.text = "${detectedType.displayName} 운동 중"
+        speakOut("${detectedType.displayName}를 감지했습니다")
     }
 
     private fun scoreCurrentRep() {
@@ -307,7 +327,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         )
         scoreList.add(score)
         currentRepAngles.clear()
-        Log.d(TAG, "회차: $squatCount, 자세 점수: $score")
+        Log.d(TAG, "회차: $repetitionCount, 자세 점수: $score")
     }
 
     /**

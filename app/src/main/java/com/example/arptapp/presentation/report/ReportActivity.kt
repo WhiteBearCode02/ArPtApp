@@ -47,6 +47,14 @@ class ReportActivity : AppCompatActivity() {
     ) {
         binding.tvExerciseType.text = exerciseType
         binding.tvTotalCount.text = "총 $totalCount 회"
+
+        if (scores.isEmpty()) {
+            binding.tvAvgScore.text = "자세 점수: 준비 중"
+            binding.tvAvgScore.setTextColor(Color.parseColor("#B0B0B0"))
+            binding.tvFeedback.text = "${exerciseType} 자세 평가는 다음 단계에서 지원합니다."
+            return
+        }
+
         binding.tvAvgScore.text = "평균 정확도: ${avgScore.toInt()}%"
         
         // 평균 점수에 따른 색상 변경

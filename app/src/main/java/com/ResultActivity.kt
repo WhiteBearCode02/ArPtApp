@@ -30,6 +30,7 @@ class ResultActivity : AppCompatActivity() {
         val exerciseTimeInSeconds = intent.getLongExtra("EXERCISE_TIME", 0L)
         val scores = intent.getFloatArrayExtra("SCORES")
         val avgScore = intent.getFloatExtra("AVG_SCORE", 0f)
+        val exerciseType = intent.getStringExtra("EXERCISE_TYPE") ?: "스쿼트"
 
         // 2. 창업자님의 원본 데이터 가공 로직 (유지)
         val formattedTime = formatElapsedTime(exerciseTimeInSeconds)
@@ -43,7 +44,7 @@ class ResultActivity : AppCompatActivity() {
         // returnToHome() 내부에 있던 것을 onCreate로 꺼내어 즉시 클릭 가능하게 했습니다.
         binding.btnViewReport.setOnClickListener {
             val reportIntent = Intent(this, ReportActivity::class.java).apply {
-                putExtra("EXERCISE_TYPE", "스쿼트")
+                putExtra("EXERCISE_TYPE", exerciseType)
                 putExtra("TOTAL_COUNT", finalCount)
                 putExtra("AVG_SCORE", avgScore)
                 putExtra("SCORES", scores)

@@ -1,16 +1,49 @@
 package com.example.arptapp.domain.classifier
 
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 
-class ExerciseClassifier {
-    /**
-     * 자동 분류 모델이 연결되기 전까지는 운동을 확정하지 않습니다.
-     *
-     * 이 메서드는 추후 시계열 분류 모델의 단일 진입점으로 사용합니다.
-     * 모델과 특징 추출기가 없는 상태에서 임의의 종목을 반환하면 잘못된
-     * Analyzer가 실행될 수 있으므로, 명시적으로 UNKNOWN을 반환합니다.
-     */
-    fun detectExercise(landmarks: List<NormalizedLandmark>): String {
-        return "UNKNOWN"
+/**
+ * A conservative landmark-based fallback classifier.
+ *
+ * A model-backed implementation can replace this class later without changing the
+ * dashboard or Analyzer API. Until then, a type must be observed in consecutive
+ * frames before it can select a repetition counter.
+ */
+class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
+    private var candidate = ExerciseType.UNKNOWN
+    private var candidateFrameCount = 0
+    private var stableExercise = ExerciseType.UNKNOWN
+
+    fun detectExercise(landmarks: List<NormalizedLandmark>): ExerciseType {
+        val angles = PoseAngleExtractor.extractSquatAngles(landmarks) ?: return stableExercise
+        return classifyAngles(angles[0], angles[1])
+    }
+
+    internal fun classifyAngles(leftKneeAngle: Float, rightKneeAngle: Float): ExerciseType {
+        val frameExercise = when {
+            leftKneeAngle <= 115f && rightKneeAngle >= 145f -> ExerciseType.LUNGE
+            rightKneeAngle <= 115f && leftKneeAngle >= 145f -> ExerciseType.LUNGE
+            leftKneeAngle <= 130f && rightKneeAngle <= 130f -> ExerciseType.SQUAT
+            else -> ExerciseType.UNKNOWN
+        }
+
+        if (frameExercise == ExerciseType.UNKNOWN) return stableExercise
+
+        if (frameExercise == candidate) {
+            candidateFrameCount++
+        } else {
+            candidate = frameExercise
+            candidateFrameCount = 1
+        }
+
+        if (candidateFrameCount >= requiredStableFrames) stableExercise = candidate
+        return stableExercise
+    }
+
+    fun reset() {
+        candidate = ExerciseType.UNKNOWN
+        candidateFrameCount = 0
+        stableExercise = ExerciseType.UNKNOWN
     }
 }
