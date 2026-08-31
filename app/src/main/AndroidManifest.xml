@@ -56,13 +56,6 @@ xmlns:tools="http://schemas.android.com/tools">
         android:name=".HistoryActivity"
         android:exported="false" />
 
-    <!-- 카메라 Activity (운동 촬영) -->
-    <activity
-        android:name=".presentation.camera.CameraActivity"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        android:exported="false"
-        android:screenOrientation="portrait" />
-
     <!-- 운동 결과 리포트 Activity (신규) -->
     <activity
         android:name=".presentation.report.ReportActivity"

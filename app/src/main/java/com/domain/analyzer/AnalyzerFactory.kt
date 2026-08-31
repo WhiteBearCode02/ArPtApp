@@ -7,7 +7,6 @@ object AnalyzerFactory {
     fun getAnalyzer(exerciseType: String): BaseExerciseAnalyzer {
         return when (exerciseType) {
             "SQUAT" -> SquatAnalyzer() // 스쿼트 트레이너 호출
-            "LUNGE" -> LungeAnalyzer() // 런지 트레이너 호출
             else -> object : BaseExerciseAnalyzer { // 대기 중일 때의 기본 동작
                 override fun analyze(landmarks: List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>) = 0
                 override fun reset() {}
