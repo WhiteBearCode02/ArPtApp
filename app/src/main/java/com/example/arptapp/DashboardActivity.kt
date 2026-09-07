@@ -28,8 +28,11 @@ import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
 import com.example.arptapp.domain.analyzer.AnalyzerFactory
 import com.example.arptapp.domain.analyzer.DTWCalculator
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
+import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.classifier.ExerciseType
+import com.example.arptapp.data.model.Landmark
+import com.example.arptapp.data.model.PoseData
 import com.example.arptapp.data.model.toAngleSequence
 import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
@@ -67,6 +70,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var cameraExecutor: ExecutorService
     private val mainViewModel: MainViewModel by viewModels()
+    private val poseAngleExtractor = PoseAngleExtractor
+    private val exerciseCounter = ExerciseCounter()
     private var poseLandmarker: PoseLandmarker? = null
     private lateinit var yoloClassifier: Yolo26Classifier
     private var tts: TextToSpeech? = null
@@ -170,6 +175,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         lastAccelerationX = null
 
         exerciseClassifier.reset()
+        exerciseCounter.resetSession()
         currentExerciseType = ExerciseType.UNKNOWN
         exerciseAnalyzer = null
         binding.tvCount.text = "0"
@@ -310,29 +316,40 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             else -> Unit
         }
 
-        val currentCount = exerciseAnalyzer?.analyze(landmarks) ?: return
+        val exerciseType = currentExerciseType.name
+        val poseData = landmarks.toPoseData()
+        val currentAngle = poseAngleExtractor.analyzePose(exerciseType, poseData)
+        if (currentAngle <= 0.0 || !currentAngle.isFinite()) return
 
-        if (currentCount > repetitionCount) {
-            repetitionCount = currentCount
+        if (exerciseCounter.processAngle(exerciseType, currentAngle)) {
+            repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
             speakOut(repetitionCount.toString())
 
-            val maxBendAngle = currentRepAngles
-                .flatMap { angles -> angles.take(2).asIterable() }
-                .minOrNull()
-            if (maxBendAngle != null) {
-                mainViewModel.addRepRecord(
-                    repNumber = repetitionCount,
-                    angle = maxBendAngle.toDouble(),
-                    sway = currentMaxSwayX
-                )
-            }
+            mainViewModel.addRepRecord(
+                repNumber = repetitionCount,
+                angle = exerciseCounter.getCurrentMaxAngle(),
+                sway = currentMaxSwayX
+            )
             currentMaxSwayX = 0f
 
             if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep()
             else currentRepAngles.clear()
         }
     }
+
+    private fun List<NormalizedLandmark>.toPoseData(): PoseData = PoseData(
+        timestamp = System.currentTimeMillis(),
+        landmarks = map { landmark ->
+            Landmark(
+                x = landmark.x(),
+                y = landmark.y(),
+                z = landmark.z(),
+                visibility = landmark.visibility().orElse(0f)
+            )
+        },
+        angles = emptyMap()
+    )
 
     private fun updateDetectedExercise(landmarks: List<NormalizedLandmark>) {
         val detectedType = exerciseClassifier.detectExercise(landmarks)
