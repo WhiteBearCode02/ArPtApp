@@ -47,6 +47,10 @@ android {
         viewBinding = true
     }
 
+    androidResources {
+        noCompress += "tflite"
+    }
+
     packaging{
         jniLibs{
             // 라이브러리 추출 설정과 충돌 방지를 위해 추가
@@ -82,6 +86,10 @@ dependencies {
 
     // --- MediaPipe Tasks: AI 비전 기능 (Pose Landmarker 등) ---
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
+
+    // --- TensorFlow Lite: YOLO 포즈 모델 추론 엔진 ---
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 
     // --- Room Database: 로컬 SQLite 데이터베이스 라이브러리 ---
     val roomVersion = "2.6.1"
