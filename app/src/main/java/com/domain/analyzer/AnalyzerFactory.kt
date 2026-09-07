@@ -8,7 +8,9 @@ import com.example.arptapp.domain.classifier.ExerciseType
 object AnalyzerFactory {
     fun getAnalyzer(exerciseType: ExerciseType): BaseExerciseAnalyzer? {
         return when (exerciseType) {
+            ExerciseType.IDLE -> null
             ExerciseType.SQUAT -> SquatAnalyzer()
+            ExerciseType.SHOULDER_PRESS -> ShoulderPressAnalyzer()
             ExerciseType.LUNGE -> LungeAnalyzer()
             ExerciseType.UNKNOWN -> null
         }

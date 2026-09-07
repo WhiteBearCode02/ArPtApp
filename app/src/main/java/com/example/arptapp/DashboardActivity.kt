@@ -5,6 +5,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -12,6 +16,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -28,6 +33,8 @@ import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.data.model.toAngleSequence
 import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
+import com.example.arptapp.utils.Yolo26Classifier
+import com.example.arptapp.viewmodel.MainViewModel
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -43,7 +50,7 @@ import kotlin.jvm.java
  * - MediaPipe Pose Landmarker 실시간 추론
  * - [방법1] 프레임 회전 정규화: 270도/90도 프레임을 0도로 변환하여 MediaPipe에 전달
  */
-class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
+class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, SensorEventListener {
 
     companion object {
         private const val TAG = "DashboardActivity"
@@ -59,8 +66,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var cameraExecutor: ExecutorService
+    private val mainViewModel: MainViewModel by viewModels()
     private var poseLandmarker: PoseLandmarker? = null
+    private lateinit var yoloClassifier: Yolo26Classifier
     private var tts: TextToSpeech? = null
+    private lateinit var sensorManager: SensorManager
+    private var lastAccelerationX: Float? = null
+    private var currentMaxSwayX = 0f
 
     // 매 회차별 점수를 저장할 리스트
     private val scoreList = mutableListOf<Float>()
@@ -100,6 +112,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         tts = TextToSpeech(this, this)
         cameraExecutor = Executors.newSingleThreadExecutor()
+        yoloClassifier = Yolo26Classifier(this)
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         standardSquatSequence = ExerciseRepository(this)
             .loadStandardPose("SQUAT")
             ?.toAngleSequence()
@@ -147,10 +161,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun startExercise() {
         isExercising = true
+        mainViewModel.resetSession()
         startTime = System.currentTimeMillis()
         repetitionCount = 0
         scoreList.clear()
         currentRepAngles.clear()
+        currentMaxSwayX = 0f
+        lastAccelerationX = null
 
         exerciseClassifier.reset()
         currentExerciseType = ExerciseType.UNKNOWN
@@ -166,6 +183,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun endExercise() {
         isExercising = false
+        val report = mainViewModel.generateFinalReport(currentExerciseType.name)
         val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
 
         // 1. 목적지를 ResultActivity로 변경합니다.
@@ -179,7 +197,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
             // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
             val avgScore = if (scoreList.isNotEmpty()) scoreList.average().toFloat() else 0f
-            putExtra("AVG_SCORE", avgScore)
+            putExtra("AVG_SCORE", report.averageScore)
         }
         startActivity(intent)
         finish()
@@ -285,9 +303,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
      * 운동 동작 분석 (스쿼트 카운팅)
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>) {
-        updateDetectedExercise(landmarks)
-        if (currentExerciseType == ExerciseType.SQUAT) {
-            PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
+        when (currentExerciseType) {
+            ExerciseType.SQUAT -> PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
+            ExerciseType.SHOULDER_PRESS -> PoseAngleExtractor.extractShoulderPressAngles(landmarks)
+                ?.let(currentRepAngles::add)
+            else -> Unit
         }
 
         val currentCount = exerciseAnalyzer?.analyze(landmarks) ?: return
@@ -297,7 +317,16 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             binding.tvCount.text = repetitionCount.toString()
             speakOut(repetitionCount.toString())
 
+            val maxBendAngle = currentRepAngles
+                .flatMap { angles -> angles.take(2).asIterable() }
+                .minOrNull()
+            if (maxBendAngle != null) {
+                mainViewModel.addRepRecord(maxBendAngle, currentMaxSwayX)
+            }
+            currentMaxSwayX = 0f
+
             if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep()
+            else currentRepAngles.clear()
         }
     }
 
@@ -430,9 +459,31 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // 정규화된 비트맵으로 MPImage 생성
         val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(rotatedBitmap).build()
 
+        val detectedType = yoloClassifier.classify(rotatedBitmap)
+        mainViewModel.updateExerciseType(detectedType)
+        val nextExerciseType = when (detectedType) {
+            "SQUAT" -> ExerciseType.SQUAT
+            "SHOULDER_PRESS" -> ExerciseType.SHOULDER_PRESS
+            else -> ExerciseType.IDLE
+        }
+        if (nextExerciseType != currentExerciseType) {
+            currentExerciseType = nextExerciseType
+            exerciseAnalyzer = AnalyzerFactory.getAnalyzer(nextExerciseType)
+            repetitionCount = 0
+            currentRepAngles.clear()
+            if (nextExerciseType != ExerciseType.IDLE) {
+                runOnUiThread {
+                    binding.tvCount.text = "0"
+                    binding.tvDashboardTitle.text = "${nextExerciseType.displayName} 운동 중"
+                }
+            }
+        }
+
         // MediaPipe에 전달 (회전 정보 없음 - 이미 0도)
-        val frameTime = System.currentTimeMillis()
-        poseLandmarker?.detectAsync(mpImage, frameTime)
+        if (detectedType != "IDLE") {
+            val frameTime = System.currentTimeMillis()
+            poseLandmarker?.detectAsync(mpImage, frameTime)
+        }
 
         imageProxy.close()
     }
@@ -471,5 +522,27 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tts?.shutdown()
         cameraExecutor.shutdown()
         poseLandmarker?.close()
+        yoloClassifier.close()
     }
+
+    override fun onResume() {
+        super.onResume()
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+    }
+
+    override fun onPause() {
+        sensorManager.unregisterListener(this)
+        super.onPause()
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        if (!isExercising || event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
+        val currentX = event.values[0]
+        lastAccelerationX?.let { currentMaxSwayX = maxOf(currentMaxSwayX, kotlin.math.abs(currentX - it)) }
+        lastAccelerationX = currentX
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 }

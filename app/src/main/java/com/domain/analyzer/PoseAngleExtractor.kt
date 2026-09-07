@@ -23,6 +23,17 @@ object PoseAngleExtractor {
         return floatArrayOf(leftKnee, rightKnee, leftHip, rightHip)
     }
 
+    fun extractShoulderPressAngles(landmarks: List<NormalizedLandmark>): FloatArray? {
+        if (landmarks.size < 17) return null
+
+        val requiredIndices = intArrayOf(11, 12, 13, 14, 15, 16)
+        if (requiredIndices.any { landmarks[it].visibility().orElse(0f) < MIN_VISIBILITY }) return null
+
+        val leftElbow = calculate3DAngle(landmarks[11], landmarks[13], landmarks[15]) ?: return null
+        val rightElbow = calculate3DAngle(landmarks[12], landmarks[14], landmarks[16]) ?: return null
+        return floatArrayOf(leftElbow, rightElbow)
+    }
+
     private fun calculate3DAngle(
         first: NormalizedLandmark,
         middle: NormalizedLandmark,
