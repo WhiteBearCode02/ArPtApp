@@ -17,11 +17,15 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        val localPropertiesFile = rootProject.file("local.properties")
         val localProperties = java.util.Properties().apply {
-            rootProject.file("local.properties").inputStream().use(::load)
+            if (localPropertiesFile.exists()) {
+                localPropertiesFile.inputStream().use(::load)
+            }
         }
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("supabase.url", "")}\"")
         buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("supabase.key", "")}\"")
+        buildConfigField("String", "ADMIN_EMAIL", "\"${localProperties.getProperty("admin.email", "")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -118,6 +122,7 @@ dependencies {
 
     // --- Supabase Kotlin client ---
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.4")
+    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.4")
     implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Unit & UI Testing: 코드 안정성 검토를 위한 테스트 도구

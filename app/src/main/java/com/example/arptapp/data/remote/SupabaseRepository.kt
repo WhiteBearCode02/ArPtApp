@@ -21,12 +21,15 @@ class SupabaseRepository {
 
     suspend fun uploadSession(report: SessionReport, records: List<RepRecord>): Result<Unit> {
         val supabase = client ?: return Result.failure(IllegalStateException("Supabase 설정이 없습니다."))
+        val userId = AuthSessionStore.current?.userId
+            ?: return Result.failure(IllegalStateException("인증된 사용자가 없습니다."))
         val sessionId = UUID.randomUUID().toString()
 
         return runCatching {
             supabase.from("exercise_sessions").insert(
                 SessionRow(
                     id = sessionId,
+                    userId = userId,
                     exerciseType = report.exerciseType,
                     totalReps = report.totalReps,
                     averageScore = report.averageScore,
@@ -51,6 +54,8 @@ class SupabaseRepository {
     @Serializable
     private data class SessionRow(
         val id: String,
+        @SerialName("user_id")
+        val userId: String,
         @SerialName("exercise_type")
         val exerciseType: String,
         @SerialName("total_reps")
