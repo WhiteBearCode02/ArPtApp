@@ -30,6 +30,8 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun getRepRecords(): List<RepRecord> = records.toList()
+
     fun generateFinalReport(exerciseType: String): SessionReport {
         val normalizedType = exerciseType.uppercase()
         if (records.isEmpty()) {

@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
     // KSP (Kotlin Symbol Processing): Room DB 어노테이션 처리를 위한 최신 엔진
     id("com.google.devtools.ksp") version "1.9.25-1.0.20"
 }
@@ -15,6 +16,12 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        val localProperties = java.util.Properties().apply {
+            rootProject.file("local.properties").inputStream().use(::load)
+        }
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("supabase.url", "")}\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("supabase.key", "")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -45,6 +52,7 @@ android {
     buildFeatures {
         // ViewBinding: XML 레이아웃의 ID를 안전하게 참조하기 위한 기능
         viewBinding = true
+        buildConfig = true
     }
 
     androidResources {
@@ -107,6 +115,10 @@ dependencies {
     // --- Coroutines: 비동기 처리 및 백그라운드 작업 ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+    // --- Supabase Kotlin client ---
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.4")
+    implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Unit & UI Testing: 코드 안정성 검토를 위한 테스트 도구
     testImplementation("junit:junit:4.13.2")

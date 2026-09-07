@@ -14,22 +14,22 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
-import com.example.arptapp.domain.analyzer.BaseExerciseAnalyzer
-import com.example.arptapp.domain.analyzer.AnalyzerFactory
+import com.example.arptapp.data.remote.SupabaseRepository
 import com.example.arptapp.domain.analyzer.DTWCalculator
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.counter.ExerciseCounter
-import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.data.model.Landmark
 import com.example.arptapp.data.model.PoseData
@@ -38,10 +38,12 @@ import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
 import com.example.arptapp.utils.Yolo26Classifier
 import com.example.arptapp.viewmodel.MainViewModel
+import com.example.arptapp.ui.feedback.FeedbackManager
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 import kotlin.jvm.java
 
 /**
@@ -70,11 +72,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var cameraExecutor: ExecutorService
     private val mainViewModel: MainViewModel by viewModels()
+    private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
     private val exerciseCounter = ExerciseCounter()
     private var poseLandmarker: PoseLandmarker? = null
     private lateinit var yoloClassifier: Yolo26Classifier
     private var tts: TextToSpeech? = null
+    private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
     private var lastAccelerationX: Float? = null
     private var currentMaxSwayX = 0f
@@ -89,9 +93,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var repetitionCount = 0
     private var startTime: Long = 0
     private var isExercising = false
-    private val exerciseClassifier = ExerciseClassifier()
     private var currentExerciseType = ExerciseType.UNKNOWN
-    private var exerciseAnalyzer: BaseExerciseAnalyzer? = null
 
     // 카메라 관련
     private var camera: Camera? = null
@@ -116,6 +118,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         setContentView(binding.root)
 
         tts = TextToSpeech(this, this)
+        feedbackManager = FeedbackManager(this)
         cameraExecutor = Executors.newSingleThreadExecutor()
         yoloClassifier = Yolo26Classifier(this)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -174,10 +177,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         currentMaxSwayX = 0f
         lastAccelerationX = null
 
-        exerciseClassifier.reset()
         exerciseCounter.resetSession()
         currentExerciseType = ExerciseType.UNKNOWN
-        exerciseAnalyzer = null
         binding.tvCount.text = "0"
 
         binding.tvDashboardTitle.text = "운동 중"
@@ -192,9 +193,34 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val report = mainViewModel.generateFinalReport(currentExerciseType.name)
         val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
 
+        lifecycleScope.launch {
+            supabaseRepository.uploadSession(report, mainViewModel.getRepRecords())
+                .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패", it) }
+        }
+
+        showSessionReport(report) {
+            openResultActivity(report, elapsedTime)
+        }
+    }
+
+    private fun showSessionReport(report: com.example.arptapp.model.SessionReport, onConfirmed: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle("운동 리포트")
+            .setMessage(
+                "운동: ${report.exerciseType}\n" +
+                    "총 반복: ${report.totalReps}회\n" +
+                    "평균 점수: ${report.averageScore}점\n\n" +
+                    report.feedbackMessage
+            )
+            .setPositiveButton("확인") { _, _ -> onConfirmed() }
+            .show()
+    }
+
+    private fun openResultActivity(report: com.example.arptapp.model.SessionReport, elapsedTime: Long) {
+
         // 1. 목적지를 ResultActivity로 변경합니다.
         val intent = Intent(this, ResultActivity::class.java).apply {
-            putExtra("TOTAL_COUNT", repetitionCount)
+            putExtra("TOTAL_COUNT", report.totalReps)
             putExtra("EXERCISE_TIME", elapsedTime)
             putExtra("EXERCISE_TYPE", currentExerciseType.displayName)
 
@@ -202,7 +228,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             putExtra("SCORES", scoreList.toFloatArray())
 
             // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
-            val avgScore = if (scoreList.isNotEmpty()) scoreList.average().toFloat() else 0f
             putExtra("AVG_SCORE", report.averageScore.toFloat())
         }
         startActivity(intent)
@@ -324,7 +349,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         if (exerciseCounter.processAngle(exerciseType, currentAngle)) {
             repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
-            speakOut(repetitionCount.toString())
+            feedbackManager.announceRep(repetitionCount)
 
             mainViewModel.addRepRecord(
                 repNumber = repetitionCount,
@@ -350,19 +375,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         },
         angles = emptyMap()
     )
-
-    private fun updateDetectedExercise(landmarks: List<NormalizedLandmark>) {
-        val detectedType = exerciseClassifier.detectExercise(landmarks)
-        if (detectedType == ExerciseType.UNKNOWN || detectedType == currentExerciseType) return
-
-        currentExerciseType = detectedType
-        exerciseAnalyzer = AnalyzerFactory.getAnalyzer(detectedType)
-        repetitionCount = 0
-        currentRepAngles.clear()
-        binding.tvCount.text = "0"
-        binding.tvDashboardTitle.text = "${detectedType.displayName} 운동 중"
-        speakOut("${detectedType.displayName}를 감지했습니다")
-    }
 
     private fun scoreCurrentRep() {
         if (standardSquatSequence.isEmpty() || currentRepAngles.isEmpty()) {
@@ -489,7 +501,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         }
         if (nextExerciseType != currentExerciseType) {
             currentExerciseType = nextExerciseType
-            exerciseAnalyzer = AnalyzerFactory.getAnalyzer(nextExerciseType)
             repetitionCount = 0
             currentRepAngles.clear()
             if (nextExerciseType != ExerciseType.IDLE) {
@@ -544,6 +555,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         cameraExecutor.shutdown()
         poseLandmarker?.close()
         yoloClassifier.close()
+        feedbackManager.release()
     }
 
     override fun onResume() {
