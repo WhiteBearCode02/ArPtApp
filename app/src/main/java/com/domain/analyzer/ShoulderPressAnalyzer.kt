@@ -1,5 +1,6 @@
 package com.example.arptapp.domain.analyzer
 
+import com.example.arptapp.data.model.StandardPose
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
 class ShoulderPressAnalyzer : BaseExerciseAnalyzer {
@@ -34,7 +35,7 @@ class ShoulderPressAnalyzer : BaseExerciseAnalyzer {
     override fun isProperForm(): Boolean = lastFormStatus
 
     private companion object {
-        const val DOWN_ANGLE = 100.0
-        const val UP_ANGLE = 155.0
+        const val DOWN_ANGLE = StandardPose.SHOULDER_BOTTOM_THRESHOLD
+        const val UP_ANGLE = StandardPose.SHOULDER_TOP_THRESHOLD
     }
 }

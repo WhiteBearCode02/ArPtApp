@@ -197,7 +197,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
             // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
             val avgScore = if (scoreList.isNotEmpty()) scoreList.average().toFloat() else 0f
-            putExtra("AVG_SCORE", report.averageScore)
+            putExtra("AVG_SCORE", report.averageScore.toFloat())
         }
         startActivity(intent)
         finish()
@@ -321,7 +321,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 .flatMap { angles -> angles.take(2).asIterable() }
                 .minOrNull()
             if (maxBendAngle != null) {
-                mainViewModel.addRepRecord(maxBendAngle, currentMaxSwayX)
+                mainViewModel.addRepRecord(
+                    repNumber = repetitionCount,
+                    angle = maxBendAngle.toDouble(),
+                    sway = currentMaxSwayX
+                )
             }
             currentMaxSwayX = 0f
 

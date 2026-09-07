@@ -1,5 +1,7 @@
 package com.example.arptapp.domain.analyzer
 
+import com.example.arptapp.data.model.StandardPose
+
 /**
  * Frames from a single squat repetition are converted into a stable count.
  * A count is emitted only after the user remains in both the bottom and
@@ -8,8 +10,8 @@ package com.example.arptapp.domain.analyzer
 internal class SquatRepCounter(
     private val requiredStableFrames: Int = 3,
     private val minimumRepDurationMs: Long = 600L,
-    private val downKneeAngle: Double = 105.0,
-    private val upKneeAngle: Double = 160.0,
+    private val downKneeAngle: Double = StandardPose.SQUAT_DOWN_THRESHOLD,
+    private val upKneeAngle: Double = StandardPose.SQUAT_UP_THRESHOLD,
     private val downDescentRatio: Double = 1.0,
     private val upDescentRatio: Double = 1.2
 ) {

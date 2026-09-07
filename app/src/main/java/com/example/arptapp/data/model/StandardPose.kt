@@ -13,7 +13,14 @@ data class StandardPose(
     val keyAngles: Map<String, AngleRange>, // 허용 각도 범위
     val duration: Long,              // 표준 동작 시간 (ms)
     val description: String          // 운동 설명
-)
+) {
+    companion object {
+        const val SQUAT_DOWN_THRESHOLD = 90.0
+        const val SQUAT_UP_THRESHOLD = 160.0
+        const val SHOULDER_BOTTOM_THRESHOLD = 70.0
+        const val SHOULDER_TOP_THRESHOLD = 160.0
+    }
+}
 
 fun StandardPose.toAngleSequence(): List<FloatArray> = sequence.map { it.toFloatArray() }
 

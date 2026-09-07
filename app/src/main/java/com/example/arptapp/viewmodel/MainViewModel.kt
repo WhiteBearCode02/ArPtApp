@@ -24,44 +24,42 @@ class MainViewModel : ViewModel() {
         _exerciseType.value = "IDLE"
     }
 
-    fun addRepRecord(maxBendAngle: Float, swayX: Float) {
-        if (maxBendAngle.isFinite() && swayX.isFinite()) {
-            records += RepRecord(maxBendAngle, abs(swayX))
+    fun addRepRecord(repNumber: Int, angle: Double, sway: Float) {
+        if (angle.isFinite() && sway.isFinite()) {
+            records += RepRecord(repNumber, angle, abs(sway))
         }
     }
 
     fun generateFinalReport(exerciseType: String): SessionReport {
         val normalizedType = exerciseType.uppercase()
-        val scoreList = records.map { scoreRep(it, normalizedType) }
-        val averageScore = scoreList.average().takeIf { it.isFinite() }?.toFloat() ?: 0f
+        if (records.isEmpty()) {
+            return SessionReport(normalizedType, 0, 0, "유효한 운동 데이터가 부족합니다.")
+        }
+
+        val averageScore = records.map { scoreRep(it, normalizedType) }.average().toInt()
         return SessionReport(
             exerciseType = normalizedType,
             totalReps = records.size,
             averageScore = averageScore,
-            feedback = buildFeedback(normalizedType, averageScore)
+            feedbackMessage = buildFeedback(normalizedType, averageScore)
         )
     }
 
-    private fun scoreRep(record: RepRecord, exerciseType: String): Float {
-        val (targetAngle, tolerance) = when (exerciseType) {
-            "SHOULDER_PRESS" -> 90f to 25f
-            else -> 90f to 20f
+    private fun scoreRep(record: RepRecord, exerciseType: String): Int {
+        val baseScore = if (exerciseType == "SQUAT") {
+            if (record.maxAngle <= 90.0) 100 else 70
+        } else {
+            if (record.maxAngle >= 160.0) 100 else 75
         }
-        val angleScore = (100f - abs(record.maxBendAngle - targetAngle) / tolerance * 100f)
-            .coerceIn(0f, 100f)
-        val swayPenalty = (record.swayX / 3f * 25f).coerceIn(0f, 25f)
-        return (angleScore - swayPenalty).coerceIn(0f, 100f)
+        val stabilityPenalty = (record.swayX * 5f).toInt()
+        return (baseScore - stabilityPenalty).coerceIn(0, 100)
     }
 
-    private fun buildFeedback(exerciseType: String, averageScore: Float): String {
-        if (records.isEmpty()) return "반복 기록이 없습니다. 카메라 앞에서 운동을 시작해 주세요."
-        val averageSway = records.map { it.swayX }.average().toFloat()
-        val target = if (exerciseType == "SHOULDER_PRESS") "팔꿈치" else "무릎"
+    private fun buildFeedback(exerciseType: String, averageScore: Int): String {
         return when {
-            averageSway > 2f -> "상체가 많이 흔들렸습니다. 코어를 고정하고 천천히 움직여 주세요."
-            averageScore < 70f -> "$target 굽힘 각도를 기준 범위에 맞추고 동작을 천천히 반복해 주세요."
-            averageScore < 90f -> "좋습니다. $target 각도와 몸의 중심을 조금 더 안정적으로 유지해 보세요."
-            else -> "훌륭합니다. $target 각도와 중심이 안정적입니다."
+            averageScore >= 90 -> "전문가 수준의 완벽한 자세입니다!"
+            averageScore >= 75 -> "안정적이지만 하강 시 미세한 흔들림이 있습니다."
+            else -> "코어에 긴장을 유지하고 가동 범위를 일정하게 가져가세요."
         }
     }
 }

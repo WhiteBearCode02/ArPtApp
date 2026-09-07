@@ -1,13 +1,36 @@
 package com.example.arptapp.domain.analyzer
 
+import com.example.arptapp.data.model.PoseData
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import kotlin.math.acos
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /** Extracts angle vectors in the same order as the standard-pose asset. */
 object PoseAngleExtractor {
     private const val MIN_VISIBILITY = 0.65f
     private const val MIN_VECTOR_MAGNITUDE = 0.0001f
+
+    fun analyzePose(exerciseType: String, poseData: PoseData): Double {
+        val landmarks = poseData.landmarks
+        val points = when (exerciseType.uppercase()) {
+            "SQUAT" -> intArrayOf(23, 25, 27)
+            "SHOULDER_PRESS" -> intArrayOf(11, 13, 15)
+            else -> return 0.0
+        }
+
+        if (points.any { index ->
+                index >= landmarks.size || landmarks[index].visibility < MIN_VISIBILITY
+            }) {
+            return 0.0
+        }
+
+        return calculateAngle(
+            landmarks[points[0]],
+            landmarks[points[1]],
+            landmarks[points[2]]
+        )
+    }
 
     fun extractSquatAngles(landmarks: List<NormalizedLandmark>): FloatArray? {
         if (landmarks.size < 29) return null
@@ -48,5 +71,23 @@ object PoseAngleExtractor {
         val dotProduct = firstVector.indices.sumOf { (firstVector[it] * lastVector[it]).toDouble() }.toFloat()
         val cosine = dotProduct / (firstMagnitude * lastMagnitude)
         return Math.toDegrees(acos(cosine.coerceIn(-1f, 1f).toDouble())).toFloat()
+    }
+
+    private fun calculateAngle(
+        first: com.example.arptapp.data.model.Landmark,
+        middle: com.example.arptapp.data.model.Landmark,
+        last: com.example.arptapp.data.model.Landmark
+    ): Double {
+        val firstAngle = atan2(
+            (first.y - middle.y).toDouble(),
+            (first.x - middle.x).toDouble()
+        )
+        val lastAngle = atan2(
+            (last.y - middle.y).toDouble(),
+            (last.x - middle.x).toDouble()
+        )
+        val radians = lastAngle - firstAngle
+        val angle = Math.abs(Math.toDegrees(radians))
+        return if (angle > 180.0) 360.0 - angle else angle
     }
 }
