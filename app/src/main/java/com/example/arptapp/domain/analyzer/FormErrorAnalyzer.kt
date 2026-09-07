@@ -3,7 +3,6 @@ package com.example.arptapp.domain.analyzer
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.toDegrees
 
 object FormErrorAnalyzer {
     const val ERROR_KNEE_VALGUS = "ERROR_KNEE_VALGUS"

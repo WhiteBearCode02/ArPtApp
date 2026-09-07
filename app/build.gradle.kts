@@ -1,17 +1,15 @@
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("org.jetbrains.kotlin.kapt")
-    // KSP (Kotlin Symbol Processing): Room DB 어노테이션 처리를 위한 최신 엔진
-    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
+    id("com.android.application") version "8.13.2"
+    id("org.jetbrains.kotlin.android") version "2.1.0"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0"
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
 }
 
 android {
     namespace = "com.example.arptapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.arptapp"
@@ -111,7 +109,7 @@ dependencies {
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     // --- Gson: JSON 데이터 직렬화 및 파싱 ---
     implementation("com.google.code.gson:gson:2.10.1")
@@ -124,8 +122,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     // --- Supabase Kotlin client ---
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.4")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.4")
+    val supabaseVersion = "3.0.0"
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:auth-kt:$supabaseVersion")
     implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Unit & UI Testing: 코드 안정성 검토를 위한 테스트 도구

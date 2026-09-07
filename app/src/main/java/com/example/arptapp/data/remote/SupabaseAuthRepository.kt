@@ -2,11 +2,12 @@ package com.example.arptapp.data.remote
 
 import android.content.Intent
 import com.example.arptapp.BuildConfig
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.handleDeeplinks
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.GoTrue
-import io.github.jan.supabase.gotrue.gotrue
-import io.github.jan.supabase.gotrue.providers.Google
-import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +25,7 @@ object AuthSessionStore {
 
 class SupabaseAuthRepository {
     private val client = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-        install(GoTrue)
+        install(Auth)
         install(Postgrest)
     }
 
@@ -32,7 +33,7 @@ class SupabaseAuthRepository {
     val session: StateFlow<AppSession?> = _session.asStateFlow()
 
     suspend fun signUp(email: String, password: String): Result<AppSession?> = runCatching {
-        client.gotrue.signUpWith(Email) {
+        client.auth.signUpWith(Email) {
             this.email = email
             this.password = password
         }
@@ -40,7 +41,7 @@ class SupabaseAuthRepository {
     }
 
     suspend fun signIn(email: String, password: String): Result<AppSession> = runCatching {
-        client.gotrue.signInWith(Email) {
+        client.auth.signInWith(Email) {
             this.email = email
             this.password = password
         }
@@ -48,24 +49,22 @@ class SupabaseAuthRepository {
     }
 
     suspend fun startGoogleSignIn(): Result<Unit> = runCatching {
-        client.gotrue.signInWith(Google) {
-            redirectTo = REDIRECT_URI
-        }
+        client.auth.signInWith(Google, REDIRECT_URI)
     }
 
     suspend fun handleAuthCallback(intent: Intent): Result<AppSession?> = runCatching {
-        client.gotrue.handleDeeplinks(intent)
+        client.handleDeeplinks(intent)
         refreshSession()
     }
 
     suspend fun signOut() {
-        client.gotrue.signOut()
+        client.auth.signOut()
         AuthSessionStore.current = null
         _session.value = null
     }
 
     private suspend fun refreshSession(): AppSession? {
-        val user = client.gotrue.currentUserOrNull() ?: run {
+        val user = client.auth.currentUserOrNull() ?: run {
             AuthSessionStore.current = null
             return null
         }
