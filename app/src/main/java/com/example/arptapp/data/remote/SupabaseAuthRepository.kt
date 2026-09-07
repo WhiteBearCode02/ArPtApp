@@ -15,11 +15,11 @@ data class AppSession(
     val userId: String,
     val email: String,
     val isAdmin: Boolean
+)
 
 object AuthSessionStore {
     var current: AppSession? = null
 }
-)
 
 class SupabaseAuthRepository {
     private val client = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
@@ -59,12 +59,13 @@ class SupabaseAuthRepository {
 
     suspend fun signOut() {
         client.auth.signOut()
+        AuthSessionStore.current = null
         _session.value = null
     }
 
     private suspend fun refreshSession(): AppSession? {
         val user = client.auth.currentUserOrNull() ?: run {
-        AuthSessionStore.current = null
+            AuthSessionStore.current = null
             return null
         }
         val email = user.email.orEmpty()
@@ -73,12 +74,12 @@ class SupabaseAuthRepository {
             email = email,
             isAdmin = email.equals(BuildConfig.ADMIN_EMAIL, ignoreCase = true)
         )
+        AuthSessionStore.current = appSession
         _session.value = appSession
         return appSession
     }
 
     private companion object {
         const val REDIRECT_URI = "arptapp://auth/callback"
-        AuthSessionStore.current = appSession
     }
 }
