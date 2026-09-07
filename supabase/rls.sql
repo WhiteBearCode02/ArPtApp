@@ -13,7 +13,7 @@ security definer
 set search_path = public
 as $$
     select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false)
-        or coalesce((auth.jwt() ->> 'email') = current_setting('app.admin_email', true), false);
+        or coalesce((auth.jwt() ->> 'email') = 'admin@gmail.com', false);
 $$;
 
 drop policy if exists "users insert own sessions" on public.exercise_sessions;

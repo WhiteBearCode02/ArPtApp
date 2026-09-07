@@ -49,7 +49,7 @@ object FormErrorAnalyzer {
         val dx = abs(shoulder.x() - hip.x()).toDouble()
         val dy = abs(shoulder.y() - hip.y()).toDouble()
         if (dx == 0.0 && dy == 0.0) return false
-        val angleFromVertical = toDegrees(atan2(dx, dy))
+        val angleFromVertical = Math.toDegrees(atan2(dx, dy))
         return angleFromVertical > FORWARD_LEAN_DEGREES
     }
 }

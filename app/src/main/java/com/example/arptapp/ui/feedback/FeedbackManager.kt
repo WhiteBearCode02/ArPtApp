@@ -22,7 +22,7 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
         vibrate()
         if (isTtsReady) {
             textToSpeech.speak(
-                "$repNumber회 완료!",
+                "${repNumber}회 완료!",
                 TextToSpeech.QUEUE_FLUSH,
                 null,
                 "rep-$repNumber"

@@ -1,7 +1,10 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.kapt")
     // KSP (Kotlin Symbol Processing): Room DB 어노테이션 처리를 위한 최신 엔진
     id("com.google.devtools.ksp") version "1.9.25-1.0.20"
 }
@@ -17,12 +20,12 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
-        val localProperties = java.util.Properties().apply {
-            if (localPropertiesFile.exists()) {
-                localPropertiesFile.inputStream().use(::load)
-            }
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { localProperties.load(it) }
         }
+        
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("supabase.url", "")}\"")
         buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("supabase.key", "")}\"")
         buildConfigField("String", "ADMIN_EMAIL", "\"${localProperties.getProperty("admin.email", "")}\"")
@@ -108,7 +111,7 @@ dependencies {
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
 
     // --- Gson: JSON 데이터 직렬화 및 파싱 ---
     implementation("com.google.code.gson:gson:2.10.1")
@@ -122,7 +125,7 @@ dependencies {
 
     // --- Supabase Kotlin client ---
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.4")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.4")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.4")
     implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Unit & UI Testing: 코드 안정성 검토를 위한 테스트 도구

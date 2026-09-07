@@ -14,17 +14,18 @@ xmlns:tools="http://schemas.android.com/tools">
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
-<application
-    android:allowBackup="true"
-    android:dataExtractionRules="@xml/data_extraction_rules"
-    android:fullBackupContent="@xml/backup_rules"
-    android:icon="@mipmap/ic_launcher"
-    android:label="@string/app_name"
-    android:roundIcon="@mipmap/ic_launcher_round"
-    android:supportsRtl="true"
-    android:theme="@style/Theme.ArPtApp"
-    tools:targetApi="31"
-    android:extractNativeLibs="true"  tools:replace="android:extractNativeLibs">
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ArPtApp"
+        tools:targetApi="31"
+        android:extractNativeLibs="true"
+        tools:replace="android:extractNativeLibs">
     <!--시스템이 라이브러리를 강제로 압축 해제하여 읽도록 설정하는 옵션을 추가-->
 
     <!-- 스플래시 화면 (앱 시작점) -->
