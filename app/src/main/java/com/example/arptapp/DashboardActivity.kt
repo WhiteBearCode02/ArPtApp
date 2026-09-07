@@ -28,6 +28,7 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.data.remote.SupabaseRepository
 import com.example.arptapp.domain.analyzer.DTWCalculator
+import com.example.arptapp.domain.analyzer.FormErrorAnalyzer
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.domain.classifier.ExerciseType
@@ -86,6 +87,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     // 매 회차별 점수를 저장할 리스트
     private val scoreList = mutableListOf<Float>()
     private val currentRepAngles = mutableListOf<FloatArray>()
+    private val currentRepErrorTags = mutableSetOf<String>()
     private val dtwCalculator = DTWCalculator()
     private lateinit var standardSquatSequence: List<FloatArray>
 
@@ -174,6 +176,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         repetitionCount = 0
         scoreList.clear()
         currentRepAngles.clear()
+        currentRepErrorTags.clear()
         currentMaxSwayX = 0f
         lastAccelerationX = null
 
@@ -335,7 +338,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>) {
         when (currentExerciseType) {
-            ExerciseType.SQUAT -> PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
+            ExerciseType.SQUAT -> {
+                PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
+                currentRepErrorTags += FormErrorAnalyzer.analyzeSquat(landmarks)
+            }
             ExerciseType.SHOULDER_PRESS -> PoseAngleExtractor.extractShoulderPressAngles(landmarks)
                 ?.let(currentRepAngles::add)
             else -> Unit
@@ -346,7 +352,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val currentAngle = poseAngleExtractor.analyzePose(exerciseType, poseData)
         if (currentAngle <= 0.0 || !currentAngle.isFinite()) return
 
-        if (exerciseCounter.processAngle(exerciseType, currentAngle)) {
+        if (exerciseCounter.processAngle(exerciseType, currentAngle, System.currentTimeMillis())) {
             repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
             feedbackManager.announceRep(repetitionCount)
@@ -354,9 +360,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             mainViewModel.addRepRecord(
                 repNumber = repetitionCount,
                 angle = exerciseCounter.getCurrentMaxAngle(),
-                sway = currentMaxSwayX
+                sway = currentMaxSwayX,
+                errorTags = currentRepErrorTags.toList(),
+                eccentricDurationMs = exerciseCounter.getLastEccentricDurationMs(),
+                concentricDurationMs = exerciseCounter.getLastConcentricDurationMs()
             )
             currentMaxSwayX = 0f
+            currentRepErrorTags.clear()
 
             if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep()
             else currentRepAngles.clear()
@@ -503,6 +513,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             currentExerciseType = nextExerciseType
             repetitionCount = 0
             currentRepAngles.clear()
+            currentRepErrorTags.clear()
             if (nextExerciseType != ExerciseType.IDLE) {
                 runOnUiThread {
                     binding.tvCount.text = "0"

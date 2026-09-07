@@ -24,9 +24,23 @@ class MainViewModel : ViewModel() {
         _exerciseType.value = "IDLE"
     }
 
-    fun addRepRecord(repNumber: Int, angle: Double, sway: Float) {
+    fun addRepRecord(
+        repNumber: Int,
+        angle: Double,
+        sway: Float,
+        errorTags: List<String> = emptyList(),
+        eccentricDurationMs: Long = 0L,
+        concentricDurationMs: Long = 0L
+    ) {
         if (angle.isFinite() && sway.isFinite()) {
-            records += RepRecord(repNumber, angle, abs(sway))
+            records += RepRecord(
+                repNumber = repNumber,
+                maxAngle = angle,
+                swayX = abs(sway),
+                errorTags = errorTags.distinct(),
+                eccentricDurationMs = eccentricDurationMs.coerceAtLeast(0L),
+                concentricDurationMs = concentricDurationMs.coerceAtLeast(0L)
+            )
         }
     }
 
@@ -54,14 +68,33 @@ class MainViewModel : ViewModel() {
             if (record.maxAngle >= 160.0) 100 else 75
         }
         val stabilityPenalty = (record.swayX * 5f).toInt()
-        return (baseScore - stabilityPenalty).coerceIn(0, 100)
+        val formErrorPenalty = record.errorTags.size * 5
+        return (baseScore - stabilityPenalty - formErrorPenalty).coerceIn(0, 100)
     }
 
     private fun buildFeedback(exerciseType: String, averageScore: Int): String {
-        return when {
+        val errorFeedback = records
+            .flatMap { it.errorTags }
+            .groupingBy { it }
+            .eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(2)
+            .map { (tag, count) -> formatErrorFeedback(tag, count) }
+
+        val scoreFeedback = when {
             averageScore >= 90 -> "전문가 수준의 완벽한 자세입니다!"
             averageScore >= 75 -> "안정적이지만 하강 시 미세한 흔들림이 있습니다."
             else -> "코어에 긴장을 유지하고 가동 범위를 일정하게 가져가세요."
         }
+        return (errorFeedback + scoreFeedback).joinToString("\n")
+    }
+
+    private fun formatErrorFeedback(tag: String, count: Int): String = when (tag) {
+        "ERROR_KNEE_VALGUS" ->
+            "스쿼트 ${count}회에서 무릎이 안쪽으로 모이는 현상이 감지되었습니다. 발끝 방향으로 무릎을 열어주세요."
+        "ERROR_FORWARD_LEAN" ->
+            "스쿼트 ${count}회에서 상체 전방 경사가 감지되었습니다. 가슴을 세우고 코어를 고정해주세요."
+        else -> "$tag 문제가 ${count}회 감지되었습니다. 자세를 천천히 교정해주세요."
     }
 }
