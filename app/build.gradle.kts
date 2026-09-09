@@ -1,5 +1,19 @@
 import java.util.Properties
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().buffered().use(::load)
+    }
+}
+
+fun localPropertyAsBuildConfigString(name: String): String {
+    val value = localProperties.getProperty(name).orEmpty()
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+    return "\"$value\""
+}
+
 plugins {
     id("com.android.application") version "8.13.2"
     id("org.jetbrains.kotlin.android") version "2.1.0"
@@ -18,15 +32,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        val localProperties = Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { localProperties.load(it) }
-        }
-        
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("supabase.url", "")}\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("supabase.key", "")}\"")
-        buildConfigField("String", "ADMIN_EMAIL", "\"${localProperties.getProperty("admin.email", "")}\"")
+        buildConfigField("String", "SUPABASE_URL", localPropertyAsBuildConfigString("supabase.url"))
+        buildConfigField("String", "SUPABASE_KEY", localPropertyAsBuildConfigString("supabase.key"))
+        buildConfigField("String", "ADMIN_EMAIL", localPropertyAsBuildConfigString("admin.email"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
