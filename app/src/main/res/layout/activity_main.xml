@@ -26,10 +26,10 @@
         <!-- 로고 컨테이너 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardLogo"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
             android:layout_marginTop="40dp"
-            app:cardCornerRadius="70dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="8dp"
             app:cardBackgroundColor="@color/color_surface"
             app:layout_constraintTop_toTopOf="parent"
@@ -40,8 +40,8 @@
                 android:id="@+id/ivLogo"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:src="@mipmap/ic_launcher_round"
-                android:padding="20dp"
+                android:src="@drawable/arptapp_logo"
+                android:scaleType="centerCrop"
                 android:contentDescription="앱 로고" />
 
         </androidx.cardview.widget.CardView>

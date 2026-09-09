@@ -44,10 +44,11 @@
 
         <ImageView
             android:id="@+id/ivProfile"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:src="@mipmap/ic_launcher_round"
-            android:contentDescription="프로필 이미지" />
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/arptapp_logo"
+            android:scaleType="centerCrop"
+            android:contentDescription="ArPtApp 로고" />
     </LinearLayout>
 
     <!-- AI PT 시작 카드 -->

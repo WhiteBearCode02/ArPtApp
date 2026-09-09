@@ -24,9 +24,10 @@
 
         <!-- 로고 또는 아이콘 (선택 사항) -->
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@mipmap/ic_launcher_round"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/arptapp_logo"
+            android:scaleType="fitCenter"
             android:layout_marginBottom="24dp"
             android:contentDescription="앱 로고" />
 

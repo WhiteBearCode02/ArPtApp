@@ -13,9 +13,12 @@
 
         <ImageView
             android:id="@+id/ivSplashLogo"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:src="@mipmap/ic_launcher_round" />
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="ArPtApp 로고"
+            android:scaleType="fitCenter"
+            android:src="@drawable/arptapp_logo" />
 
         <TextView
             android:layout_width="wrap_content"
