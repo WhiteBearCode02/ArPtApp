@@ -1,5 +1,19 @@
 # 🏋️‍♂️ ArPtApp: 2-Stage Hybrid AI 실시간 피트니스 코칭 시스템
 
+> 현재 저장소의 `yolo11n-pose_int8.tflite`는 운동 classification 학습이 완료된 모델이 아닙니다. 따라서 앱은 MediaPipe 관절 추적을 독립 실행하며, YOLO 운동 분류 연동은 `READY`, `SQUAT`, `SHOULDER_PRESS`로 학습·검증된 classification 모델이 준비된 뒤 활성화해야 합니다.
+
+## Dataset Pipeline v0.1.0
+
+재현 가능한 학습 데이터 구축을 위해 source metadata, MediaPipe 33-landmark sequence, 정규화 좌표, 관절 feature, repetition 구간, pseudo/human annotation 및 subject-independent split을 지원합니다. 구조와 CLI는 [Dataset Pipeline 문서](docs/DATASET_PIPELINE.md)를 참고하세요.
+
+```bash
+python -m ai_module.pipeline.dataset_builder --video ./data/test_squat.mp4 --exercise SQUAT --source-type LOCAL
+python -m ai_module.pipeline.dataset_validator --dataset-root ai_module/dataset
+python -m unittest discover -s ai_module/tests -v
+```
+
+YouTube는 URL·video ID·timestamp 등 reference metadata만 관리하며 영상 자동 다운로드 기능은 제공하지 않습니다.
+
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
 ![TensorFlow Lite](https://img.shields.io/badge/TensorFlow_Lite-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)

@@ -12,3 +12,11 @@ local.properties
 /captures
 .externalNativeBuild
 .cxx
+
+# Generated ML dataset artifacts (metadata/schema files remain versioned)
+/ai_module/dataset/**/*.npz
+/ai_module/dataset/**/*_features.json
+/ai_module/dataset/classification/ready/*
+/ai_module/dataset/classification/squat/*
+/ai_module/dataset/classification/shoulder_press/*
+!/ai_module/dataset/**/.gitkeep

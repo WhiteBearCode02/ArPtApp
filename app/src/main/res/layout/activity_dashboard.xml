@@ -8,12 +8,17 @@
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:implementationMode="compatible"
+        app:scaleType="fillCenter" />
 
     <com.example.arptapp.OverlayView
         android:id="@+id/overlayView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:elevation="2dp"
+        android:focusable="false" />
 
     <RelativeLayout
         android:layout_width="match_parent"

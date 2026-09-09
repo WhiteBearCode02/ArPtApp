@@ -1,0 +1,8 @@
+{
+  "dataset_name": "ArPt Exercise Form Dataset",
+  "version": "0.1.0",
+  "pose_extractor": {"type": "mediapipe", "landmark_count": 33, "values": ["x", "y", "z", "visibility"]},
+  "exercise_classes": ["READY", "SQUAT", "SHOULDER_PRESS"],
+  "samples": 0,
+  "statistics": {}
+}

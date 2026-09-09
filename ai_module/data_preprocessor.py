@@ -1,56 +1,53 @@
-import cv2
-import mediapipe as mp
-import pandas as pd
-import os
+"""Legacy-compatible frame CSV exporter backed by the reusable PoseExtractor."""
 
-# MediaPipe Pose 초기화
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5)
+from __future__ import annotations
 
-def process_videos():
-    base_path = "./data"
-    exercise_types = ['SQUAT', 'LUNGE', 'READY']
-    all_rows = []
+import argparse
+import csv
+from pathlib import Path
 
-    for label in exercise_types:
-        folder_path = os.path.join(base_path, label)
-        if not os.path.exists(folder_path): continue
+from ai_module.pipeline.pose_extractor import PoseExtractor
+from ai_module.pipeline.schema import Exercise
 
-        for video_name in os.listdir(folder_path):
-            if not video_name.endswith(('.mp4', '.avi')): continue
-            
-            video_path = os.path.join(folder_path, video_name)
-            cap = cv2.VideoCapture(video_path)
-            print(f"[{label}] 분석 중: {video_name}")
 
-            while cap.isOpened():
-                success, frame = cap.read()
-                if not success: break
+def process_videos(base_path: str | Path = "data", output: str | Path = "raw_data.csv") -> int:
+    """Preserve the former folder-to-CSV workflow for classification experiments."""
+    base = Path(base_path)
+    labels = [Exercise.READY, Exercise.SQUAT, Exercise.SHOULDER_PRESS]
+    header = ["label", "source_video", "frame_index", "timestamp_sec"]
+    for index in range(33):
+        header.extend([f"landmark_{index}_{axis}" for axis in ("x", "y", "z", "visibility")])
+    count = 0
+    with Path(output).open("w", newline="", encoding="utf-8") as stream, PoseExtractor() as extractor:
+        writer = csv.writer(stream)
+        writer.writerow(header)
+        for label in labels:
+            folder = base / label.value
+            if not folder.exists():
+                continue
+            for video in sorted(folder.iterdir()):
+                if video.suffix.lower() not in {".mp4", ".avi", ".mov", ".mkv"}:
+                    continue
+                print(f"[{label.value}] processing: {video.name}")
+                for frame in extractor.iter_video(video):
+                    if frame.landmarks is None:
+                        continue
+                    writer.writerow([
+                        label.value, str(video), frame.frame_index, frame.timestamp_sec,
+                        *frame.landmarks.reshape(-1).tolist(),
+                    ])
+                    count += 1
+    print(f"Exported {count} frames to {output}")
+    return count
 
-                # RGB 변환 및 포즈 추출
-                results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-                if results.pose_landmarks:
-                    # 33개 관절의 x, y, z, visibility 추출 (총 132개 숫자)
-                    landmarks = []
-                    for lm in results.pose_landmarks.landmark:
-                        landmarks.extend([lm.x, lm.y, lm.z, lm.visibility])
-                    
-                    # 데이터 한 줄에 [라벨, 좌표들...] 형태로 저장
-                    all_rows.append([label] + landmarks)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Legacy frame-level classification CSV exporter")
+    parser.add_argument("--data", default="data")
+    parser.add_argument("--output", default="raw_data.csv")
+    args = parser.parse_args()
+    process_videos(args.data, args.output)
 
-            cap.release()
-
-    # 헤더 생성
-    landmark_names = [landmark.name for landmark in mp_pose.PoseLandmark]
-    header = ['label']
-    for landmark_name in landmark_names:
-        header.extend([f'{landmark_name}_x', f'{landmark_name}_y', f'{landmark_name}_z', f'{landmark_name}_visibility'])
-
-    # 데이터프레임 생성 및 CSV 저장
-    df = pd.DataFrame(all_rows, columns=header)
-    df.to_csv("raw_data.csv", index=False)
-    print(f"--- 전처리 완료! 총 {len(all_rows)}프레임의 데이터가 raw_data.csv에 저장되었습니다. ---")
 
 if __name__ == "__main__":
-    process_videos()
+    main()

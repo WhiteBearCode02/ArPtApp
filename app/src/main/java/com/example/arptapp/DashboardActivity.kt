@@ -10,6 +10,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
@@ -38,7 +39,6 @@ import com.example.arptapp.data.model.PoseData
 import com.example.arptapp.data.model.toAngleSequence
 import com.example.arptapp.data.repository.ExerciseRepository
 import com.example.arptapp.presentation.report.ReportActivity
-import com.example.arptapp.utils.Yolo26Classifier
 import com.example.arptapp.viewmodel.MainViewModel
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
@@ -79,7 +79,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val exerciseCounter = ExerciseCounter()
     private val fallbackExerciseClassifier = ExerciseClassifier()
     private var poseLandmarker: PoseLandmarker? = null
-    private lateinit var yoloClassifier: Yolo26Classifier
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
@@ -124,7 +123,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         tts = TextToSpeech(this, this)
         feedbackManager = FeedbackManager(this)
         cameraExecutor = Executors.newSingleThreadExecutor()
-        yoloClassifier = Yolo26Classifier(this)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         standardSquatSequence = ExerciseRepository(this)
             .loadStandardPose("SQUAT")
@@ -285,12 +283,17 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             }
             .setErrorListener { error ->
                 Log.e(TAG, "PoseLandmarker 오류: ${error.message}")
+                runOnUiThread {
+                    binding.tvDetectedExercise.text = "자세 인식을 다시 시도하는 중"
+                    binding.overlayView.clearResults()
+                }
             }
 
         try {
             poseLandmarker = PoseLandmarker.createFromOptions(this, optionsBuilder.build())
         } catch (e: Exception) {
             Log.e(TAG, "PoseLandmarker 초기화 실패", e)
+            binding.tvDetectedExercise.text = "자세 인식 모델을 불러오지 못했습니다"
         }
     }
 
@@ -519,30 +522,28 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
      * - 후면 카메라: 90도 회전 프레임 → 0도로 정규화
      */
     private fun analyzeImage(imageProxy: ImageProxy) {
-        val bitmap = imageProxy.toBitmap()
-        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+        try {
+            val landmarker = poseLandmarker ?: return
+            val bitmap = imageProxy.toBitmap()
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
 
-        Log.d("ARPT_METHOD1", "원본 프레임 회전 각도: ${rotationDegrees}도")
+            val rotatedBitmap = if (rotationDegrees != 0) {
+                rotateMatrix(bitmap, rotationDegrees)
+            } else {
+                bitmap
+            }
 
-        // [방법1 핵심] 비트맵을 회전하여 0도로 정규화
-        val rotatedBitmap = if (rotationDegrees != 0) {
-            rotateMatrix(bitmap, rotationDegrees)
-        } else {
-            bitmap
+            val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(rotatedBitmap).build()
+
+            // 현재 포함된 yolo11n-pose 모델은 운동 분류 모델이 아닙니다. 미학습 YOLO
+            // 결과가 MediaPipe 실행을 막지 않도록 관절 추론을 독립적으로 수행합니다.
+            landmarker.detectAsync(mpImage, SystemClock.uptimeMillis())
+        } catch (error: Exception) {
+            Log.e(TAG, "카메라 프레임 분석 실패", error)
+        } finally {
+            // 예외가 발생해도 다음 CameraX 프레임이 계속 전달되도록 반드시 닫습니다.
+            imageProxy.close()
         }
-
-        Log.d("ARPT_METHOD1", "정규화 후 비트맵 크기: ${rotatedBitmap.width}x${rotatedBitmap.height}")
-
-        // 정규화된 비트맵으로 MPImage 생성
-        val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(rotatedBitmap).build()
-
-        val detectedType = yoloClassifier.classify(rotatedBitmap)
-        mainViewModel.updateExerciseType(detectedType)
-        // 골격 표시는 운동 분류 성공 여부와 무관해야 하므로 MediaPipe는 항상 실행합니다.
-        val frameTime = System.currentTimeMillis()
-        poseLandmarker?.detectAsync(mpImage, frameTime)
-
-        imageProxy.close()
     }
 
     /**
@@ -579,7 +580,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         tts?.shutdown()
         cameraExecutor.shutdown()
         poseLandmarker?.close()
-        yoloClassifier.close()
         feedbackManager.release()
     }
 

@@ -1,4 +1,16 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr"
+    "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+    "files.watcherExclude": {
+        "**/.gradle/**": true,
+        "**/build/**": true
+    },
+    "search.exclude": {
+        "**/.gradle": true,
+        "**/build": true
+    },
+    "java.project.resourceFilters": [
+        ".gradle",
+        "build"
+    ]
 }
