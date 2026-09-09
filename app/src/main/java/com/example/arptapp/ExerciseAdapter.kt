@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.arptapp.data.ExerciseRecord
 import com.example.arptapp.databinding.ItemExerciseRecordBinding
+import java.util.Locale
 
 /**
  * DB의 운동 기록 리스트를 UI 리스트 항목으로 변환해주는 어댑터입니다.
@@ -27,7 +28,7 @@ class ExerciseAdapter(private val records: List<ExerciseRecord>) :
         with(holder.binding) {
             tvRecordDate.text = record.date
             tvRecordCount.text = "${record.totalCount}회"
-            tvRecordCalories.text = "${String.format("%.1f", record.burnedCalories)} kcal"
+            tvRecordCalories.text = "${String.format(Locale.getDefault(), "%.1f", record.burnedCalories)} kcal"
         }
     }
 

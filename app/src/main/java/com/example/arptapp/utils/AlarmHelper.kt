@@ -13,7 +13,9 @@ object AlarmHelper {
 
     fun setupDailyReminder(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = AlarmReceiver.ACTION_DAILY_REMINDER
+        }
         
         // PendingIntent: 시스템이 나중에 우리 대신 실행할 인텐트
         val pendingIntent = PendingIntent.getBroadcast(

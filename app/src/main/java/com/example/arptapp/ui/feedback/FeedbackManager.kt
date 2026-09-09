@@ -1,14 +1,14 @@
 package com.example.arptapp.ui.feedback
 
 import android.content.Context
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.speech.tts.TextToSpeech
+import androidx.core.content.ContextCompat
 import java.util.Locale
 
 class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
-    private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private val vibrator = requireNotNull(ContextCompat.getSystemService(context, Vibrator::class.java))
     private val textToSpeech = TextToSpeech(context.applicationContext, this)
     private var isTtsReady = false
 
@@ -37,11 +37,6 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
 
     private fun vibrate() {
         if (!vibrator.hasVibrator()) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(80L, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(80L)
-        }
+        vibrator.vibrate(VibrationEffect.createOneShot(80L, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 }

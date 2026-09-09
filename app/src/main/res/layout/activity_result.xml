@@ -8,7 +8,7 @@
     android:background="#121212" 
     android:gravity="center_horizontal">
 
-    /<!--제목 텍스트 뷰-->
+    <!--제목 텍스트 뷰-->
     <TextView
         android:id="@+id/tvResultTitle"
         android:layout_width="wrap_content"

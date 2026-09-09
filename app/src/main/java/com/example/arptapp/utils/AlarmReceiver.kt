@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.arptapp.MainActivity
 import com.example.arptapp.R
@@ -16,16 +15,23 @@ import com.example.arptapp.R
  */
 class AlarmReceiver : BroadcastReceiver() {
 
-    private val CHANNEL_ID = "AR_PT_REMINDER"
+    companion object {
+        const val ACTION_DAILY_REMINDER = "com.example.arptapp.action.DAILY_REMINDER"
+        private const val CHANNEL_ID = "AR_PT_REMINDER"
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            AlarmHelper.setupDailyReminder(context)
+            return
+        }
+        if (intent.action != ACTION_DAILY_REMINDER) return
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // 안드로이드 8.0 이상은 채널 설정 필수
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "운동 리마인더", NotificationManager.IMPORTANCE_DEFAULT)
-            notificationManager.createNotificationChannel(channel)
-        }
+        // minSdk 26 이상이므로 알림 채널은 항상 필요합니다.
+        val channel = NotificationChannel(CHANNEL_ID, "운동 리마인더", NotificationManager.IMPORTANCE_DEFAULT)
+        notificationManager.createNotificationChannel(channel)
 
         // 알림 클릭 시 앱의 메인 화면으로 이동하도록 설정
         val mainIntent = Intent(context, MainActivity::class.java)

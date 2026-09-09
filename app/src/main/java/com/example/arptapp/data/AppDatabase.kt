@@ -19,7 +19,7 @@ import androidx.room.RoomDatabase
         UserEntity::class,
         HealthProfile::class // 반드시 ::class (코틀린 문법) 사용
     ],
-    version = 2, // 기존 1에서 2로 상향
+    version = 3, // HealthProfile.userId 인덱스 추가에 따른 스키마 버전 상향
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

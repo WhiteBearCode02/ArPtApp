@@ -79,7 +79,7 @@ class ResultActivity : AppCompatActivity() {
     private fun formatElapsedTime(seconds: Long): String {
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
-        return String.format("%02d분 %02d초", minutes, remainingSeconds)
+        return String.format(Locale.getDefault(), "%02d분 %02d초", minutes, remainingSeconds)
     }
 
     private fun displayExerciseSummary(count: Int, time: String, calories: Double) {

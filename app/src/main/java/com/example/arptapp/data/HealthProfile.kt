@@ -2,6 +2,7 @@ package com.example.arptapp.data
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 // 인바디 정보
@@ -14,7 +15,8 @@ import androidx.room.PrimaryKey
             childColumns = ["userId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index("userId")]
 )
 data class HealthProfile(
     @PrimaryKey(autoGenerate = true) val profileId: Int = 0,
