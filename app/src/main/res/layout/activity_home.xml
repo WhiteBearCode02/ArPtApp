@@ -1,236 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/bg_screen"
-    android:padding="24dp"
-    tools:context=".HomeActivity">
-
-    <!-- 상단 환영 메시지 -->
+    android:fillViewport="true">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="40dp">
-
+        android:orientation="vertical"
+        android:padding="24dp">
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tvWelcomeName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="사용자님, 반갑습니다!"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="오늘도 완벽한 자세로 득근해볼까요? 🔥"
-                android:textColor="#B0B0B0"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
-
-        <ImageView
-            android:id="@+id/ivProfile"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/arptapp_logo"
-            android:scaleType="centerCrop"
-            android:contentDescription="ArPtApp 로고" />
-    </LinearLayout>
-
-    <!-- AI PT 시작 카드 -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardStartExercise"
-        android:layout_width="match_parent"
-        android:layout_height="180dp"
-        android:layout_marginBottom="20dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?android:attr/selectableItemBackground"
-        app:cardBackgroundColor="@color/color_primary"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="4dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="20dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="트레이닝 시작"
-                android:textColor="#FFFFFF"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="카메라를 연결해 자세 분석을 시작합니다"
-                android:textColor="#E0E0E0"
-                android:textSize="14sp"
-                android:layout_marginTop="8dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="START SESSION  →"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:layout_marginTop="12dp"
-                android:alpha="0.8" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- 기록 확인 카드 -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardViewHistory"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?android:attr/selectableItemBackground"
-        app:cardBackgroundColor="@color/color_surface"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="2dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="28dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="24dp">
-
+            android:orientation="horizontal">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="운동 기록"
-                    android:textColor="#FFFFFF"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="최근 세션과 운동 데이터를 확인하세요"
-                    android:textColor="#B0B0B0"
-                    android:textSize="13sp"
-                    android:layout_marginTop="4dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.14" android:text="ARPT HOME" android:textColor="@color/color_primary" android:textSize="11sp" android:textStyle="bold" />
+                <TextView android:id="@+id/tvWelcomeName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Welcome" android:textColor="@color/text_primary" android:textSize="23sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Your movement, made visible." android:textColor="@color/text_secondary" android:textSize="14sp" />
             </LinearLayout>
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_view"
-                android:contentDescription="기록 보기"
-                app:tint="#B0B0B0" />
+            <ImageView android:layout_width="58dp" android:layout_height="58dp" android:contentDescription="ArPtApp logo" android:scaleType="centerCrop" android:src="@drawable/arptapp_logo" />
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
 
-    <!-- 추가 메뉴 (선택 사항) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="20dp"
-        android:weightSum="2">
+        <FrameLayout
+            android:id="@+id/cardStartExercise"
+            android:layout_width="match_parent"
+            android:layout_height="196dp"
+            android:layout_marginBottom="22dp"
+            android:background="@drawable/bg_training_portal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+            <com.example.arptapp.ui.StarBurstView android:id="@+id/starBurstView" android:layout_width="match_parent" android:layout_height="match_parent" android:importantForAccessibility="no" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="24dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_status_chip" android:paddingHorizontal="12dp" android:paddingVertical="6dp" android:text="LIVE MOTION ANALYSIS" android:textColor="#D8ECFF" android:textSize="11sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Start training" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Hold to orbit, release to launch." android:textColor="#C7DBF2" android:textSize="14sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:letterSpacing="0.12" android:text="PRESS TO LAUNCH  *" android:textColor="#8ED3FF" android:textSize="12sp" android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
 
-        <!-- 대시보드 카드 -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardDashboard"
-            android:layout_width="0dp"
-            android:layout_height="100dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="10dp"
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/color_surface"
+            app:cardCornerRadius="20dp"
+            app:strokeColor="@color/color_border"
+            app:strokeWidth="1dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12" android:text="YOUTUBE PUBLIC TRENDS" android:textColor="@color/color_primary" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Workout interest today" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold" />
+                    </LinearLayout>
+                    <ImageButton android:id="@+id/btnRefreshTrends" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_input_field" android:contentDescription="Refresh workout trends" android:src="@android:drawable/ic_popup_sync" app:tint="@color/color_primary" />
+                </LinearLayout>
+                <TextView android:id="@+id/tvTrendStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Calculated from public video views, not personal history." android:textColor="@color/text_secondary" android:textSize="12sp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical">
+                    <TextView android:id="@+id/tvTrendFirst" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:text="01  Loading public trends..." android:textColor="@color/text_primary" android:textSize="15sp" />
+                    <TextView android:id="@+id/tvTrendSecond" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:text="02  Preparing dashboard..." android:textColor="@color/text_primary" android:textSize="15sp" />
+                    <TextView android:id="@+id/tvTrendThird" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:text="03  API setup required" android:textColor="@color/text_primary" android:textSize="15sp" />
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:autoLink="web" android:text="YouTube public data: https://www.youtube.com/t/terms" android:textColor="@color/text_secondary" android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardViewHistory"
+            android:layout_width="match_parent"
+            android:layout_height="112dp"
+            android:layout_marginBottom="16dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
             app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="01"
-                    android:textSize="32sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="대시보드"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp" />
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/color_border"
+            app:strokeWidth="1dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:padding="22dp">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Training history" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Review your latest sessions and movement data." android:textColor="@color/text_secondary" android:textSize="13sp" />
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=">" android:textColor="@color/color_primary" android:textSize="32sp" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- 설정 카드 -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardSettings"
-            android:layout_width="0dp"
-            android:layout_height="100dp"
-            android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="02"
-                    android:textSize="32sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="설정"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

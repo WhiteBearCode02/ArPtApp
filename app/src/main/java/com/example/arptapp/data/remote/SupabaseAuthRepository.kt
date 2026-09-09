@@ -29,7 +29,12 @@ class SupabaseAuthRepository {
             "Supabase 설정이 없습니다. local.properties를 확인해 주세요."
         }
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Auth)
+            install(Auth) {
+                // Email confirmation and OAuth return to MainActivity through
+                // the arptapp://auth/callback intent filter in AndroidManifest.
+                scheme = "arptapp"
+                host = "auth"
+            }
             install(Postgrest)
         }
     }

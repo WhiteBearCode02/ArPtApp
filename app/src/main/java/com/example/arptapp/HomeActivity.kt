@@ -2,41 +2,96 @@ package com.example.arptapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.MotionEvent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityHomeBinding
-import com.example.arptapp.utils.AlarmHelper // 알림 예약 유틸리티 클래스
+import com.example.arptapp.utils.AlarmHelper
+import com.example.arptapp.viewmodel.HomeViewModel
+import com.example.arptapp.viewmodel.WorkoutTrendsUiState
+import kotlinx.coroutines.launch
 
-/**
- * 앱의 메인 허브로서 사용자 인사말 표시, 서비스 화면 전환, 
- * 그리고 일일 운동 알림 스케줄링을 담당합니다.
- */
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
+    private val homeViewModel: HomeViewModel by viewModels()
+    private var isLaunchingTraining = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 1. [Notification] 매일 오후 8시 운동 권장 알림 스케줄링 등록
-        // 사용자가 홈 화면에 진입할 때마다 알림이 최신 상태로 예약됩니다.
         AlarmHelper.setupDailyReminder(this)
 
-        // 2. [Data Reception] 로그인 시 전달받은 사용자 이름 표시
-        val userName = intent.getStringExtra("USER_NAME") ?: "회원"
-        binding.tvWelcomeName.text = "${userName}님, 반갑습니다!"
+        val userName = intent.getStringExtra("USER_NAME") ?: "Member"
+        binding.tvWelcomeName.text = "$userName, welcome"
 
-        // 3. [Navigation: AI PT] 'AI PT 시작하기' 카드 클릭 시 카메라 분석 화면으로 이동
+        observeWorkoutTrends()
+        binding.btnRefreshTrends.setOnClickListener { homeViewModel.loadTrends() }
+        homeViewModel.loadTrends()
+
+        binding.cardStartExercise.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> binding.starBurstView.startOrbit()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> binding.starBurstView.stopOrbit()
+            }
+            false
+        }
+
         binding.cardStartExercise.setOnClickListener {
-            val intent = Intent(this, DashboardActivity::class.java)
-            startActivity(intent)
+            if (isLaunchingTraining) return@setOnClickListener
+            isLaunchingTraining = true
+            binding.cardStartExercise.isEnabled = false
+            binding.starBurstView.burst {
+                startActivity(Intent(this, DashboardActivity::class.java))
+                isLaunchingTraining = false
+                binding.cardStartExercise.isEnabled = true
+            }
         }
 
-        // 4. [Navigation: History] '나의 기록 확인' 카드 클릭 시 DB 목록 화면으로 이동
         binding.cardViewHistory.setOnClickListener {
-            val intent = Intent(this, HistoryActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
+    }
+
+    private fun observeWorkoutTrends() {
+        lifecycleScope.launch {
+            homeViewModel.trends.collect { state ->
+                when (state) {
+                    WorkoutTrendsUiState.Loading -> {
+                        binding.btnRefreshTrends.isEnabled = false
+                        binding.tvTrendStatus.text = "Loading public YouTube video trends..."
+                        setTrendRows(listOf("Loading public trends...", "Preparing dashboard...", "Please wait..."))
+                    }
+
+                    is WorkoutTrendsUiState.Content -> {
+                        binding.btnRefreshTrends.isEnabled = true
+                        binding.tvTrendStatus.text = if (state.snapshot.isCached) {
+                            "Saved public-video interest · refreshes every 6 hours"
+                        } else {
+                            "Public-video interest · updated just now"
+                        }
+                        setTrendRows(state.snapshot.trends.map { trend ->
+                            "${trend.exercise}     interest ${trend.score}"
+                        })
+                    }
+
+                    is WorkoutTrendsUiState.Unavailable -> {
+                        binding.btnRefreshTrends.isEnabled = true
+                        binding.tvTrendStatus.text = "Trend service setup is required."
+                        setTrendRows(listOf("Trend service is preparing", "No personal history is used", "Use refresh after setup"))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setTrendRows(rows: List<String>) {
+        val displayRows = (rows + List(3) { "No trend data" }).take(3)
+        binding.tvTrendFirst.text = "01  ${displayRows[0]}"
+        binding.tvTrendSecond.text = "02  ${displayRows[1]}"
+        binding.tvTrendThird.text = "03  ${displayRows[2]}"
     }
 }
