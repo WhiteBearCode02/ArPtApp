@@ -6,9 +6,12 @@
         <item name="colorSecondary">@color/color_accent</item>
         <item name="android:windowBackground">@color/color_background</item>
         <item name="android:statusBarColor">@color/color_background</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/color_nav</item>
     </style>
     <style name="Theme.ArPtApp" parent="Base.Theme.ArPtApp">
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/color_nav</item>
+        <item name="android:statusBarColor">@color/color_background</item>
     </style>
 </resources>

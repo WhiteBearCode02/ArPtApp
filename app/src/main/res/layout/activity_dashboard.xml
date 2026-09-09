@@ -56,6 +56,20 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/tvDetectedExercise"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvDashboardTitle"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_status_chip"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="인식 중: 운동 감지 중"
+            android:textColor="#CCFFFFFF"
+            android:textSize="14sp" />
+
         <!-- 카운트 표시 -->
         <LinearLayout
             android:id="@+id/layoutCount"
@@ -64,7 +78,7 @@
             android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="100dp"
-            android:background="@drawable/bg_primary_button"
+            android:background="@drawable/bg_status_chip"
             android:paddingHorizontal="32dp"
             android:paddingVertical="16dp"
             android:orientation="vertical"
@@ -80,9 +94,10 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvCountUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SQUATS"
+                android:text="운동 횟수"
                 android:textColor="#CCFFFFFF"
                 android:textSize="14sp"
                 android:letterSpacing="0.1" />

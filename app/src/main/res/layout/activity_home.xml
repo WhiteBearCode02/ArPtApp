@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1E1E1E"
+    android:background="@drawable/bg_screen"
     android:padding="24dp"
     tools:context=".HomeActivity">
 
@@ -59,7 +59,7 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?android:attr/selectableItemBackground"
-        app:cardBackgroundColor="#2196F3"
+        app:cardBackgroundColor="@color/color_primary"
         app:cardCornerRadius="20dp"
         app:cardElevation="4dp">
 
@@ -73,7 +73,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="AI PT 시작하기"
+                android:text="트레이닝 시작"
                 android:textColor="#FFFFFF"
                 android:textSize="24sp"
                 android:textStyle="bold" />
@@ -81,7 +81,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="실시간 자세 교정 및 자동 카운팅"
+                android:text="카메라를 연결해 자세 분석을 시작합니다"
                 android:textColor="#E0E0E0"
                 android:textSize="14sp"
                 android:layout_marginTop="8dp" />
@@ -89,7 +89,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="👆 탭하여 시작"
+                android:text="START SESSION  →"
                 android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:layout_marginTop="12dp"
@@ -105,7 +105,7 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?android:attr/selectableItemBackground"
-        app:cardBackgroundColor="#2C2C2C"
+        app:cardBackgroundColor="@color/color_surface"
         app:cardCornerRadius="20dp"
         app:cardElevation="2dp">
 
@@ -125,7 +125,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="나의 기록 확인"
+                    android:text="운동 기록"
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -133,7 +133,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="지금까지 쌓인 성장 데이터"
+                    android:text="최근 세션과 운동 데이터를 확인하세요"
                     android:textColor="#B0B0B0"
                     android:textSize="13sp"
                     android:layout_marginTop="4dp" />
@@ -166,7 +166,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="#2C2C2C"
+            app:cardBackgroundColor="@color/color_surface"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp">
 
@@ -180,7 +180,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📊"
+                    android:text="01"
                     android:textSize="32sp" />
 
                 <TextView
@@ -203,7 +203,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="#2C2C2C"
+            app:cardBackgroundColor="@color/color_surface"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp">
 
@@ -217,7 +217,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚙️"
+                    android:text="02"
                     android:textSize="32sp" />
 
                 <TextView

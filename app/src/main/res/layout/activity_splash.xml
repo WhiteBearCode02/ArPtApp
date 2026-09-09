@@ -34,7 +34,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="40dp"
-        android:text="Powered by AI Engine"
+        android:text="MOVE  ·  ANALYZE  ·  IMPROVE"
         android:textColor="@color/text_secondary"
         android:textSize="12sp" />
 

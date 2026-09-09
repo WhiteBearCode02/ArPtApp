@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="#121212" 
+    android:background="@drawable/bg_screen"
     android:gravity="center_horizontal">
 
     <!--제목 텍스트 뷰-->
@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        app:cardBackgroundColor="#1E1E1E"
+        app:cardBackgroundColor="@color/color_surface"
         app:cardCornerRadius="16dp"
         app:cardElevation="4dp">
 
@@ -48,7 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0회"
-                android:textColor="#2979FF" 
+                android:textColor="@color/color_primary"
                 android:textSize="48sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp"/>
@@ -66,7 +66,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:text="홈으로 돌아가기"
-        android:backgroundTint="#2979FF"
+        android:backgroundTint="@color/color_primary"
         android:textColor="#FFFFFF"
         android:textStyle="bold"
         app:cornerRadius="12dp"
@@ -79,7 +79,7 @@
         android:layout_height="56dp"
         android:layout_marginTop="16dp"
         android:text="상세 리포트 보기"
-        android:backgroundTint="#4CAF50"
+        android:backgroundTint="@color/color_surface_high"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
         android:textStyle="bold" />

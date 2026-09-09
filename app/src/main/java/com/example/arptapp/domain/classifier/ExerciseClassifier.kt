@@ -16,6 +16,15 @@ class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
     private var stableExercise = ExerciseType.UNKNOWN
 
     fun detectExercise(landmarks: List<NormalizedLandmark>): ExerciseType {
+        val shoulderAngles = PoseAngleExtractor.extractShoulderPressAngles(landmarks)
+        if (shoulderAngles != null) {
+            val leftWristAboveShoulder = landmarks[15].y() < landmarks[11].y()
+            val rightWristAboveShoulder = landmarks[16].y() < landmarks[12].y()
+            if (leftWristAboveShoulder && rightWristAboveShoulder) {
+                return stabilize(ExerciseType.SHOULDER_PRESS)
+            }
+        }
+
         val angles = PoseAngleExtractor.extractSquatAngles(landmarks) ?: return stableExercise
         return classifyAngles(angles[0], angles[1])
     }
@@ -28,6 +37,10 @@ class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
             else -> ExerciseType.UNKNOWN
         }
 
+        return stabilize(frameExercise)
+    }
+
+    private fun stabilize(frameExercise: ExerciseType): ExerciseType {
         if (frameExercise == ExerciseType.UNKNOWN) return stableExercise
 
         if (frameExercise == candidate) {

@@ -66,6 +66,11 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         invalidate()
     }
 
+    fun clearResults() {
+        landmarks = null
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 

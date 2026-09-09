@@ -31,6 +31,7 @@ import com.example.arptapp.domain.analyzer.DTWCalculator
 import com.example.arptapp.domain.analyzer.FormErrorAnalyzer
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.counter.ExerciseCounter
+import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.data.model.Landmark
 import com.example.arptapp.data.model.PoseData
@@ -76,6 +77,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
     private val exerciseCounter = ExerciseCounter()
+    private val fallbackExerciseClassifier = ExerciseClassifier()
     private var poseLandmarker: PoseLandmarker? = null
     private lateinit var yoloClassifier: Yolo26Classifier
     private var tts: TextToSpeech? = null
@@ -181,8 +183,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         lastAccelerationX = null
 
         exerciseCounter.resetSession()
+        fallbackExerciseClassifier.reset()
         currentExerciseType = ExerciseType.UNKNOWN
         binding.tvCount.text = "0"
+        updateDetectedExerciseUi(ExerciseType.UNKNOWN)
 
         binding.tvDashboardTitle.text = "운동 중"
         binding.btnStartExercise.visibility = View.GONE
@@ -263,6 +267,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                     val mainPersonLandmarks = selectMainPerson(result)
 
                     if (mainPersonLandmarks != null) {
+                        val landmarkExerciseType = fallbackExerciseClassifier.detectExercise(mainPersonLandmarks)
+                        updateCurrentExerciseType(landmarkExerciseType)
+
                         if (isExercising) {
                             processLandmarks(mainPersonLandmarks)
                         }
@@ -270,6 +277,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                         // [방법1] 이미 정규화된 비트맵으로 처리되었으므로
                         // imageWidth, imageHeight는 회전 후의 최종 크기
                         updateOverlay(mainPersonLandmarks, inputImage)
+                    } else {
+                        updateCurrentExerciseType(ExerciseType.UNKNOWN)
+                        binding.overlayView.clearResults()
                     }
                 }
             }
@@ -423,6 +433,30 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         )
     }
 
+    private fun updateCurrentExerciseType(nextExerciseType: ExerciseType) {
+        updateDetectedExerciseUi(nextExerciseType)
+        if (nextExerciseType == ExerciseType.UNKNOWN || nextExerciseType == currentExerciseType) return
+
+        currentExerciseType = nextExerciseType
+        repetitionCount = 0
+        currentRepAngles.clear()
+        currentRepErrorTags.clear()
+        binding.tvCount.text = "0"
+        binding.tvCountUnit.text = nextExerciseType.displayName
+        if (isExercising) {
+            binding.tvDashboardTitle.text = "${nextExerciseType.displayName} 운동 중"
+        }
+    }
+
+    private fun updateDetectedExerciseUi(exerciseType: ExerciseType) {
+        val displayName = if (exerciseType == ExerciseType.IDLE) {
+            ExerciseType.UNKNOWN.displayName
+        } else {
+            exerciseType.displayName
+        }
+        binding.tvDetectedExercise.text = "인식 중: $displayName"
+    }
+
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED) {
@@ -504,29 +538,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         val detectedType = yoloClassifier.classify(rotatedBitmap)
         mainViewModel.updateExerciseType(detectedType)
-        val nextExerciseType = when (detectedType) {
-            "SQUAT" -> ExerciseType.SQUAT
-            "SHOULDER_PRESS" -> ExerciseType.SHOULDER_PRESS
-            else -> ExerciseType.IDLE
-        }
-        if (nextExerciseType != currentExerciseType) {
-            currentExerciseType = nextExerciseType
-            repetitionCount = 0
-            currentRepAngles.clear()
-            currentRepErrorTags.clear()
-            if (nextExerciseType != ExerciseType.IDLE) {
-                runOnUiThread {
-                    binding.tvCount.text = "0"
-                    binding.tvDashboardTitle.text = "${nextExerciseType.displayName} 운동 중"
-                }
-            }
-        }
-
-        // MediaPipe에 전달 (회전 정보 없음 - 이미 0도)
-        if (detectedType != "IDLE") {
-            val frameTime = System.currentTimeMillis()
-            poseLandmarker?.detectAsync(mpImage, frameTime)
-        }
+        // 골격 표시는 운동 분류 성공 여부와 무관해야 하므로 MediaPipe는 항상 실행합니다.
+        val frameTime = System.currentTimeMillis()
+        poseLandmarker?.detectAsync(mpImage, frameTime)
 
         imageProxy.close()
     }

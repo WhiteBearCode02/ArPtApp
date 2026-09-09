@@ -138,9 +138,10 @@ dependencies {
 
     // --- Supabase Kotlin client ---
     val supabaseVersion = "3.0.0"
+    val ktorVersion = "3.0.0-rc-1"
     implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion")
     implementation("io.github.jan-tennert.supabase:auth-kt:$supabaseVersion")
-    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.ktor:ktor-client-android:$ktorVersion")
 
     // Unit & UI Testing: 코드 안정성 검토를 위한 테스트 도구
     testImplementation("junit:junit:4.13.2")
