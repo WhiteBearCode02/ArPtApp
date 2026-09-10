@@ -39,7 +39,6 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", localPropertyAsBuildConfigString("supabase.url"))
         buildConfigField("String", "SUPABASE_KEY", localPropertyAsBuildConfigString("supabase.key"))
-        buildConfigField("String", "ADMIN_EMAIL", localPropertyAsBuildConfigString("admin.email"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

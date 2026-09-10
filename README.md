@@ -175,8 +175,11 @@ cd ArPtApp
 sdk.dir=C\:\\Users\\YOUR_NAME\\AppData\\Local\\Android\\Sdk
 supabase.url=https://YOUR_PROJECT.supabase.co
 supabase.key=YOUR_SUPABASE_ANON_KEY
-admin.email=YOUR_ADMIN_EMAIL
 ```
+
+관리자 계정은 앱에 이메일을 하드코딩하지 않습니다. Supabase SQL Editor에서
+[`supabase/admin-role-setup.sql`](supabase/admin-role-setup.sql)의 이메일 예시를 실제 관리자 계정으로 바꿔 실행한 뒤,
+앱에서 로그아웃하고 다시 로그인하면 관리자 대시보드로 자동 이동합니다.
 
 Supabase Authentication에서 이메일 사용자를 생성하거나 앱 회원가입 화면을 이용합니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일까지 완료해야 로그인할 수 있습니다.
 

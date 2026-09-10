@@ -12,6 +12,9 @@ import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonObject
 
 data class AppSession(
     val userId: String,
@@ -22,6 +25,12 @@ data class AppSession(
 object AuthSessionStore {
     var current: AppSession? = null
 }
+
+internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata
+    ?.get("role")
+    ?.jsonPrimitive
+    ?.contentOrNull
+    ?.equals("admin", ignoreCase = true) == true
 
 class SupabaseAuthRepository {
     private val client by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -67,6 +76,10 @@ class SupabaseAuthRepository {
         refreshSession()
     }
 
+    suspend fun restoreSession(): Result<AppSession?> = runCatching {
+        refreshSession()
+    }
+
     suspend fun signOut() {
         client.auth.signOut()
         AuthSessionStore.current = null
@@ -82,7 +95,7 @@ class SupabaseAuthRepository {
         val appSession = AppSession(
             userId = user.id,
             email = email,
-            isAdmin = email.equals(BuildConfig.ADMIN_EMAIL, ignoreCase = true)
+            isAdmin = hasAdminRole(user.appMetadata)
         )
         AuthSessionStore.current = appSession
         _session.value = appSession

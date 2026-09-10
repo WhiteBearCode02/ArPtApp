@@ -3,6 +3,7 @@ package com.example.arptapp
 import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,13 @@ class HomeActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         AlarmHelper.setupDailyReminder(this)
+
+        val isAdmin = intent.getBooleanExtra("IS_ADMIN", false) ||
+            com.example.arptapp.data.remote.AuthSessionStore.current?.isAdmin == true
+        binding.cardAdminDashboard.visibility = if (isAdmin) View.VISIBLE else View.GONE
+        binding.cardAdminDashboard.setOnClickListener {
+            startActivity(Intent(this, AdminDashboardActivity::class.java))
+        }
 
         val userName = intent.getStringExtra("USER_NAME") ?: "회원"
         binding.tvWelcomeName.text = "${userName}님, 반갑습니다"

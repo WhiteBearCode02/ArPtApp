@@ -9,11 +9,10 @@ create or replace function public.is_admin()
 returns boolean
 language sql
 stable
-security definer
-set search_path = public
+security invoker
+set search_path = ''
 as $$
-    select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false)
-        or coalesce((auth.jwt() ->> 'email') = 'admin@gmail.com', false);
+    select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false);
 $$;
 
 drop policy if exists "users insert own sessions" on public.exercise_sessions;

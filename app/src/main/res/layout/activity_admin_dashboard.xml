@@ -15,17 +15,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:letterSpacing="0.14"
             android:text="ADMIN CONSOLE"
             android:textColor="@color/color_accent"
             android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.14" />
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="운영 대시보드"
+            android:text="관리자 대시보드"
             android:textColor="@color/text_primary"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -35,6 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:text="관리자 권한 확인 중..."
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -57,7 +58,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SYSTEM STATUS"
+                    android:text="시스템 상태"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -99,12 +100,13 @@
                 app:cardElevation="0dp"
                 app:strokeColor="@color/color_border"
                 app:strokeWidth="1dp">
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="bottom|start"
                     android:padding="18dp"
-                    android:text="01\n회원 관리"
+                    android:text="01&#10;회원 관리"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -120,16 +122,37 @@
                 app:cardElevation="0dp"
                 app:strokeColor="@color/color_border"
                 app:strokeWidth="1dp">
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="bottom|start"
                     android:padding="18dp"
-                    android:text="02\n세션 분석"
+                    android:text="02&#10;세션 분석"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenUserHome"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="28dp"
+            android:text="사용자 홈 보기"
+            android:textColor="@color/color_primary"
+            app:strokeColor="@color/color_primary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdminLogout"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="20dp"
+            android:text="로그아웃"
+            android:textColor="@color/text_primary"
+            app:backgroundTint="@color/color_surface_high" />
     </LinearLayout>
 </ScrollView>
