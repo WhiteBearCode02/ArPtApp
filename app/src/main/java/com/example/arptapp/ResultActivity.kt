@@ -9,6 +9,7 @@ import com.example.arptapp.data.ExerciseRecord
 import com.example.arptapp.databinding.ActivityResultBinding
 import com.example.arptapp.presentation.report.ReportActivity
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,10 +36,23 @@ class ResultActivity : AppCompatActivity() {
         // 2. 창업자님의 원본 데이터 가공 로직 (유지)
         val formattedTime = formatElapsedTime(exerciseTimeInSeconds)
         val burnedCalories = calculateCalories(finalCount)
+        val workoutDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+        val feedbackMessage = intent.getStringExtra("FEEDBACK_MESSAGE")
+            ?.takeIf { it.isNotBlank() }
+            ?: feedbackForScore(avgScore)
 
         // 3. UI 업데이트 및 DB 저장 (유지)
         displayExerciseSummary(finalCount, formattedTime, burnedCalories)
-        saveWorkoutToDatabase(finalCount, exerciseTimeInSeconds, burnedCalories)
+        saveWorkoutToDatabase(
+            count = finalCount,
+            duration = exerciseTimeInSeconds,
+            calories = burnedCalories,
+            workoutDate = workoutDate,
+            exerciseType = exerciseType,
+            averageScore = avgScore,
+            scores = scores ?: floatArrayOf(),
+            feedbackMessage = feedbackMessage
+        )
 
         // 4. [수정 포인트] 상세 리포트 보기 버튼 설정
         // returnToHome() 내부에 있던 것을 onCreate로 꺼내어 즉시 클릭 가능하게 했습니다.
@@ -48,6 +62,10 @@ class ResultActivity : AppCompatActivity() {
                 putExtra("TOTAL_COUNT", finalCount)
                 putExtra("AVG_SCORE", avgScore)
                 putExtra("SCORES", scores)
+                putExtra("WORKOUT_DATE", workoutDate)
+                putExtra("EXERCISE_TIME", exerciseTimeInSeconds)
+                putExtra("BURNED_CALORIES", burnedCalories)
+                putExtra("FEEDBACK_MESSAGE", feedbackMessage)
             }
             startActivity(reportIntent)
         }
@@ -60,13 +78,25 @@ class ResultActivity : AppCompatActivity() {
 
     // === 창업자님의 원본 기능들 (절대 삭제하지 않음) ===
 
-    private fun saveWorkoutToDatabase(count: Int, duration: Long, calories: Double) {
-        val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    private fun saveWorkoutToDatabase(
+        count: Int,
+        duration: Long,
+        calories: Double,
+        workoutDate: String,
+        exerciseType: String,
+        averageScore: Float,
+        scores: FloatArray,
+        feedbackMessage: String
+    ) {
         val record = ExerciseRecord(
-            date = currentDate,
+            date = workoutDate,
             totalCount = count,
             duration = duration,
-            burnedCalories = calories
+            burnedCalories = calories,
+            exerciseType = exerciseType,
+            averageScore = averageScore,
+            scoresJson = JSONArray(scores.toList()).toString(),
+            feedbackMessage = feedbackMessage
         )
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(applicationContext)
@@ -75,6 +105,13 @@ class ResultActivity : AppCompatActivity() {
     }
 
     private fun calculateCalories(count: Int): Double = count * 0.5
+
+    private fun feedbackForScore(score: Float): String = when {
+        score >= 90f -> "매우 안정적인 자세를 유지했습니다. 현재 움직임을 계속 유지해 보세요."
+        score >= 70f -> "전반적으로 좋습니다. 관절 정렬과 동작 범위를 조금 더 일정하게 유지해 보세요."
+        score > 0f -> "속도를 낮추고 관절 위치를 확인하면서 정확하게 반복해 보세요."
+        else -> "자세 점수를 계산할 수 있는 운동 데이터가 부족합니다."
+    }
 
     private fun formatElapsedTime(seconds: Long): String {
         val minutes = seconds / 60

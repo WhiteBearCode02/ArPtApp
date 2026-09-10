@@ -47,5 +47,9 @@ data class ExerciseRecord(
      * - 단위: kcal.
      * - 횟수와 시간 정보를 조합하여 산출된 에너지 소모량입니다.
      */
-    val burnedCalories: Double
+    val burnedCalories: Double,
+    val exerciseType: String = "",
+    val averageScore: Float = 0f,
+    val scoresJson: String = "[]",
+    val feedbackMessage: String = ""
 )

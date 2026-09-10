@@ -28,6 +28,15 @@
             android:textColor="@color/color_primary"
             android:textSize="20sp" />
 
+        <TextView
+            android:id="@+id/tvWorkoutDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="운동 일시"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -61,6 +70,25 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="운동 시간: 00분 00초"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvCalories"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="예상 소모 칼로리: 0.0 kcal"
+                    android:textColor="@color/color_accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
                     android:id="@+id/tvFeedback"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -87,6 +115,19 @@
             android:layout_width="match_parent"
             android:layout_height="300dp"
             android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvChartEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_trend_row"
+            android:gravity="center"
+            android:padding="18dp"
+            android:text="이 기록에는 회차별 자세 점수가 저장되어 있지 않습니다."
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnClose"

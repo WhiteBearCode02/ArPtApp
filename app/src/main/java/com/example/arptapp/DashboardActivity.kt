@@ -234,6 +234,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
             // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
             putExtra("AVG_SCORE", report.averageScore.toFloat())
+            putExtra("FEEDBACK_MESSAGE", report.feedbackMessage)
         }
         startActivity(intent)
         finish()

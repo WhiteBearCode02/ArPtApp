@@ -10,7 +10,10 @@ import java.util.Locale
 /**
  * DB의 운동 기록 리스트를 UI 리스트 항목으로 변환해주는 어댑터입니다.
  */
-class ExerciseAdapter(private val records: List<ExerciseRecord>) :
+class ExerciseAdapter(
+    private val records: List<ExerciseRecord>,
+    private val onRecordClick: (ExerciseRecord) -> Unit
+) :
     RecyclerView.Adapter<ExerciseAdapter.RecordViewHolder>() {
 
     inner class RecordViewHolder(val binding: ItemExerciseRecordBinding) :
@@ -27,8 +30,10 @@ class ExerciseAdapter(private val records: List<ExerciseRecord>) :
         val record = records[position]
         with(holder.binding) {
             tvRecordDate.text = record.date
+            tvRecordType.text = record.exerciseType.ifBlank { "운동 기록" }
             tvRecordCount.text = "${record.totalCount}회"
             tvRecordCalories.text = "${String.format(Locale.getDefault(), "%.1f", record.burnedCalories)} kcal"
+            root.setOnClickListener { onRecordClick(record) }
         }
     }
 

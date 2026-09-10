@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * [ArPtApp - 데이터베이스 관리 총괄 클래스]
@@ -19,7 +21,7 @@ import androidx.room.RoomDatabase
         UserEntity::class,
         HealthProfile::class // 반드시 ::class (코틀린 문법) 사용
     ],
-    version = 3, // HealthProfile.userId 인덱스 추가에 따른 스키마 버전 상향
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -52,11 +54,21 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 // [Migration 전략] 버전이 올라갔을 때 기존 데이터를 어떻게 처리할지 정합니다. 
                 // 지금은 초기 단계이므로 기존 데이터를 지우고 새로 만드는 방식을 채택합니다.
-                .fallbackToDestructiveMigration() 
+                .addMigrations(MIGRATION_3_4)
+                .fallbackToDestructiveMigration()
                 .build()
                 
                 INSTANCE = instance
                 instance
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN exerciseType TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN averageScore REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN scoresJson TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN feedbackMessage TEXT NOT NULL DEFAULT ''")
             }
         }
     }
