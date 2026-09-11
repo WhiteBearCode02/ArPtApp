@@ -1,20 +1,16 @@
 package com.example.arptapp.data.remote
 
 import android.content.Intent
-import com.example.arptapp.BuildConfig
-import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
-import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.Google
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.JsonObject
 
 data class AppSession(
     val userId: String,
@@ -34,22 +30,9 @@ internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata
     ?.equals("admin", ignoreCase = true) == true
 
 class SupabaseAuthRepository {
-    private val client by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        require(BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()) {
-            "Supabase 설정이 없습니다. local.properties를 확인해 주세요."
-        }
-        createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Auth) {
-                // Email confirmation and OAuth return to MainActivity through
-                // the arptapp://auth/callback intent filter in AndroidManifest.
-                scheme = "arptapp"
-                host = "auth"
-            }
-            install(Postgrest)
-        }
-    }
+    private val client get() = SupabaseClientProvider.client
 
-    private val _session = MutableStateFlow<AppSession?>(null)
+    private val _session = MutableStateFlow<AppSession?>(AuthSessionStore.current)
     val session: StateFlow<AppSession?> = _session.asStateFlow()
 
     suspend fun signUp(email: String, password: String): Result<AppSession?> = runCatching {
@@ -78,6 +61,7 @@ class SupabaseAuthRepository {
     }
 
     suspend fun restoreSession(): Result<AppSession?> = runCatching {
+        client.auth.awaitInitialization()
         refreshSession()
     }
 
@@ -114,20 +98,21 @@ class SupabaseAuthRepository {
     }
 
     suspend fun signOut() {
+        client.auth.awaitInitialization()
         client.auth.signOut()
         AuthSessionStore.current = null
         _session.value = null
     }
 
-    private suspend fun refreshSession(): AppSession? {
+    private fun refreshSession(): AppSession? {
         val user = client.auth.currentUserOrNull() ?: run {
             AuthSessionStore.current = null
+            _session.value = null
             return null
         }
-        val email = user.email.orEmpty()
         val appSession = AppSession(
             userId = user.id,
-            email = email,
+            email = user.email.orEmpty(),
             isAdmin = hasAdminRole(user.appMetadata),
             requiresCurrentPassword = user.identities.orEmpty().any { it.provider == "email" }
         )

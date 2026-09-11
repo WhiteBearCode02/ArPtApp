@@ -1,26 +1,17 @@
 package com.example.arptapp.data.remote
 
-import com.example.arptapp.BuildConfig
 import com.example.arptapp.model.RepRecord
 import com.example.arptapp.model.SessionReport
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import java.util.UUID
 
 class SupabaseRepository {
-    private val client = if (BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()) {
-        createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Postgrest)
-        }
-    } else {
-        null
-    }
-
     suspend fun uploadSession(report: SessionReport, records: List<RepRecord>): Result<Unit> {
-        val supabase = client ?: return Result.failure(IllegalStateException("Supabase 설정이 없습니다."))
+        val supabase = runCatching { SupabaseClientProvider.client }.getOrElse { error ->
+            return Result.failure(error)
+        }
         val userId = AuthSessionStore.current?.userId
             ?: return Result.failure(IllegalStateException("인증된 사용자가 없습니다."))
         val sessionId = UUID.randomUUID().toString()
