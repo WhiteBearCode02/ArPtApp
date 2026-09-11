@@ -19,7 +19,8 @@ import kotlinx.serialization.json.JsonObject
 data class AppSession(
     val userId: String,
     val email: String,
-    val isAdmin: Boolean
+    val isAdmin: Boolean,
+    val requiresCurrentPassword: Boolean
 )
 
 object AuthSessionStore {
@@ -80,6 +81,38 @@ class SupabaseAuthRepository {
         refreshSession()
     }
 
+    suspend fun updateEmail(newEmail: String): Result<Unit> = runCatching {
+        check(client.auth.currentUserOrNull() != null) { "로그인이 필요한 작업입니다." }
+        client.auth.updateUser {
+            email = newEmail
+        }
+        refreshSession()
+        Unit
+    }
+
+    suspend fun updatePassword(
+        currentPassword: String,
+        newPassword: String
+    ): Result<Unit> = runCatching {
+        val user = client.auth.currentUserOrNull()
+            ?: error("로그인이 필요한 작업입니다.")
+        val email = user.email
+            ?: error("이메일 로그인 사용자만 비밀번호를 변경할 수 있습니다.")
+        val requiresCurrentPassword = user.identities.orEmpty().any { it.provider == "email" }
+        if (requiresCurrentPassword) {
+            require(currentPassword.isNotBlank()) { "현재 비밀번호를 입력해 주세요." }
+            client.auth.signInWith(Email) {
+                this.email = email
+                password = currentPassword
+            }
+        }
+        client.auth.updateUser {
+            password = newPassword
+        }
+        refreshSession()
+        Unit
+    }
+
     suspend fun signOut() {
         client.auth.signOut()
         AuthSessionStore.current = null
@@ -95,7 +128,8 @@ class SupabaseAuthRepository {
         val appSession = AppSession(
             userId = user.id,
             email = email,
-            isAdmin = hasAdminRole(user.appMetadata)
+            isAdmin = hasAdminRole(user.appMetadata),
+            requiresCurrentPassword = user.identities.orEmpty().any { it.provider == "email" }
         )
         AuthSessionStore.current = appSession
         _session.value = appSession

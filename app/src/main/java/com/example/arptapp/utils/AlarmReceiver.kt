@@ -9,6 +9,9 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.example.arptapp.MainActivity
 import com.example.arptapp.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * 예약된 시간에 신호를 받아 상단바 알림을 띄우는 리시버입니다.
@@ -22,7 +25,14 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            AlarmHelper.setupDailyReminder(context)
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    AlarmHelper.syncDailyReminder(context)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
             return
         }
         if (intent.action != ACTION_DAILY_REMINDER) return

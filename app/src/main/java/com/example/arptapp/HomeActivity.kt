@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityHomeBinding
+import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.utils.AlarmHelper
 import com.example.arptapp.viewmodel.HomeViewModel
 import com.example.arptapp.viewmodel.WorkoutTrendsUiState
@@ -17,14 +18,23 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private val homeViewModel: HomeViewModel by viewModels()
+    private val settingsRepository by lazy { UserSettingsRepository(this) }
     private var isLaunchingTraining = false
+    private var currentUserId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        AlarmHelper.setupDailyReminder(this)
+        currentUserId = intent.getStringExtra("USER_ID")
+            ?: com.example.arptapp.data.remote.AuthSessionStore.current?.userId
+        currentUserId?.let { userId ->
+            lifecycleScope.launch {
+                settingsRepository.activateUser(userId)
+                AlarmHelper.syncDailyReminder(this@HomeActivity)
+            }
+        }
 
         val isAdmin = intent.getBooleanExtra("IS_ADMIN", false) ||
             com.example.arptapp.data.remote.AuthSessionStore.current?.isAdmin == true
@@ -61,6 +71,19 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardViewHistory.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
+        binding.cardPersonalSettings.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val userId = currentUserId ?: return
+        lifecycleScope.launch {
+            val nickname = settingsRepository.getSettings(userId).nickname
+            if (nickname.isNotBlank()) binding.tvWelcomeName.text = "${nickname}님, 반갑습니다"
         }
     }
 
