@@ -26,6 +26,15 @@
                 <TextView android:id="@+id/tvWelcomeName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="반갑습니다" android:textColor="@color/text_primary" android:textSize="23sp" android:textStyle="bold" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="오늘의 움직임을 정확하게 기록해 보세요." android:textColor="@color/text_secondary" android:textSize="14sp" />
             </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenSettings"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:minWidth="0dp"
+                android:text="설정"
+                android:contentDescription="개인 설정 열기" />
             <ImageView android:layout_width="58dp" android:layout_height="58dp" android:contentDescription="ArPtApp logo" android:scaleType="centerCrop" android:src="@drawable/arptapp_logo" />
         </LinearLayout>
 

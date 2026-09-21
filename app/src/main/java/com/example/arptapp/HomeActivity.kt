@@ -76,6 +76,9 @@ class HomeActivity : AppCompatActivity() {
         binding.cardPersonalSettings.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
+        binding.btnOpenSettings.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
     }
 
     override fun onResume() {
