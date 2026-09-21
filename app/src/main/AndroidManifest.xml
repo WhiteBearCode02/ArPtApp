@@ -75,6 +75,9 @@ xmlns:tools="http://schemas.android.com/tools">
         android:name=".ProfileActivity"
         android:exported="false"
         android:theme="@style/Theme.ArPtApp" />
+    <activity
+        android:name=".PasswordChangeActivity"
+        android:exported="false" />
 
     <!-- 알림 수신기 -->
     <receiver

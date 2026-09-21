@@ -1,6 +1,7 @@
 package com.example.arptapp
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -49,7 +50,9 @@ class ProfileActivity : AppCompatActivity() {
         binding.cardReminderTime.setOnClickListener { showTimePicker() }
         binding.btnSavePreferences.setOnClickListener { savePersonalSettings() }
         binding.btnUpdateEmail.setOnClickListener { updateEmail() }
-        binding.btnUpdatePassword.setOnClickListener { updatePassword() }
+        binding.btnUpdatePassword.setOnClickListener {
+            startActivity(Intent(this, PasswordChangeActivity::class.java))
+        }
 
         loadProfile()
     }
@@ -80,12 +83,12 @@ class ProfileActivity : AppCompatActivity() {
     private fun bindAccount(session: AppSession) {
         binding.tvProfileEmailSummary.text = session.email
         binding.etProfileEmail.setText(session.email)
-        binding.tilCurrentPassword.visibility =
+        binding.btnUpdatePassword.visibility =
             if (session.requiresCurrentPassword) View.VISIBLE else View.GONE
         binding.tvPasswordGuide.text = if (session.requiresCurrentPassword) {
-            "안전을 위해 현재 비밀번호를 확인한 뒤 변경합니다."
+            "비밀번호 변경 전에 현재 비밀번호로 본인을 확인합니다."
         } else {
-            "Google 로그인 계정에 앱 전용 비밀번호를 새로 설정할 수 있습니다."
+            "Google 계정의 비밀번호는 Google 계정에서 관리해 주세요."
         }
     }
 
@@ -212,45 +215,6 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun updatePassword() {
-        val currentSession = session ?: return
-        val currentPassword = binding.etCurrentPassword.text?.toString().orEmpty()
-        val newPassword = binding.etNewPassword.text?.toString().orEmpty()
-        val confirmation = binding.etConfirmPassword.text?.toString().orEmpty()
-        clearPasswordErrors()
-
-        when {
-            currentSession.requiresCurrentPassword && currentPassword.isBlank() -> {
-                binding.tilCurrentPassword.error = "현재 비밀번호를 입력해 주세요."
-            }
-            newPassword.length < 8 -> {
-                binding.tilNewPassword.error = "새 비밀번호는 8자 이상이어야 합니다."
-            }
-            newPassword != confirmation -> {
-                binding.tilConfirmPassword.error = "새 비밀번호가 일치하지 않습니다."
-            }
-            currentPassword.isNotEmpty() && currentPassword == newPassword -> {
-                binding.tilNewPassword.error = "현재 비밀번호와 다른 비밀번호를 입력해 주세요."
-            }
-            else -> {
-                setLoading(true)
-                lifecycleScope.launch {
-                    authRepository.updatePassword(currentPassword, newPassword)
-                        .onSuccess {
-                            binding.etCurrentPassword.text?.clear()
-                            binding.etNewPassword.text?.clear()
-                            binding.etConfirmPassword.text?.clear()
-                            showMessage("Supabase 계정 비밀번호를 변경했습니다.")
-                        }
-                        .onFailure { error ->
-                            showMessage(error.userMessage("비밀번호를 변경하지 못했습니다."))
-                        }
-                    setLoading(false)
-                }
-            }
-        }
-    }
-
     private fun hasNotificationPermission(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -285,12 +249,6 @@ class ProfileActivity : AppCompatActivity() {
         binding.tilWeight.error = null
         binding.tilMuscleMass.error = null
         binding.tilBodyFat.error = null
-    }
-
-    private fun clearPasswordErrors() {
-        binding.tilCurrentPassword.error = null
-        binding.tilNewPassword.error = null
-        binding.tilConfirmPassword.error = null
     }
 
     private fun setLoading(loading: Boolean) {

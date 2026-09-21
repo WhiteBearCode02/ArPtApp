@@ -97,6 +97,23 @@ class SupabaseAuthRepository {
         Unit
     }
 
+    suspend fun verifyCurrentPassword(currentPassword: String): Result<Unit> = runCatching {
+        val user = client.auth.currentUserOrNull() ?: error("로그인이 필요합니다.")
+        require(user.identities.orEmpty().any { it.provider == "email" }) {
+            "Google 계정의 비밀번호는 Google 계정에서 변경해 주세요."
+        }
+        require(currentPassword.isNotBlank()) { "현재 비밀번호를 입력해 주세요." }
+        val userId = user.id
+        val email = user.email ?: error("계정 이메일을 확인할 수 없습니다.")
+        client.auth.signInWith(Email) {
+            this.email = email
+            password = currentPassword
+        }
+        check(client.auth.currentUserOrNull()?.id == userId) { "계정 확인에 실패했습니다." }
+        refreshSession()
+        Unit
+    }
+
     suspend fun signOut() {
         client.auth.awaitInitialization()
         client.auth.signOut()
