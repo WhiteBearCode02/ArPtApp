@@ -11,14 +11,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 sealed interface WorkoutTrendsUiState {
+    data object Idle : WorkoutTrendsUiState
     data object Loading : WorkoutTrendsUiState
     data class Content(val snapshot: WorkoutTrendSnapshot) : WorkoutTrendsUiState
     data class Unavailable(val message: String) : WorkoutTrendsUiState
 }
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = YouTubeTrendRepository(application)
-    private val _trends = MutableStateFlow<WorkoutTrendsUiState>(WorkoutTrendsUiState.Loading)
+    private val repository = YouTubeTrendRepository()
+    private val _trends = MutableStateFlow<WorkoutTrendsUiState>(WorkoutTrendsUiState.Idle)
     val trends: StateFlow<WorkoutTrendsUiState> = _trends.asStateFlow()
 
     fun loadTrends() {

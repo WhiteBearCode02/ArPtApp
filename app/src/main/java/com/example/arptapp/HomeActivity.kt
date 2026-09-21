@@ -48,7 +48,6 @@ class HomeActivity : AppCompatActivity() {
 
         observeWorkoutTrends()
         binding.btnRefreshTrends.setOnClickListener { homeViewModel.loadTrends() }
-        homeViewModel.loadTrends()
 
         binding.cardStartExercise.setOnTouchListener { _, event ->
             when (event.actionMasked) {
@@ -94,19 +93,21 @@ class HomeActivity : AppCompatActivity() {
         lifecycleScope.launch {
             homeViewModel.trends.collect { state ->
                 when (state) {
+                    WorkoutTrendsUiState.Idle -> {
+                        binding.btnRefreshTrends.isEnabled = true
+                        binding.tvTrendStatus.text = "조회 버튼을 누르면 무료 조회 한도에서 1회 사용합니다."
+                        showTrendMessage("운동 영상 순위를 조회해 주세요")
+                    }
                     WorkoutTrendsUiState.Loading -> {
                         binding.btnRefreshTrends.isEnabled = false
                         binding.tvTrendStatus.text = "YouTube 공개 영상 데이터를 불러오는 중입니다."
-                        setTrendRows(listOf("공개 영상 데이터 불러오는 중", "대시보드 준비 중", "잠시만 기다려 주세요"))
+                        showTrendMessage("공개 영상 데이터 불러오는 중")
                     }
 
                     is WorkoutTrendsUiState.Content -> {
                         binding.btnRefreshTrends.isEnabled = true
-                        binding.tvTrendStatus.text = if (state.snapshot.isCached) {
-                            "저장된 공개 영상 조회수 데이터 · 6시간마다 갱신"
-                        } else {
-                            "공개 영상 표본의 누적 조회수 · 방금 갱신"
-                        }
+                        binding.tvTrendStatus.text =
+                            "공개 영상 표본의 누적 조회수 · 오늘 남은 무료 조회 ${state.snapshot.remainingRequests}회"
                         setTrendRows(state.snapshot.trends.map { trend ->
                             "${localizeExerciseName(trend.exercise)}     상대 조회수 ${trend.score}"
                         })
@@ -114,8 +115,8 @@ class HomeActivity : AppCompatActivity() {
 
                     is WorkoutTrendsUiState.Unavailable -> {
                         binding.btnRefreshTrends.isEnabled = true
-                        binding.tvTrendStatus.text = "공개 영상 데이터 서비스를 준비하고 있습니다."
-                        setTrendRows(listOf("서비스 준비 중", "개인 검색 기록은 사용하지 않음", "설정 후 새로고침해 주세요"))
+                        binding.tvTrendStatus.text = state.message
+                        showTrendMessage(state.message)
                     }
                 }
             }
@@ -123,10 +124,18 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setTrendRows(rows: List<String>) {
+        binding.tvTrendSecond.visibility = View.VISIBLE
+        binding.tvTrendThird.visibility = View.VISIBLE
         val displayRows = (rows + List(3) { "표시할 데이터 없음" }).take(3)
         binding.tvTrendFirst.text = "01  ${displayRows[0]}"
         binding.tvTrendSecond.text = "02  ${displayRows[1]}"
         binding.tvTrendThird.text = "03  ${displayRows[2]}"
+    }
+
+    private fun showTrendMessage(message: String) {
+        binding.tvTrendFirst.text = message
+        binding.tvTrendSecond.visibility = View.GONE
+        binding.tvTrendThird.visibility = View.GONE
     }
 
     private fun localizeExerciseName(name: String): String = when (name.lowercase()) {

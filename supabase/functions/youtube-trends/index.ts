@@ -12,11 +12,43 @@ const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "public, max-age=21600",
+  "Cache-Control": "no-store",
 }
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers })
+
+class QuotaExceededError extends Error {}
+
+async function youtubeResponse(response: Response) {
+  if (response.ok) return response.json()
+  const body = await response.text()
+  if ((response.status === 403 || response.status === 429) &&
+    /quotaExceeded|dailyLimitExceeded|rateLimitExceeded|quota/i.test(body)) {
+    throw new QuotaExceededError("YouTube quota exhausted")
+  }
+  throw new Error(`YouTube request failed: ${response.status}`)
+}
+
+async function reserveFreeRequest(): Promise<number> {
+  const url = Deno.env.get("SUPABASE_URL")
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  if (!url || !serviceKey) throw new Error("Quota service is not configured")
+
+  const response = await fetch(`${url}/rest/v1/rpc/reserve_youtube_trend_request`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  })
+  if (!response.ok) throw new Error(`Quota reservation failed: ${response.status}`)
+  const remaining = await response.json()
+  if (typeof remaining !== "number") throw new Error("Invalid quota response")
+  return remaining
+}
 
 async function viewTotal(key: string, query: string) {
   const searchUrl = new URL(SEARCH)
@@ -25,8 +57,7 @@ async function viewTotal(key: string, query: string) {
     regionCode: "KR", relevanceLanguage: "ko", safeSearch: "moderate", q: query,
   }).toString()
   const searchResponse = await fetch(searchUrl)
-  if (!searchResponse.ok) throw new Error(`Search failed: ${searchResponse.status}`)
-  const searchData = await searchResponse.json()
+  const searchData = await youtubeResponse(searchResponse)
   const ids = (searchData.items ?? []).flatMap((item: { id?: { videoId?: string } }) =>
     item.id?.videoId ? [item.id.videoId] : [])
   if (ids.length === 0) return { total: 0, sampleSize: 0 }
@@ -34,8 +65,7 @@ async function viewTotal(key: string, query: string) {
   const videoUrl = new URL(VIDEOS)
   videoUrl.search = new URLSearchParams({ key, part: "statistics", id: ids.join(",") }).toString()
   const videoResponse = await fetch(videoUrl)
-  if (!videoResponse.ok) throw new Error(`Statistics failed: ${videoResponse.status}`)
-  const videoData = await videoResponse.json()
+  const videoData = await youtubeResponse(videoResponse)
   const total = (videoData.items ?? []).reduce(
     (sum: number, item: { statistics?: { viewCount?: string } }) => sum + Number(item.statistics?.viewCount ?? 0), 0,
   )
@@ -44,10 +74,19 @@ async function viewTotal(key: string, query: string) {
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers })
-  if (request.method !== "GET") return json({ message: "Method not allowed" }, 405)
+  if (request.method !== "POST") return json({ message: "Method not allowed" }, 405)
 
   const key = Deno.env.get("YOUTUBE_API_KEY")
   if (!key) return json({ message: "YouTube trend service is not configured." }, 503)
+
+  let remainingRequests: number
+  try {
+    remainingRequests = await reserveFreeRequest()
+  } catch (error) {
+    console.error(error)
+    return json({ message: "무료 조회 한도를 확인할 수 없습니다." }, 503)
+  }
+  if (remainingRequests < 0) return json({ message: "할당 조회수 모두 사용" }, 429)
 
   try {
     const raw = await Promise.all(QUERIES.map(async ({ exercise, query }) => ({
@@ -60,9 +99,10 @@ Deno.serve(async (request) => {
       score: Math.round((trend.total / maximum) * 100),
       sampleSize: trend.sampleSize,
     })).sort((left, right) => right.score - left.score)
-    return json({ updatedAt: new Date().toISOString(), trends })
+    return json({ updatedAt: new Date().toISOString(), remainingRequests, trends })
   } catch (error) {
     console.error(error)
+    if (error instanceof QuotaExceededError) return json({ message: "할당 조회수 모두 사용" }, 429)
     return json({ message: "YouTube trend data is temporarily unavailable." }, 502)
   }
 })
