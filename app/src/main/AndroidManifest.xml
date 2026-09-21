@@ -56,6 +56,9 @@ xmlns:tools="http://schemas.android.com/tools">
         android:name=".HomeActivity"
         android:exported="false" />
     <activity
+        android:name=".YouTubeRankingActivity"
+        android:exported="false" />
+    <activity
         android:name=".DashboardActivity"
         android:exported="false" />
     <activity

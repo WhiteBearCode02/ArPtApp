@@ -2,6 +2,9 @@
 .gradle
 /.gradle-user-home/
 local.properties
+**/.env
+**/.env.*
+!**/.env.example
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
