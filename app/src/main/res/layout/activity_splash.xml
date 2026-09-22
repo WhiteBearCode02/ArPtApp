@@ -16,15 +16,15 @@
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:adjustViewBounds="true"
-            android:contentDescription="ArPtApp 로고"
+            android:contentDescription="AIRPTCoach 로고"
             android:scaleType="fitCenter"
-            android:src="@drawable/arptapp_logo" />
+            android:src="@drawable/airptcoach_logo" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="AR PT COACH"
+            android:text="AIRPTCoach"
             android:textColor="@color/white"
             android:textSize="28sp"
             android:textStyle="bold"

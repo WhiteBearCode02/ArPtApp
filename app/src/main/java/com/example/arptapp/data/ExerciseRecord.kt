@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * [ArPtApp - 운동 기록 데이터 엔티티]
+ * [AIRPTCoach - 운동 기록 데이터 엔티티]
  * * 역할: 
  * - 이 클래스는 SQLite 데이터베이스 내의 'exercise_records'라는 이름의 표(Table)를 정의합니다.
  * - 사용자가 운동을 마칠 때마다 [날짜, 횟수, 시간, 칼로리] 데이터를 하나의 행(Row)으로 묶어 저장합니다.

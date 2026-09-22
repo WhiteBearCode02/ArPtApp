@@ -46,9 +46,9 @@
                     <ImageView
                         android:layout_width="64dp"
                         android:layout_height="64dp"
-                        android:contentDescription="ArPtApp 프로필 로고"
+                        android:contentDescription="AIRPTCoach 프로필 로고"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/arptapp_logo" />
+                        android:src="@drawable/airptcoach_logo" />
 
                     <LinearLayout
                         android:layout_width="0dp"

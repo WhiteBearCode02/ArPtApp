@@ -53,7 +53,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // 알림 내용 구성
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher) // 앱 아이콘 사용
-            .setContentTitle("AR PT COACH")
+            .setContentTitle("AIRPTCoach")
             .setContentText("오늘 운동하셨나요? AI 코치가 기다리고 있어요!")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)

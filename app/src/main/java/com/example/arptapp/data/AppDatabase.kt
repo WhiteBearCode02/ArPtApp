@@ -9,7 +9,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * [ArPtApp - 데이터베이스 관리 총괄 클래스]
+ * [AIRPTCoach - 데이터베이스 관리 총괄 클래스]
  * * 역할:
  * - 앱 전체에서 사용하는 데이터베이스의 중심점 역할을 합니다.
  * - 데이터베이스 인스턴스를 생성하고, 정의한 DAO(ExerciseDao)를 외부에 제공합니다.

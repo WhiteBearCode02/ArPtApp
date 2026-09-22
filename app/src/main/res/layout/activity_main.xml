@@ -40,7 +40,7 @@
                 android:id="@+id/ivLogo"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:src="@drawable/arptapp_logo"
+                android:src="@drawable/airptcoach_logo"
                 android:scaleType="centerCrop"
                 android:contentDescription="앱 로고" />
 
@@ -51,7 +51,7 @@
             android:id="@+id/tvAppName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="AR PT"
+            android:text="AIRPTCoach"
             android:textColor="#2196F3"
             android:textSize="36sp"
             android:textStyle="bold"
@@ -368,7 +368,7 @@
             android:id="@+id/tvVersion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="AR PT  ·  VERSION 1.0"
+            android:text="AIRPTCoach  ·  VERSION 1.0"
             android:textColor="#666666"
             android:textSize="11sp"
             android:layout_marginTop="32dp"

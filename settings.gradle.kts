@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ArPtApp"
+rootProject.name = "AIRPTCoach"
 include(":app")

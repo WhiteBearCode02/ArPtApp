@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.arptapp.databinding.ActivitySplashBinding
 
 /**
- * [ArPtApp - Splash Module]
+ * [AIRPTCoach - Splash Module]
  * 역할: 초기 리소스 로딩 및 브랜딩 노출 후 메인 진입점으로 이동시킵니다.
  */
 class SplashActivity : AppCompatActivity() {

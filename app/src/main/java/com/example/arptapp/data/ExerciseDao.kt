@@ -6,7 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 
 /**
- * [ArPtApp - 운동 기록 데이터 접근 객체 (DAO)]
+ * [AIRPTCoach - 운동 기록 데이터 접근 객체 (DAO)]
  * * 역할:
  * - 데이터베이스(DB)에 접근하여 데이터를 저장, 조회, 삭제하는 모든 명령을 관리하는 통로입니다.
  * - SQL 쿼리문을 직접 작성하거나 Room에서 제공하는 편리한 기능을 사용하여 데이터를 제어합니다.

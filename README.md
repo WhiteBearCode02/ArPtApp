@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable-nodpi/arptapp_logo.png" width="280" alt="ArPtApp logo" />
+<img src="app/src/main/res/drawable-nodpi/airptcoach_logo.png" width="280" alt="AIRPTCoach logo" />
 
-# ArPtApp
+# AIRPTCoach
 
 ### AI Personal Trainer · 실시간 운동 자세 분석 Android 앱
 
@@ -24,7 +24,7 @@
 
 ## 프로젝트가 해결하려는 문제
 
-혼자 운동할 때는 자신의 자세가 어떻게 보이는지, 어느 관절에서 동작이 무너지는지 확인하기 어렵습니다. ArPtApp은 스마트폰 카메라 한 대로 다음 질문에 답하는 것을 목표로 합니다.
+혼자 운동할 때는 자신의 자세가 어떻게 보이는지, 어느 관절에서 동작이 무너지는지 확인하기 어렵습니다. AIRPTCoach는 스마트폰 카메라 한 대로 다음 질문에 답하는 것을 목표로 합니다.
 
 - 앱이 지금 누구를 운동 주체로 추적하고 있는가?
 - 사용자가 어떤 운동을 수행하고 있는가?
@@ -52,7 +52,7 @@
 
 ## 🧠 AI 처리 아키텍처
 
-ArPtApp에서 YOLO와 MediaPipe는 서로 다른 책임을 가집니다.
+AIRPTCoach에서 YOLO와 MediaPipe는 서로 다른 책임을 가집니다.
 
 - **YOLO Classification**은 현재 수행 중인 운동 종목을 판단합니다.
 - **MediaPipe Pose**는 운동 중인 사람과 33개 관절 좌표를 지속적으로 추적합니다.
@@ -142,7 +142,7 @@ ArPtApp/
 │   │   ├── DashboardActivity.kt  # 실시간 운동 분석 화면
 │   │   └── OverlayView.kt        # 관절 구조 시각화
 │   ├── assets/                    # MediaPipe/TFLite 모델과 표준 자세
-│   └── res/                       # 네이비 기반 UI와 ArPtApp 로고
+│   └── res/                       # 네이비 기반 UI와 AIRPTCoach 로고
 ├── ai_module/
 │   ├── pipeline/                 # pose·rep·annotation dataset builder
 │   ├── training/                 # split·validation·향후 학습 entry point
@@ -166,6 +166,8 @@ ArPtApp/
 git clone https://github.com/WhiteBearCode02/ArPtApp.git
 cd ArPtApp
 ```
+
+GitHub 저장소 주소와 로컬 폴더명은 아직 `ArPtApp`입니다. Android 패키지명(`com.example.arptapp`), 기존 앱 데이터와 로그인 딥링크(`arptapp://auth/callback`)도 호환성을 위해 유지합니다. Gradle 프로젝트명과 사용자에게 보이는 앱 이름은 `AIRPTCoach`입니다.
 
 ### 2. Supabase 설정
 

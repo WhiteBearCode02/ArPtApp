@@ -24,9 +24,9 @@
             <ImageView
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:contentDescription="ArPtApp 로고"
+                android:contentDescription="AIRPTCoach 로고"
                 android:scaleType="centerCrop"
-                android:src="@drawable/arptapp_logo" />
+                android:src="@drawable/airptcoach_logo" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -39,7 +39,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.14"
-                    android:text="ARPT  /  YOUR SPACE"
+                    android:text="AIRPTCoach  /  YOUR SPACE"
                     android:textColor="@color/aurora_mint"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -308,7 +308,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="ARPT  ·  움직임을 더 선명하게"
+            android:text="AIRPTCoach  ·  움직임을 더 선명하게"
             android:textColor="@color/text_muted"
             android:textSize="11sp" />
     </LinearLayout>
