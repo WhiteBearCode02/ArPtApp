@@ -4,10 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityHomeBinding
 import com.example.arptapp.data.preferences.UserSettingsRepository
+import com.example.arptapp.data.preferences.LoginPreferences
+import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
 
@@ -15,6 +18,7 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private val settingsRepository by lazy { UserSettingsRepository(this) }
+    private val authRepository = SupabaseAuthRepository()
     private var isLaunchingTraining = false
     private var currentUserId: String? = null
 
@@ -71,6 +75,27 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnOpenSettings.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
+        }
+        binding.btnLogout.setOnClickListener {
+            binding.btnLogout.isEnabled = false
+            lifecycleScope.launch {
+                runCatching { authRepository.signOut() }
+                    .onSuccess {
+                        LoginPreferences(this@HomeActivity).apply {
+                            rememberLogin = false
+                            pendingGoogleRememberLogin = null
+                        }
+                        settingsRepository.clearActiveUser()
+                        AlarmHelper.cancelDailyReminder(this@HomeActivity)
+                        startActivity(Intent(this@HomeActivity, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        })
+                    }
+                    .onFailure {
+                        binding.btnLogout.isEnabled = true
+                        Toast.makeText(this@HomeActivity, "로그아웃에 실패했습니다. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+                    }
+            }
         }
     }
 

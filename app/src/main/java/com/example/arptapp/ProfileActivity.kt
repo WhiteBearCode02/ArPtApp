@@ -1,6 +1,7 @@
 package com.example.arptapp
 
 import android.Manifest
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -18,8 +19,6 @@ import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.databinding.ActivityProfileBinding
 import com.example.arptapp.utils.AlarmHelper
-import com.google.android.material.timepicker.MaterialTimePicker
-import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -105,19 +104,13 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showTimePicker() {
-        val picker = MaterialTimePicker.Builder()
-            .setTitleText("운동 알림 시간")
-            .setTimeFormat(if (DateFormat.is24HourFormat(this)) TimeFormat.CLOCK_24H else TimeFormat.CLOCK_12H)
-            .setHour(reminderHour)
-            .setMinute(reminderMinute)
-            .build()
-        picker.addOnPositiveButtonClickListener {
-            reminderHour = picker.hour
-            reminderMinute = picker.minute
+        TimePickerDialog(this, { _, hour, minute ->
+            reminderHour = hour
+            reminderMinute = minute
             binding.switchReminder.isChecked = true
             updateReminderTimeText()
-        }
-        picker.show(supportFragmentManager, "workout_reminder_time")
+        }, reminderHour.coerceIn(0, 23), reminderMinute.coerceIn(0, 59),
+            DateFormat.is24HourFormat(this)).show()
     }
 
     private fun updateReminderTimeText() {

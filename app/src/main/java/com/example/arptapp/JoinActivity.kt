@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityJoinBinding
 import com.example.arptapp.data.remote.SignUpProfile
+import com.example.arptapp.data.preferences.LoginPreferences
 import com.example.arptapp.viewmodel.LoginState
 import com.example.arptapp.viewmodel.LoginViewModel
 import kotlinx.coroutines.launch
@@ -106,6 +107,7 @@ class JoinActivity : AppCompatActivity() {
                         finish()
                     }
                     is LoginState.Authenticated -> {
+                        LoginPreferences(this@JoinActivity).rememberLogin = false
                         startActivity(Intent(this@JoinActivity, if (state.session.isAdmin) AdminDashboardActivity::class.java else HomeActivity::class.java).apply {
                             putExtra("USER_ID", state.session.userId)
                             putExtra("USER_EMAIL", state.session.email)

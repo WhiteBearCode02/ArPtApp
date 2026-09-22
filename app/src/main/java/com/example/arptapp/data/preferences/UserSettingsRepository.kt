@@ -53,6 +53,10 @@ class UserSettingsRepository(context: Context) {
         dataStore.edit { preferences -> preferences[ACTIVE_USER_ID] = userId }
     }
 
+    suspend fun clearActiveUser() {
+        dataStore.edit { preferences -> preferences.remove(ACTIVE_USER_ID) }
+    }
+
     suspend fun save(userId: String, settings: UserSettings) {
         val keys = SettingsKeys(userId)
         dataStore.edit { preferences ->

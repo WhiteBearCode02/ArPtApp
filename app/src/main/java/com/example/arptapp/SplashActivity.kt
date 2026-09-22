@@ -2,10 +2,13 @@ package com.example.arptapp
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.arptapp.data.preferences.LoginPreferences
+import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.databinding.ActivitySplashBinding
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * [AIRPTCoach - Splash Module]
@@ -20,14 +23,35 @@ class SplashActivity : AppCompatActivity() {
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2.5초(2500ms) 동안 스플래시 화면을 유지한 후 이동
-        Handler(Looper.getMainLooper()).postDelayed({
-            // 1. 로그인 화면(MainActivity)으로 이동하는 인텐트 생성
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            
-            // 2. 스플래시 화면 종료 (뒤로가기 시 다시 나타나지 않도록 제거)
-            finish()
-        }, 2500)
+        lifecycleScope.launch {
+            delay(2500)
+            val preferences = LoginPreferences(this@SplashActivity)
+            val repository = SupabaseAuthRepository()
+            val session = repository.restoreSession().getOrNull()
+
+            if (!preferences.rememberLogin) {
+                if (session != null) runCatching { repository.signOut() }
+                openLogin()
+                return@launch
+            }
+
+            if (session == null) {
+                preferences.rememberLogin = false
+                openLogin()
+            } else {
+                startActivity(Intent(this@SplashActivity,
+                    if (session.isAdmin) AdminDashboardActivity::class.java else HomeActivity::class.java).apply {
+                    putExtra("USER_ID", session.userId)
+                    putExtra("USER_EMAIL", session.email)
+                    putExtra("IS_ADMIN", session.isAdmin)
+                })
+                finish()
+            }
+        }
+    }
+
+    private fun openLogin() {
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
     }
 }

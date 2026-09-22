@@ -9,6 +9,9 @@ import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.AuthSessionStore
 import com.example.arptapp.data.remote.SupabaseAuthRepository
+import com.example.arptapp.data.preferences.LoginPreferences
+import com.example.arptapp.data.preferences.UserSettingsRepository
+import com.example.arptapp.utils.AlarmHelper
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 
@@ -58,8 +61,20 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun signOut() {
         lifecycleScope.launch {
-            authRepository.signOut()
-            openLogin()
+            runCatching { authRepository.signOut() }
+                .onSuccess {
+                    LoginPreferences(this@AdminDashboardActivity).apply {
+                        rememberLogin = false
+                        pendingGoogleRememberLogin = null
+                    }
+                    UserSettingsRepository(this@AdminDashboardActivity).clearActiveUser()
+                    AlarmHelper.cancelDailyReminder(this@AdminDashboardActivity)
+                    openLogin()
+                }
+                .onFailure {
+                    Toast.makeText(this@AdminDashboardActivity,
+                        "로그아웃에 실패했습니다. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 

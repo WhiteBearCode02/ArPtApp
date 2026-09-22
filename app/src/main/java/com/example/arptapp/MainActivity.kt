@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
+import com.example.arptapp.data.preferences.LoginPreferences
 import com.example.arptapp.databinding.ActivityMainBinding
 import com.example.arptapp.viewmodel.LoginState
 import com.example.arptapp.viewmodel.LoginViewModel
@@ -17,11 +18,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val loginViewModel: LoginViewModel by viewModels()
+    private val loginPreferences by lazy { LoginPreferences(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.checkRememberLogin.isChecked =
+            loginPreferences.pendingGoogleRememberLogin ?: loginPreferences.rememberLogin
 
         setupClickListeners()
         observeLoginState()
@@ -31,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         // 로그인 버튼
         binding.btnLogin.setOnClickListener {
+            loginPreferences.pendingGoogleRememberLogin = null
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
 
@@ -64,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnGoogleLogin.setOnClickListener {
+            loginPreferences.pendingGoogleRememberLogin = binding.checkRememberLogin.isChecked
             loginViewModel.signInWithGoogle()
         }
 
@@ -97,13 +103,19 @@ class MainActivity : AppCompatActivity() {
                             binding.btnLogin.isEnabled = true
                             binding.btnGoogleLogin.isEnabled = true
                         }
-                        is LoginState.Authenticated -> navigateForSession(state.session)
+                        is LoginState.Authenticated -> {
+                            loginPreferences.rememberLogin =
+                                loginPreferences.pendingGoogleRememberLogin ?: binding.checkRememberLogin.isChecked
+                            loginPreferences.pendingGoogleRememberLogin = null
+                            navigateForSession(state.session)
+                        }
                         is LoginState.SignedUp -> Toast.makeText(
                             this@MainActivity,
                             "회원가입이 완료되었습니다. 이메일 인증 후 로그인해 주세요.",
                             Toast.LENGTH_LONG
                         ).show()
                         is LoginState.Error -> {
+                            loginPreferences.pendingGoogleRememberLogin = null
                             binding.btnLogin.isEnabled = true
                             binding.btnGoogleLogin.isEnabled = true
                             binding.tilPassword.error = state.message
