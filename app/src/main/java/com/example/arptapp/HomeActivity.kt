@@ -69,9 +69,6 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
-        binding.cardPersonalSettings.setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
-        }
         binding.btnOpenSettings.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }

@@ -3,151 +3,280 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen"
+    android:background="@drawable/bg_home_aurora"
     android:fillViewport="true">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="22dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="28dp">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="28dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="ArPtApp 로고"
+                android:scaleType="centerCrop"
+                android:src="@drawable/arptapp_logo" />
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.14" android:text="ARPT 홈" android:textColor="@color/color_primary" android:textSize="11sp" android:textStyle="bold" />
-                <TextView android:id="@+id/tvWelcomeName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="반갑습니다" android:textColor="@color/text_primary" android:textSize="23sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="오늘의 움직임을 정확하게 기록해 보세요." android:textColor="@color/text_secondary" android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.14"
+                    android:text="ARPT  /  YOUR SPACE"
+                    android:textColor="@color/aurora_mint"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvWelcomeName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="반갑습니다"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
             </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnOpenSettings"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_height="48dp"
+                android:contentDescription="개인 설정 열기"
                 android:minWidth="0dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="12dp"
                 android:text="설정"
-                android:contentDescription="개인 설정 열기" />
-            <ImageView android:layout_width="58dp" android:layout_height="58dp" android:contentDescription="ArPtApp logo" android:scaleType="centerCrop" android:src="@drawable/arptapp_logo" />
+                android:textColor="@color/aurora_ice"
+                android:textSize="12sp"
+                app:cornerRadius="16dp"
+                app:strokeColor="@color/aurora_border" />
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="19dp"
+            android:text="오늘도 나에게 맞는 움직임을 시작해 볼까요?"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
 
         <FrameLayout
             android:id="@+id/cardStartExercise"
             android:layout_width="match_parent"
-            android:layout_height="196dp"
-            android:layout_marginBottom="22dp"
-            android:background="@drawable/bg_training_portal"
+            android:layout_height="162dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_home_hero"
             android:clickable="true"
+            android:contentDescription="트레이닝 시작"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground">
-            <com.example.arptapp.ui.StarBurstView android:id="@+id/starBurstView" android:layout_width="match_parent" android:layout_height="match_parent" android:importantForAccessibility="no" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:padding="24dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_status_chip" android:paddingHorizontal="12dp" android:paddingVertical="6dp" android:text="실시간 동작 분석" android:textColor="#D8ECFF" android:textSize="11sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="트레이닝 시작" android:textColor="@color/text_primary" android:textSize="28sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="길게 누르면 별이 회전하고, 놓으면 시작합니다." android:textColor="#C7DBF2" android:textSize="14sp" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:letterSpacing="0.12" android:text="눌러서 운동 시작  *" android:textColor="#8ED3FF" android:textSize="12sp" android:textStyle="bold" />
-            </LinearLayout>
-        </FrameLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
-            app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="20dp"
-            app:strokeColor="@color/color_border"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:letterSpacing="0.12" android:text="YOUTUBE 공개 데이터" android:textColor="@color/color_primary" android:textSize="11sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="조회수 기준 인기 영상" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold" />
-                    </LinearLayout>
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btnOpenRanking" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="운동 영상 순위 화면 열기" android:text="보기" />
-                </LinearLayout>
-                <TextView android:id="@+id/tvTrendStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="스쿼트·숄더 프레스 공개 영상 · 3시간 서버 캐시" android:textColor="@color/text_secondary" android:textSize="12sp" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical">
-                    <TextView android:id="@+id/tvTrendFirst" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:text="영상 순위 화면에서 운동을 선택해 조회하세요" android:textColor="@color/text_primary" android:textSize="15sp" />
-                    <TextView android:id="@+id/tvTrendSecond" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:textColor="@color/text_primary" android:textSize="15sp" android:visibility="gone" />
-                    <TextView android:id="@+id/tvTrendThird" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_trend_row" android:paddingHorizontal="14dp" android:paddingVertical="12dp" android:textColor="@color/text_primary" android:textSize="15sp" android:visibility="gone" />
-                </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:autoLink="web" android:text="YouTube 공개 데이터 · 이용약관: https://www.youtube.com/t/terms" android:textColor="@color/text_secondary" android:textSize="11sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardPersonalSettings"
-            android:layout_width="match_parent"
-            android:layout_height="104dp"
-            android:layout_marginBottom="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/color_border"
-            app:strokeWidth="1dp">
+            <com.example.arptapp.ui.StarBurstView
+                android:id="@+id/starBurstView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="22dp">
+                android:orientation="vertical"
+                android:paddingHorizontal="22dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_home_chip"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:text="LIVE  ·  실시간 자세 분석"
+                    android:textColor="@color/aurora_ice"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="11dp"
+                    android:text="트레이닝 시작  ↗"
+                    android:textColor="@color/text_primary"
+                    android:textSize="25sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="자세를 확인하며 내 속도로 운동해요."
+                    android:textColor="@color/aurora_ice"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="25dp"
+            android:layout_marginBottom="11dp"
+            android:text="바로가기"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardViewHistory"
+                android:layout_width="0dp"
+                android:layout_height="112dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/aurora_tile"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/aurora_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="개인 설정"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:text="↗"
+                        android:textColor="@color/aurora_mint"
+                        android:textSize="22sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
-                        android:text="신체 정보, 알림 시간, 계정 정보를 관리합니다."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-                </LinearLayout>
+                        android:text="운동 기록"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=">"
-                    android:textColor="@color/color_primary"
-                    android:textSize="32sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="지난 운동과 리포트"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnOpenRanking"
+                android:layout_width="0dp"
+                android:layout_height="112dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/aurora_tile"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/aurora_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✦"
+                        android:textColor="@color/aurora_lilac"
+                        android:textSize="21sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="영상 순위"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="공개 영상 조회수"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="13dp"
+            android:text="영상 순위는 공개 영상 기준이며, 서버 설정 후 이용할 수 있어요."
+            android:textColor="@color/text_muted"
+            android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:autoLink="web"
+            android:text="YouTube 이용약관: https://www.youtube.com/t/terms"
+            android:textColor="@color/text_muted"
+            android:textSize="10sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardAdminDashboard"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginBottom="16dp"
+            android:layout_height="64dp"
+            android:layout_marginTop="18dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground"
             android:visibility="gone"
-            app:cardBackgroundColor="@color/color_surface_high"
-            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="@color/aurora_tile"
+            app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/color_primary"
+            app:strokeColor="@color/aurora_lilac"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -155,60 +284,32 @@
                 android:layout_height="match_parent"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="22dp">
+                android:paddingHorizontal="18dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="관리자 대시보드"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:text="회원 및 서비스 현황을 관리합니다."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-                </LinearLayout>
+                    android:text="관리자 대시보드"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text=">"
-                    android:textColor="@color/color_primary"
-                    android:textSize="32sp" />
+                    android:text="열기  ↗"
+                    android:textColor="@color/aurora_lilac"
+                    android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardViewHistory"
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="112dp"
-            android:layout_marginBottom="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/color_border"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:padding="22dp">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="운동 기록" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="최근 운동과 상세 자세 리포트를 확인하세요." android:textColor="@color/text_secondary" android:textSize="13sp" />
-                </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=">" android:textColor="@color/color_primary" android:textSize="32sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="ARPT  ·  움직임을 더 선명하게"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp" />
     </LinearLayout>
 </ScrollView>
