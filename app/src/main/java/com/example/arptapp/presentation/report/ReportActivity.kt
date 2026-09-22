@@ -3,13 +3,17 @@ package com.example.arptapp.presentation.report
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.arptapp.data.RepAnalysisCodec
 import com.example.arptapp.databinding.ActivityReportBinding
+import com.example.arptapp.model.RepAnalysis
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import java.util.Locale
 
 class ReportActivity : AppCompatActivity() {
@@ -25,23 +29,28 @@ class ReportActivity : AppCompatActivity() {
         val exerciseType = intent.getStringExtra("EXERCISE_TYPE") ?: "스쿼트"
         val totalCount = intent.getIntExtra("TOTAL_COUNT", 0)
         val avgScore = intent.getFloatExtra("AVG_SCORE", 0f)
-        val scores = intent.getFloatArrayExtra("SCORES") ?: floatArrayOf()
+        val analyses = RepAnalysisCodec.decode(intent.getStringExtra("REP_ANALYSES_JSON")
+            ?: org.json.JSONArray(intent.getFloatArrayExtra("SCORES")?.toList() ?: emptyList<Float>()).toString())
         val workoutDate = intent.getStringExtra("WORKOUT_DATE").orEmpty()
         val duration = intent.getLongExtra("EXERCISE_TIME", 0L)
         val calories = intent.getDoubleExtra("BURNED_CALORIES", 0.0)
         val storedFeedback = intent.getStringExtra("FEEDBACK_MESSAGE").orEmpty()
         
         // UI 업데이트
-        setupUI(exerciseType, totalCount, avgScore, scores, workoutDate, duration, calories, storedFeedback)
+        setupUI(exerciseType, totalCount, avgScore, analyses, workoutDate, duration, calories, storedFeedback)
         
         // 차트 그리기
-        if (scores.isNotEmpty()) {
+        if (analyses.isNotEmpty()) {
             binding.chart.visibility = View.VISIBLE
             binding.tvChartEmpty.visibility = View.GONE
-            setupChart(scores)
+            setupChart(analyses)
+            setupRepDetails(analyses)
         } else {
             binding.chart.visibility = View.GONE
             binding.tvChartEmpty.visibility = View.VISIBLE
+            binding.tvRepDetailsHeader.visibility = View.GONE
+            binding.tvRepAnalysisNote.visibility = View.GONE
+            binding.repAnalysisContainer.visibility = View.GONE
         }
         
         // 닫기 버튼
@@ -54,7 +63,7 @@ class ReportActivity : AppCompatActivity() {
         exerciseType: String,
         totalCount: Int,
         avgScore: Float,
-        scores: FloatArray,
+        analyses: List<RepAnalysis>,
         workoutDate: String,
         duration: Long,
         calories: Double,
@@ -70,7 +79,7 @@ class ReportActivity : AppCompatActivity() {
             calories
         )
 
-        if (scores.isEmpty()) {
+        if (analyses.isEmpty()) {
             binding.tvAvgScore.text = "자세 점수: 기록 없음"
             binding.tvAvgScore.setTextColor(Color.parseColor("#B0B0B0"))
             binding.tvFeedback.text = storedFeedback.ifBlank {
@@ -79,13 +88,14 @@ class ReportActivity : AppCompatActivity() {
             return
         }
 
-        binding.tvAvgScore.text = "평균 정확도: ${avgScore.toInt()}%"
+        val displayScore = if (avgScore > 0f) avgScore else analyses.map { it.score }.average().toFloat()
+        binding.tvAvgScore.text = "평균 자세 점수: ${displayScore.toInt()}점"
         
         // 평균 점수에 따른 색상 변경
         binding.tvAvgScore.setTextColor(
             when {
-                avgScore >= 90 -> Color.parseColor("#4CAF50")
-                avgScore >= 70 -> Color.parseColor("#FF9800")
+                displayScore >= 90 -> Color.parseColor("#4CAF50")
+                displayScore >= 70 -> Color.parseColor("#FF9800")
                 else -> Color.parseColor("#F44336")
             }
         )
@@ -105,14 +115,15 @@ class ReportActivity : AppCompatActivity() {
         return String.format(Locale.getDefault(), "%02d분 %02d초", minutes, seconds)
     }
     
-    private fun setupChart(scores: FloatArray) {
-        val entries = scores.mapIndexed { index, score ->
-            BarEntry((index + 1).toFloat(), score)
+    private fun setupChart(analyses: List<RepAnalysis>) {
+        val entries = analyses.mapIndexed { index, analysis ->
+            BarEntry((index + 1).toFloat(), analysis.score)
         }
         
-        val dataSet = BarDataSet(entries, "세트별 정확도").apply {
+        val dataSet = BarDataSet(entries, "횟수별 자세 점수").apply {
             // 점수에 따른 색상 설정
-            colors = scores.map { score ->
+            colors = analyses.map { analysis ->
+                val score = analysis.score
                 when {
                     score >= 90 -> Color.parseColor("#4CAF50")
                     score >= 70 -> Color.parseColor("#FF9800")
@@ -123,7 +134,7 @@ class ReportActivity : AppCompatActivity() {
             valueTextColor = Color.WHITE
         }
         
-        val barData = BarData(dataSet)
+        val barData = BarData(dataSet).apply { barWidth = 0.65f }
         
         binding.chart.apply {
             data = barData
@@ -135,9 +146,12 @@ class ReportActivity : AppCompatActivity() {
                 setDrawGridLines(false)
                 granularity = 1f
                 textColor = Color.WHITE
-                valueFormatter = IndexAxisValueFormatter(
-                    (1..scores.size).map { "${it}회" }
-                )
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String =
+                        if (value.toInt().toFloat() == value && value in 1f..analyses.size.toFloat()) {
+                            "${value.toInt()}회"
+                        } else ""
+                }
             }
             
             // Y축 설정
@@ -161,7 +175,27 @@ class ReportActivity : AppCompatActivity() {
             animateY(1000)
             
             setFitBars(true)
+            setVisibleXRangeMaximum(8f)
             invalidate()
         }
     }
+
+    private fun setupRepDetails(analyses: List<RepAnalysis>) {
+        binding.repAnalysisContainer.removeAllViews()
+        analyses.forEach { analysis ->
+            val item = TextView(this).apply {
+                text = "${analysis.repNumber}회 · ${analysis.score.toInt()}점\n${analysis.detail}"
+                setTextColor(Color.WHITE)
+                textSize = 14f
+                setPadding(18.dp, 14.dp, 18.dp, 14.dp)
+                setBackgroundResource(com.example.arptapp.R.drawable.bg_trend_row)
+            }
+            binding.repAnalysisContainer.addView(item, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8.dp })
+        }
+    }
+
+    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
 }

@@ -85,8 +85,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var lastAccelerationX: Float? = null
     private var currentMaxSwayX = 0f
 
-    // 매 회차별 점수를 저장할 리스트
-    private val scoreList = mutableListOf<Float>()
     private val currentRepAngles = mutableListOf<FloatArray>()
     private val currentRepErrorTags = mutableSetOf<String>()
     private val dtwCalculator = DTWCalculator()
@@ -174,7 +172,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         mainViewModel.resetSession()
         startTime = System.currentTimeMillis()
         repetitionCount = 0
-        scoreList.clear()
         currentRepAngles.clear()
         currentRepErrorTags.clear()
         currentMaxSwayX = 0f
@@ -229,8 +226,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             putExtra("EXERCISE_TIME", elapsedTime)
             putExtra("EXERCISE_TYPE", currentExerciseType.displayName)
 
-            // 2. 모아둔 점수 리스트를 배열로 변환해서 넘깁니다. (리포트 그래프용)
-            putExtra("SCORES", scoreList.toFloatArray())
+            // 각 회차의 점수와 관찰 내용을 함께 전달합니다.
+            putExtra("REP_ANALYSES_JSON", com.example.arptapp.data.RepAnalysisCodec.encode(
+                mainViewModel.getRepAnalyses(report.exerciseType)
+            ))
 
             // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
             putExtra("AVG_SCORE", report.averageScore.toFloat())
@@ -371,19 +370,23 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             binding.tvCount.text = repetitionCount.toString()
             feedbackManager.announceRep(repetitionCount)
 
+            val poseScore = if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep() else {
+                currentRepAngles.clear()
+                null
+            }
+
             mainViewModel.addRepRecord(
                 repNumber = repetitionCount,
                 angle = exerciseCounter.getCurrentMaxAngle(),
                 sway = currentMaxSwayX,
                 errorTags = currentRepErrorTags.toList(),
                 eccentricDurationMs = exerciseCounter.getLastEccentricDurationMs(),
-                concentricDurationMs = exerciseCounter.getLastConcentricDurationMs()
+                concentricDurationMs = exerciseCounter.getLastConcentricDurationMs(),
+                poseScore = poseScore
             )
             currentMaxSwayX = 0f
             currentRepErrorTags.clear()
 
-            if (currentExerciseType == ExerciseType.SQUAT) scoreCurrentRep()
-            else currentRepAngles.clear()
         }
     }
 
@@ -400,10 +403,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         angles = emptyMap()
     )
 
-    private fun scoreCurrentRep() {
+    private fun scoreCurrentRep(): Float? {
         if (standardSquatSequence.isEmpty() || currentRepAngles.isEmpty()) {
             currentRepAngles.clear()
-            return
+            return null
         }
 
         val score = dtwCalculator.calculateAverageScore(
@@ -411,9 +414,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             standardSequence = standardSquatSequence,
             weights = dtwCalculator.getExerciseWeights("SQUAT")
         )
-        scoreList.add(score)
         currentRepAngles.clear()
         Log.d(TAG, "회차: $repetitionCount, 자세 점수: $score")
+        return score.takeIf { it.isFinite() && it in 0f..100f }
     }
 
     /**

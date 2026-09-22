@@ -30,6 +30,8 @@ class ResultActivity : AppCompatActivity() {
         val finalCount = intent.getIntExtra("TOTAL_COUNT", 0)
         val exerciseTimeInSeconds = intent.getLongExtra("EXERCISE_TIME", 0L)
         val scores = intent.getFloatArrayExtra("SCORES")
+        val repAnalysesJson = intent.getStringExtra("REP_ANALYSES_JSON")
+            ?: JSONArray(scores?.toList() ?: emptyList<Float>()).toString()
         val avgScore = intent.getFloatExtra("AVG_SCORE", 0f)
         val exerciseType = intent.getStringExtra("EXERCISE_TYPE") ?: "스쿼트"
 
@@ -50,7 +52,7 @@ class ResultActivity : AppCompatActivity() {
             workoutDate = workoutDate,
             exerciseType = exerciseType,
             averageScore = avgScore,
-            scores = scores ?: floatArrayOf(),
+            repAnalysesJson = repAnalysesJson,
             feedbackMessage = feedbackMessage
         )
 
@@ -62,6 +64,7 @@ class ResultActivity : AppCompatActivity() {
                 putExtra("TOTAL_COUNT", finalCount)
                 putExtra("AVG_SCORE", avgScore)
                 putExtra("SCORES", scores)
+                putExtra("REP_ANALYSES_JSON", repAnalysesJson)
                 putExtra("WORKOUT_DATE", workoutDate)
                 putExtra("EXERCISE_TIME", exerciseTimeInSeconds)
                 putExtra("BURNED_CALORIES", burnedCalories)
@@ -85,7 +88,7 @@ class ResultActivity : AppCompatActivity() {
         workoutDate: String,
         exerciseType: String,
         averageScore: Float,
-        scores: FloatArray,
+        repAnalysesJson: String,
         feedbackMessage: String
     ) {
         val record = ExerciseRecord(
@@ -95,7 +98,7 @@ class ResultActivity : AppCompatActivity() {
             burnedCalories = calories,
             exerciseType = exerciseType,
             averageScore = averageScore,
-            scoresJson = JSONArray(scores.toList()).toString(),
+            scoresJson = repAnalysesJson,
             feedbackMessage = feedbackMessage
         )
         lifecycleScope.launch {
