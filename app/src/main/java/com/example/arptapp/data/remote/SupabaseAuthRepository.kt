@@ -11,6 +11,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+data class SignUpProfile(
+    val name: String,
+    val weightKg: Double?,
+    val skeletalMuscleMassKg: Double?,
+    val bodyFatMassKg: Double?,
+    val bodyFatPercentage: Double?
+)
 
 data class AppSession(
     val userId: String,
@@ -35,10 +45,17 @@ class SupabaseAuthRepository {
     private val _session = MutableStateFlow<AppSession?>(AuthSessionStore.current)
     val session: StateFlow<AppSession?> = _session.asStateFlow()
 
-    suspend fun signUp(email: String, password: String): Result<AppSession?> = runCatching {
-        client.auth.signUpWith(Email) {
+    suspend fun signUp(email: String, password: String, profile: SignUpProfile): Result<AppSession?> = runCatching {
+        client.auth.signUpWith(Email, redirectUrl = REDIRECT_URI) {
             this.email = email
             this.password = password
+            data = buildJsonObject {
+                put("name", profile.name)
+                profile.weightKg?.let { put("weight_kg", it) }
+                profile.skeletalMuscleMassKg?.let { put("skeletal_muscle_mass_kg", it) }
+                profile.bodyFatMassKg?.let { put("body_fat_mass_kg", it) }
+                profile.bodyFatPercentage?.let { put("body_fat_percentage", it) }
+            }
         }
         refreshSession()
     }

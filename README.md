@@ -181,7 +181,9 @@ supabase.key=YOUR_SUPABASE_ANON_KEY
 [`supabase/admin-role-setup.sql`](supabase/admin-role-setup.sql)의 이메일 예시를 실제 관리자 계정으로 바꿔 실행한 뒤,
 앱에서 로그아웃하고 다시 로그인하면 관리자 대시보드로 자동 이동합니다.
 
-Supabase Authentication에서 이메일 사용자를 생성하거나 앱 회원가입 화면을 이용합니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일까지 완료해야 로그인할 수 있습니다.
+앱 회원가입 화면에서 이메일·비밀번호를 제출하면 Supabase Auth 계정이 생성됩니다. 이름과 선택 입력한 신체 수치는 해당 Auth 사용자의 `user_metadata`에 저장합니다(별도의 `public` 프로필 테이블은 만들지 않습니다). 비밀번호는 앱에서 별도로 저장하지 않습니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일의 링크를 연 뒤 로그인할 수 있고, 비활성화된 경우 가입 직후 앱으로 이동합니다.
+
+Google 로그인 사용 전에는 [Supabase Google 제공자 설정](https://supabase.com/docs/guides/auth/social-login/auth-google)에 따라 Google Cloud의 웹 OAuth 클라이언트 ID·Secret을 Supabase Auth → Providers → Google에 설정하고, Google의 승인된 리디렉션 URI에 Supabase 대시보드가 표시하는 callback URL을 추가해야 합니다. 또한 Supabase Auth → URL Configuration → Redirect URLs에 `arptapp://auth/callback`을 등록하세요. Google Client Secret은 Android 앱이나 `local.properties`에 넣지 않습니다. 이메일 인증 링크도 같은 앱 딥링크로 돌아옵니다.
 
 ### 3. 빌드
 

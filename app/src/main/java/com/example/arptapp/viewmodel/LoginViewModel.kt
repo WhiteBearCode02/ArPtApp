@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.SupabaseAuthRepository
+import com.example.arptapp.data.remote.SignUpProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,9 +32,9 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, profile: SignUpProfile) {
         launchAuth {
-            repository.signUp(email, password).fold(
+            repository.signUp(email, password, profile).fold(
                 onSuccess = { session ->
                     _state.value = if (session == null) {
                         LoginState.SignedUp(needsEmailConfirmation = true)

@@ -89,7 +89,14 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 loginViewModel.state.collect { state ->
                     when (state) {
-                        LoginState.Idle, LoginState.Loading -> Unit
+                        LoginState.Loading -> {
+                            binding.btnLogin.isEnabled = false
+                            binding.btnGoogleLogin.isEnabled = false
+                        }
+                        LoginState.Idle -> {
+                            binding.btnLogin.isEnabled = true
+                            binding.btnGoogleLogin.isEnabled = true
+                        }
                         is LoginState.Authenticated -> navigateForSession(state.session)
                         is LoginState.SignedUp -> Toast.makeText(
                             this@MainActivity,
@@ -97,6 +104,8 @@ class MainActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
                         is LoginState.Error -> {
+                            binding.btnLogin.isEnabled = true
+                            binding.btnGoogleLogin.isEnabled = true
                             binding.tilPassword.error = state.message
                             Toast.makeText(this@MainActivity, state.message, Toast.LENGTH_SHORT).show()
                         }
