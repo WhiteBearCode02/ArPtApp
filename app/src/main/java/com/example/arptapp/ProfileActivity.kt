@@ -37,7 +37,7 @@ class ProfileActivity : AppCompatActivity() {
             binding.switchReminder.isChecked = false
             Toast.makeText(this, "알림 권한이 없어 운동 알림을 껐습니다.", Toast.LENGTH_LONG).show()
         }
-        savePersonalSettings(checkNotificationPermission = false)
+        saveReminderSettings(checkNotificationPermission = false)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +47,8 @@ class ProfileActivity : AppCompatActivity() {
 
         binding.toolbarProfile.setNavigationOnClickListener { finish() }
         binding.cardReminderTime.setOnClickListener { showTimePicker() }
-        binding.btnSavePreferences.setOnClickListener { savePersonalSettings() }
+        binding.btnSaveBodyInfo.setOnClickListener { saveBodyInfo() }
+        binding.btnSaveReminder.setOnClickListener { saveReminderSettings() }
         binding.btnUpdateEmail.setOnClickListener { updateEmail() }
         binding.btnUpdatePassword.setOnClickListener {
             startActivity(Intent(this, PasswordChangeActivity::class.java))
@@ -122,7 +123,7 @@ class ProfileActivity : AppCompatActivity() {
         )
     }
 
-    private fun savePersonalSettings(checkNotificationPermission: Boolean = true) {
+    private fun saveBodyInfo() {
         val currentSession = session ?: return
         clearBodyErrors()
 
@@ -147,35 +148,54 @@ class ProfileActivity : AppCompatActivity() {
         }
         if (binding.tilBodyFat.error != null) return
 
+        setLoading(true)
+        lifecycleScope.launch {
+            runCatching {
+                val settings = settingsRepository.getSettings(currentSession.userId).copy(
+                    nickname = nickname,
+                    heightCm = height,
+                    weightKg = weight,
+                    skeletalMuscleMassKg = muscleMass,
+                    bodyFatPercentage = bodyFat
+                )
+                settingsRepository.save(currentSession.userId, settings)
+            }.onSuccess {
+                showMessage("신체 정보를 저장했습니다.")
+            }.onFailure { error ->
+                showMessage(error.userMessage("신체 정보를 저장하지 못했습니다."))
+            }
+            setLoading(false)
+        }
+    }
+
+    private fun saveReminderSettings(checkNotificationPermission: Boolean = true) {
+        val currentSession = session ?: return
         if (checkNotificationPermission && binding.switchReminder.isChecked && !hasNotificationPermission()) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
 
-        val settings = UserSettings(
-            nickname = nickname,
-            heightCm = height,
-            weightKg = weight,
-            skeletalMuscleMassKg = muscleMass,
-            bodyFatPercentage = bodyFat,
-            reminderEnabled = binding.switchReminder.isChecked,
-            reminderHour = reminderHour,
-            reminderMinute = reminderMinute
-        )
-
+        val enabled = binding.switchReminder.isChecked
+        val hour = reminderHour
+        val minute = reminderMinute
         setLoading(true)
         lifecycleScope.launch {
             runCatching {
+                val settings = settingsRepository.getSettings(currentSession.userId).copy(
+                    reminderEnabled = enabled,
+                    reminderHour = hour,
+                    reminderMinute = minute
+                )
                 settingsRepository.save(currentSession.userId, settings)
-                if (settings.reminderEnabled) {
-                    AlarmHelper.scheduleDailyReminder(this@ProfileActivity, reminderHour, reminderMinute)
+                if (enabled) {
+                    AlarmHelper.scheduleDailyReminder(this@ProfileActivity, hour, minute)
                 } else {
                     AlarmHelper.cancelDailyReminder(this@ProfileActivity)
                 }
             }.onSuccess {
-                showMessage("개인 설정과 운동 알림을 저장했습니다.")
+                showMessage("알림 설정을 저장했습니다.")
             }.onFailure { error ->
-                showMessage(error.userMessage("설정을 저장하지 못했습니다."))
+                showMessage(error.userMessage("알림 설정을 저장하지 못했습니다."))
             }
             setLoading(false)
         }
@@ -246,7 +266,10 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun setLoading(loading: Boolean) {
         binding.progressProfile.visibility = if (loading) View.VISIBLE else View.GONE
-        binding.btnSavePreferences.isEnabled = !loading
+        binding.btnSaveBodyInfo.isEnabled = !loading
+        binding.btnSaveReminder.isEnabled = !loading
+        binding.switchReminder.isEnabled = !loading
+        binding.cardReminderTime.isEnabled = !loading
         binding.btnUpdateEmail.isEnabled = !loading
         binding.btnUpdatePassword.isEnabled = !loading
     }
