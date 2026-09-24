@@ -17,18 +17,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 @Database(
     entities = [
-        ExerciseRecord::class,
-        UserEntity::class,
-        HealthProfile::class // 반드시 ::class (코틀린 문법) 사용
+        ExerciseRecord::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     // [DAO 연결] 외부에서 이 함수를 통해 운동 기록 데이터에 접근할 수 있게 합니다.
     abstract fun exerciseDao(): ExerciseDao
-    abstract fun userDao(): UserDao
 
     /**
      * [싱글톤 패턴 구현 부분]
@@ -54,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 // [Migration 전략] 버전이 올라갔을 때 기존 데이터를 어떻게 처리할지 정합니다. 
                 // 지금은 초기 단계이므로 기존 데이터를 지우고 새로 만드는 방식을 채택합니다.
-                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .build()
                 
@@ -69,6 +66,15 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN averageScore REAL NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN scoresJson TEXT NOT NULL DEFAULT '[]'")
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN feedbackMessage TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                // 계정과 비밀번호는 Supabase Auth만 관리합니다.
+                db.execSQL("DROP TABLE IF EXISTS health_profiles")
+                db.execSQL("DROP TABLE IF EXISTS users")
             }
         }
     }

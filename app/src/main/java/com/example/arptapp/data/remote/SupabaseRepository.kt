@@ -1,6 +1,7 @@
 package com.example.arptapp.data.remote
 
 import com.example.arptapp.model.RepRecord
+import com.example.arptapp.model.RepAnalysis
 import com.example.arptapp.model.SessionReport
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
@@ -8,7 +9,13 @@ import kotlinx.serialization.SerialName
 import java.util.UUID
 
 class SupabaseRepository {
-    suspend fun uploadSession(report: SessionReport, records: List<RepRecord>): Result<Unit> {
+    suspend fun uploadSession(
+        report: SessionReport,
+        records: List<RepRecord>,
+        analyses: List<RepAnalysis>,
+        durationSeconds: Long,
+        burnedCalories: Double
+    ): Result<Unit> {
         val supabase = runCatching { SupabaseClientProvider.client }.getOrElse { error ->
             return Result.failure(error)
         }
@@ -24,17 +31,27 @@ class SupabaseRepository {
                     exerciseType = report.exerciseType,
                     totalReps = report.totalReps,
                     averageScore = report.averageScore,
-                    feedbackMessage = report.feedbackMessage
+                    feedbackMessage = report.feedbackMessage,
+                    durationSeconds = durationSeconds.coerceAtLeast(0L),
+                    burnedCalories = burnedCalories.coerceAtLeast(0.0)
                 )
             )
             if (records.isNotEmpty()) {
+                val analysesByRep = analyses.associateBy { it.repNumber }
                 supabase.from("exercise_rep_records").insert(
                     records.map { record ->
+                        val analysis = analysesByRep[record.repNumber]
                         RepRow(
                             sessionId = sessionId,
                             repNumber = record.repNumber,
                             maxAngle = record.maxAngle,
-                            swayX = record.swayX
+                            swayX = record.swayX,
+                            score = analysis?.score,
+                            detail = analysis?.detail.orEmpty(),
+                            errorTags = record.errorTags,
+                            eccentricDurationMs = record.eccentricDurationMs,
+                            concentricDurationMs = record.concentricDurationMs,
+                            poseScore = record.poseScore
                         )
                     }
                 )
@@ -54,7 +71,11 @@ class SupabaseRepository {
         @SerialName("average_score")
         val averageScore: Int,
         @SerialName("feedback_message")
-        val feedbackMessage: String
+        val feedbackMessage: String,
+        @SerialName("duration_seconds")
+        val durationSeconds: Long,
+        @SerialName("burned_calories")
+        val burnedCalories: Double
     )
 
     @Serializable
@@ -66,6 +87,16 @@ class SupabaseRepository {
         @SerialName("max_angle")
         val maxAngle: Double,
         @SerialName("sway_x")
-        val swayX: Float
+        val swayX: Float,
+        val score: Float?,
+        val detail: String,
+        @SerialName("error_tags")
+        val errorTags: List<String>,
+        @SerialName("eccentric_duration_ms")
+        val eccentricDurationMs: Long,
+        @SerialName("concentric_duration_ms")
+        val concentricDurationMs: Long,
+        @SerialName("pose_score")
+        val poseScore: Float?
     )
 }

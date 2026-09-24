@@ -22,6 +22,9 @@ data class ExerciseRecord(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
 
+    /** Supabase Auth 사용자 ID. 기기 내 계정 간 운동 기록을 분리합니다. */
+    val userId: String,
+
     /**
      * [Date: 운동을 수행한 날짜]
      * - 예: "2026-01-03 20:30"

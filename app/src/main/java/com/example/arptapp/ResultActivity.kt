@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.data.AppDatabase
 import com.example.arptapp.data.ExerciseRecord
+import com.example.arptapp.data.remote.AuthSessionStore
 import com.example.arptapp.databinding.ActivityResultBinding
 import com.example.arptapp.presentation.report.ReportActivity
 import kotlinx.coroutines.launch
@@ -92,6 +93,7 @@ class ResultActivity : AppCompatActivity() {
         feedbackMessage: String
     ) {
         val record = ExerciseRecord(
+            userId = AuthSessionStore.current?.userId.orEmpty(),
             date = workoutDate,
             totalCount = count,
             duration = duration,

@@ -18,7 +18,9 @@ import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.data.remote.UserProfileRepository
+import com.example.arptapp.data.remote.UserPreferencesRepository
 import com.example.arptapp.data.remote.withCloudBodyProfile
+import com.example.arptapp.data.remote.withCloudReminderPreferences
 import com.example.arptapp.databinding.ActivityProfileBinding
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
@@ -28,6 +30,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProfileBinding
     private val authRepository = SupabaseAuthRepository()
     private val cloudProfileRepository = UserProfileRepository()
+    private val cloudPreferencesRepository = UserPreferencesRepository()
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private var session: AppSession? = null
     private var reminderHour = 20
@@ -74,10 +77,18 @@ class ProfileActivity : AppCompatActivity() {
                     settingsRepository.activateUser(restoredSession.userId)
                     bindAccount(restoredSession)
                     val localSettings = settingsRepository.getSettings(restoredSession.userId)
-                    val settings = cloudProfileRepository.getProfile(restoredSession.userId)
+                    var settings = cloudProfileRepository.getProfile(restoredSession.userId)
                         .getOrNull()
                         ?.let(localSettings::withCloudBodyProfile)
                         ?: localSettings
+                    val cloudPreferences = cloudPreferencesRepository
+                        .getPreferences(restoredSession.userId)
+                        .getOrNull()
+                    if (cloudPreferences == null) {
+                        cloudPreferencesRepository.savePreferences(restoredSession.userId, settings)
+                    } else {
+                        settings = settings.withCloudReminderPreferences(cloudPreferences)
+                    }
                     settingsRepository.save(restoredSession.userId, settings)
                     bindSettings(settings)
                     setLoading(false)
@@ -196,7 +207,7 @@ class ProfileActivity : AppCompatActivity() {
         val minute = reminderMinute
         setLoading(true)
         lifecycleScope.launch {
-            runCatching {
+            val settingsResult = runCatching {
                 val settings = settingsRepository.getSettings(currentSession.userId).copy(
                     reminderEnabled = enabled,
                     reminderHour = hour,
@@ -208,10 +219,19 @@ class ProfileActivity : AppCompatActivity() {
                 } else {
                     AlarmHelper.cancelDailyReminder(this@ProfileActivity)
                 }
-            }.onSuccess {
-                showMessage("알림 설정을 저장했습니다.")
-            }.onFailure { error ->
+                settings
+            }
+            settingsResult.onFailure { error ->
                 showMessage(error.userMessage("알림 설정을 저장하지 못했습니다."))
+            }
+            settingsResult.getOrNull()?.let { settings ->
+                cloudPreferencesRepository.savePreferences(currentSession.userId, settings)
+                    .onSuccess {
+                        showMessage("알림 설정을 기기와 Supabase에 저장했습니다.")
+                    }
+                    .onFailure { error ->
+                        showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
+                    }
             }
             setLoading(false)
         }

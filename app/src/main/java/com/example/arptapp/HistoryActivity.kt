@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.arptapp.data.AppDatabase
+import com.example.arptapp.data.remote.AuthSessionStore
 import com.example.arptapp.databinding.ActivityHistoryBinding
 import com.example.arptapp.presentation.report.ReportActivity
 import kotlinx.coroutines.launch
@@ -34,7 +35,12 @@ class HistoryActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(applicationContext)
             // 최신순으로 정렬된 모든 기록 수신
-            val historyList = db.exerciseDao().getAllRecords()
+            val userId = AuthSessionStore.current?.userId.orEmpty()
+            val historyList = if (userId.isBlank()) {
+                emptyList()
+            } else {
+                db.exerciseDao().getAllRecords(userId)
+            }
 
             if (historyList.isEmpty()) {
                 // 기록이 없을 경우 안내 문구 노출

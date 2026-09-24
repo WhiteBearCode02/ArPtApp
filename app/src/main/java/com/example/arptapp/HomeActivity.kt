@@ -12,7 +12,9 @@ import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.data.preferences.LoginPreferences
 import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.data.remote.UserProfileRepository
+import com.example.arptapp.data.remote.UserPreferencesRepository
 import com.example.arptapp.data.remote.withCloudBodyProfile
+import com.example.arptapp.data.remote.withCloudReminderPreferences
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
 
@@ -22,6 +24,7 @@ class HomeActivity : AppCompatActivity() {
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private val authRepository = SupabaseAuthRepository()
     private val cloudProfileRepository = UserProfileRepository()
+    private val cloudPreferencesRepository = UserPreferencesRepository()
     private var isLaunchingTraining = false
     private var currentUserId: String? = null
 
@@ -36,9 +39,17 @@ class HomeActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 settingsRepository.activateUser(userId)
                 val localSettings = settingsRepository.getSettings(userId)
-                cloudProfileRepository.getProfile(userId).getOrNull()?.let { cloudProfile ->
-                    settingsRepository.save(userId, localSettings.withCloudBodyProfile(cloudProfile))
+                var mergedSettings = cloudProfileRepository.getProfile(userId)
+                    .getOrNull()
+                    ?.let(localSettings::withCloudBodyProfile)
+                    ?: localSettings
+                val cloudPreferences = cloudPreferencesRepository.getPreferences(userId).getOrNull()
+                if (cloudPreferences == null) {
+                    cloudPreferencesRepository.savePreferences(userId, mergedSettings)
+                } else {
+                    mergedSettings = mergedSettings.withCloudReminderPreferences(cloudPreferences)
                 }
+                settingsRepository.save(userId, mergedSettings)
                 AlarmHelper.syncDailyReminder(this@HomeActivity)
             }
         }

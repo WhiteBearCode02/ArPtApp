@@ -51,7 +51,7 @@ class MainViewModel : ViewModel() {
 
     fun getRepAnalyses(exerciseType: String): List<RepAnalysis> = records.mapIndexed { index, record ->
         RepAnalysis(
-            repNumber = index + 1,
+            repNumber = record.repNumber.takeIf { it > 0 } ?: index + 1,
             score = scoreRep(record, exerciseType.uppercase()).toFloat(),
             detail = describeRep(record, exerciseType.uppercase())
         )

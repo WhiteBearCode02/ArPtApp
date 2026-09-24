@@ -194,9 +194,18 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         isExercising = false
         val report = mainViewModel.generateFinalReport(currentExerciseType.name)
         val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
+        val records = mainViewModel.getRepRecords()
+        val analyses = mainViewModel.getRepAnalyses(report.exerciseType)
+        val burnedCalories = report.totalReps * 0.5
 
         lifecycleScope.launch {
-            supabaseRepository.uploadSession(report, mainViewModel.getRepRecords())
+            supabaseRepository.uploadSession(
+                report = report,
+                records = records,
+                analyses = analyses,
+                durationSeconds = elapsedTime,
+                burnedCalories = burnedCalories
+            )
                 .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패", it) }
         }
 

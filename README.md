@@ -44,7 +44,7 @@
 | Form Feedback | 무릎 모임과 상체 숙임 등 초기 자세 오류 규칙 분석 | 🧪 |
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
 | Authentication | Supabase 이메일 회원가입·로그인 | ✅ |
-| Persistence | Room 로컬 기록 및 Supabase 세션 업로드 기반 | ✅ |
+| Persistence | Room 로컬 기록 + Supabase 운동·신체·알림 설정 동기화 | ✅ |
 | Exercise Classification | 학습된 YOLO Classification 모델 기반 자동 종목 인식 | 🚧 |
 | Dataset Pipeline | repetition 단위 pose sequence·metadata·annotation 생성 | 🧪 |
 
@@ -183,7 +183,7 @@ supabase.key=YOUR_SUPABASE_ANON_KEY
 [`supabase/admin-role-setup.sql`](supabase/admin-role-setup.sql)의 이메일 예시를 실제 관리자 계정으로 바꿔 실행한 뒤,
 앱에서 로그아웃하고 다시 로그인하면 관리자 대시보드로 자동 이동합니다.
 
-앱 회원가입 화면에서 이메일·비밀번호를 제출하면 Supabase Auth 계정이 생성됩니다. 이름과 선택 입력한 신체 수치는 해당 Auth 사용자의 `user_metadata`에 저장합니다(별도의 `public` 프로필 테이블은 만들지 않습니다). 비밀번호는 앱에서 별도로 저장하지 않습니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일의 링크를 연 뒤 로그인할 수 있고, 비활성화된 경우 가입 직후 앱으로 이동합니다.
+앱 회원가입 화면에서 이메일·비밀번호를 제출하면 Supabase Auth 계정이 생성됩니다. 이름과 선택 입력한 신체 수치는 가입 메타데이터를 거쳐 RLS로 보호된 `public.user_profiles`에 저장되며, 이후 변경 내용은 `body_measurements`에 이력으로 남습니다. 알림 시간은 기기 DataStore와 `user_preferences`에 함께 저장하고 실제 Android 알람은 각 기기에서 예약합니다. 운동 결과는 `exercise_sessions`와 `exercise_rep_records`에 계정별로 저장합니다. 비밀번호는 앱 DB에 별도로 저장하지 않습니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일의 링크를 연 뒤 로그인할 수 있고, 비활성화된 경우 가입 직후 앱으로 이동합니다.
 
 Google 로그인 사용 전에는 [Supabase Google 제공자 설정](https://supabase.com/docs/guides/auth/social-login/auth-google)에 따라 Google Cloud의 웹 OAuth 클라이언트 ID·Secret을 Supabase Auth → Providers → Google에 설정하고, Google의 승인된 리디렉션 URI에 Supabase 대시보드가 표시하는 callback URL을 추가해야 합니다. 또한 Supabase Auth → URL Configuration → Redirect URLs에 `arptapp://auth/callback`을 등록하세요. Google Client Secret은 Android 앱이나 `local.properties`에 넣지 않습니다. 이메일 인증 링크도 같은 앱 딥링크로 돌아옵니다.
 
@@ -270,7 +270,7 @@ python -m unittest discover -s ai_module/tests -v
 - [x] 대상 사용자 선택 및 스켈레톤 오버레이
 - [x] 스쿼트·숄더프레스 각도 추출
 - [x] repetition 상태 머신과 세션 리포트
-- [x] Supabase 로그인 및 세션 업로드 기반
+- [x] Supabase 로그인, 운동 세션·횟수별 분석, 신체 이력 및 알림 설정 동기화
 - [ ] 오류 관절별 색상 강조와 상세 코칭 문구
 - [ ] 실기기별 성능·발열·프레임 측정
 

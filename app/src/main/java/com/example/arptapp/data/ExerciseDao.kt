@@ -30,8 +30,8 @@ interface ExerciseDao {
      * - "SELECT * FROM exercise_records ORDER BY id DESC"
      * -> 'exercise_records' 테이블의 모든 열을 가져오되, id 번호가 큰 것(최신순)부터 정렬하라는 뜻입니다.
      */
-    @Query("SELECT * FROM exercise_records ORDER BY id DESC")
-    suspend fun getAllRecords(): List<ExerciseRecord>
+    @Query("SELECT * FROM exercise_records WHERE userId = :userId ORDER BY id DESC")
+    suspend fun getAllRecords(userId: String): List<ExerciseRecord>
 
     /**
      * [특정 기간 기록 삭제하기 (선택 사항)]
