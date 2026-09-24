@@ -1,11 +1,13 @@
 package com.example.arptapp
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.Toast
@@ -24,6 +26,7 @@ import com.example.arptapp.data.remote.withCloudReminderPreferences
 import com.example.arptapp.databinding.ActivityProfileBinding
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.Locale
 
 class ProfileActivity : AppCompatActivity() {
@@ -55,6 +58,8 @@ class ProfileActivity : AppCompatActivity() {
         binding.cardReminderTime.setOnClickListener { showTimePicker() }
         binding.btnSaveBodyInfo.setOnClickListener { saveBodyInfo() }
         binding.btnSaveReminder.setOnClickListener { saveReminderSettings() }
+        binding.btnOpenGoogleCalendar.setOnClickListener { openCalendarAtReminderTime() }
+        binding.btnCreateGoogleCalendarReminder.setOnClickListener { createCalendarReminder() }
         binding.btnUpdateEmail.setOnClickListener { updateEmail() }
         binding.btnUpdatePassword.setOnClickListener {
             startActivity(Intent(this, PasswordChangeActivity::class.java))
@@ -237,6 +242,59 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Opens the calendar at the next selected reminder time. Existing Google Calendar
+     * events remain owned and edited by the calendar app; AIRPTCoach does not read them.
+     */
+    private fun openCalendarAtReminderTime() {
+        val reminderAt = nextReminderTimeMillis()
+        val uri = CalendarContract.CONTENT_URI.buildUpon()
+            .appendPath("time")
+            .appendPath(reminderAt.toString())
+            .build()
+        launchCalendar(Intent(Intent.ACTION_VIEW, uri))
+    }
+
+    /**
+     * Prefills a daily recurring event and lets the user choose the calendar, reminder,
+     * and final values before saving. INSERT intents do not require calendar permissions.
+     */
+    private fun createCalendarReminder() {
+        val beginAt = nextReminderTimeMillis()
+        val endAt = beginAt + CALENDAR_EVENT_DURATION_MS
+        val intent = Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginAt)
+            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endAt)
+            putExtra(CalendarContract.Events.TITLE, getString(R.string.calendar_event_title))
+            putExtra(CalendarContract.Events.DESCRIPTION, getString(R.string.calendar_event_description))
+            putExtra(CalendarContract.Events.RRULE, "FREQ=DAILY")
+            putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_FREE)
+        }
+        launchCalendar(intent)
+    }
+
+    private fun nextReminderTimeMillis(): Long = Calendar.getInstance().run {
+        set(Calendar.HOUR_OF_DAY, reminderHour.coerceIn(0, 23))
+        set(Calendar.MINUTE, reminderMinute.coerceIn(0, 59))
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+        if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_MONTH, 1)
+        timeInMillis
+    }
+
+    private fun launchCalendar(baseIntent: Intent) {
+        try {
+            startActivity(Intent(baseIntent).setPackage(GOOGLE_CALENDAR_PACKAGE))
+        } catch (_: ActivityNotFoundException) {
+            try {
+                startActivity(baseIntent)
+            } catch (_: ActivityNotFoundException) {
+                showMessage(getString(R.string.calendar_app_not_found))
+            }
+        }
+    }
+
     private fun updateEmail() {
         val oldEmail = session?.email ?: return
         val newEmail = binding.etProfileEmail.text?.toString()?.trim().orEmpty()
@@ -306,6 +364,8 @@ class ProfileActivity : AppCompatActivity() {
         binding.btnSaveReminder.isEnabled = !loading
         binding.switchReminder.isEnabled = !loading
         binding.cardReminderTime.isEnabled = !loading
+        binding.btnOpenGoogleCalendar.isEnabled = !loading
+        binding.btnCreateGoogleCalendarReminder.isEnabled = !loading
         binding.btnUpdateEmail.isEnabled = !loading
         binding.btnUpdatePassword.isEnabled = !loading
     }
@@ -336,5 +396,10 @@ class ProfileActivity : AppCompatActivity() {
         this == null -> ""
         this % 1f == 0f -> toInt().toString()
         else -> toString()
+    }
+
+    private companion object {
+        const val GOOGLE_CALENDAR_PACKAGE = "com.google.android.calendar"
+        const val CALENDAR_EVENT_DURATION_MS = 60L * 60L * 1000L
     }
 }

@@ -45,6 +45,7 @@
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
 | Authentication | Supabase 이메일 회원가입·로그인 | ✅ |
 | Persistence | Room 로컬 기록 + Supabase 운동·신체·알림 설정 동기화 | ✅ |
+| Calendar Reminder | 개인설정에서 Google 캘린더 반복 운동 일정 생성·관리 화면 연결 | ✅ |
 | Exercise Classification | 학습된 YOLO Classification 모델 기반 자동 종목 인식 | 🚧 |
 | Dataset Pipeline | repetition 단위 pose sequence·metadata·annotation 생성 | 🧪 |
 
@@ -212,6 +213,8 @@ supabase.key=YOUR_SUPABASE_ANON_KEY
 앱에서 로그아웃하고 다시 로그인하면 관리자 대시보드로 자동 이동합니다.
 
 앱 회원가입 화면에서 이메일·비밀번호를 제출하면 Supabase Auth 계정이 생성됩니다. 이름과 선택 입력한 신체 수치는 가입 메타데이터를 거쳐 RLS로 보호된 `public.user_profiles`에 저장되며, 이후 변경 내용은 `body_measurements`에 이력으로 남습니다. 알림 시간은 기기 DataStore와 `user_preferences`에 함께 저장하고 실제 Android 알람은 각 기기에서 예약합니다. 운동 결과는 `exercise_sessions`와 `exercise_rep_records`에 계정별로 저장합니다. 비밀번호는 앱 DB에 별도로 저장하지 않습니다. 이메일 확인 기능이 활성화된 프로젝트라면 확인 메일의 링크를 연 뒤 로그인할 수 있고, 비활성화된 경우 가입 직후 앱으로 이동합니다.
+
+개인설정의 Google 캘린더 항목은 Android Calendar Intent를 사용합니다. 앱이 캘린더 내용을 직접 읽거나 수정하지 않으며, 사용자가 Google 캘린더 화면에서 기존 일정을 수정하거나 미리 입력된 매일 반복 일정을 최종 저장합니다. 따라서 별도의 Google Calendar API 키와 캘린더 읽기·쓰기 권한이 필요하지 않습니다.
 
 Google 로그인 사용 전에는 [Supabase Google 제공자 설정](https://supabase.com/docs/guides/auth/social-login/auth-google)에 따라 Google Cloud의 웹 OAuth 클라이언트 ID·Secret을 Supabase Auth → Providers → Google에 설정하고, Google의 승인된 리디렉션 URI에 Supabase 대시보드가 표시하는 callback URL을 추가해야 합니다. 또한 Supabase Auth → URL Configuration → Redirect URLs에 `arptapp://auth/callback`을 등록하세요. Google Client Secret은 Android 앱이나 `local.properties`에 넣지 않습니다. 이메일 인증 링크도 같은 앱 딥링크로 돌아옵니다.
 
