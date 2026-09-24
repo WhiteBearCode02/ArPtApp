@@ -11,6 +11,15 @@
     <string name="count_format">%1$d / %2$d</string>
     <string name="accuracy_format">정확도: %1$d%%</string>
 
+    <string name="camera_close">운동 화면 닫기</string>
+    <string name="camera_switch">전면·후면 카메라 전환</string>
+    <string name="camera_ai_pose">AI POSE</string>
+    <string name="exercise_ready">운동 준비</string>
+    <string name="exercise_detecting">인식 중 · 운동 감지 중</string>
+    <string name="exercise_count">운동 횟수</string>
+    <string name="exercise_start">운동 시작</string>
+    <string name="exercise_end">운동 종료</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus

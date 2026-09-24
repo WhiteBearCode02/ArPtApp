@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/black">
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
@@ -20,119 +20,208 @@
         android:elevation="2dp"
         android:focusable="false" />
 
-    <RelativeLayout
+    <!-- 카메라 영상의 명암과 관계없이 정보가 읽히도록 하는 최소한의 그라데이션입니다. -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_camera_top_scrim"
+        android:clickable="false" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="280dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_camera_bottom_scrim"
+        android:clickable="false" />
+
+    <View
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-90dp"
+        android:layout_marginEnd="-80dp"
+        android:alpha="0.72"
+        android:background="@drawable/bg_camera_aurora_glow"
+        android:clickable="false" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="24dp">
+        android:fitsSystemWindows="true"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
 
-        <!-- X 버튼 (왼쪽 위) -->
         <ImageButton
             android:id="@+id/btnClose"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
-            android:background="@drawable/bg_input_field"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:contentDescription="닫기"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_camera_icon_button"
+            android:contentDescription="@string/camera_close"
+            android:padding="12dp"
+            android:src="@drawable/ic_camera_close"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             app:tint="@color/white" />
 
-        <!-- 카메라 전환 버튼 (오른쪽 위) - 새로 추가 -->
+        <LinearLayout
+            android:id="@+id/layoutCameraHeader"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toStartOf="@id/btnSwitchCamera"
+            app:layout_constraintStart_toEndOf="@id/btnClose"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.18"
+                android:text="@string/camera_ai_pose"
+                android:textColor="@color/aurora_mint"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tvDashboardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/exercise_ready"
+                android:textColor="@color/white"
+                android:textSize="20sp" />
+        </LinearLayout>
+
         <ImageButton
             android:id="@+id/btnSwitchCamera"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentTop="true"
-            android:background="@drawable/bg_input_field"
-            android:src="@android:drawable/ic_menu_camera"
-            android:contentDescription="카메라 전환"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_camera_icon_button"
+            android:contentDescription="@string/camera_switch"
+            android:padding="11dp"
+            android:src="@drawable/ic_camera_flip"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             app:tint="@color/white" />
 
-        <!-- 제목 -->
-        <TextView
-            android:id="@+id/tvDashboardTitle"
+        <LinearLayout
+            android:id="@+id/layoutDetectedExercise"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentTop="true"
-            android:text="운동 준비"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_height="36dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_camera_status_chip"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="14dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layoutCameraHeader">
 
-        <TextView
-            android:id="@+id/tvDetectedExercise"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/tvDashboardTitle"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_status_chip"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
-            android:text="인식 중: 운동 감지 중"
-            android:textColor="#CCFFFFFF"
-            android:textSize="14sp" />
+            <View
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:background="@drawable/bg_camera_live_dot" />
 
-        <!-- 카운트 표시 -->
+            <TextView
+                android:id="@+id/tvDetectedExercise"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/exercise_detecting"
+                android:textColor="#EFFFFFFF"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/layoutCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
-            android:layout_marginBottom="100dp"
-            android:background="@drawable/bg_status_chip"
-            android:paddingHorizontal="32dp"
-            android:paddingVertical="16dp"
+            android:layout_width="148dp"
+            android:layout_height="96dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_camera_count_panel"
+            android:gravity="center"
             android:orientation="vertical"
-            android:gravity="center">
+            app:layout_constraintBottom_toTopOf="@id/layoutCameraActions"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
             <TextView
                 android:id="@+id/tvCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false"
                 android:text="0"
                 android:textColor="@color/white"
-                android:textSize="48sp"
-                android:textStyle="bold" />
+                android:textSize="44sp" />
 
             <TextView
                 android:id="@+id/tvCountUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="운동 횟수"
-                android:textColor="#CCFFFFFF"
-                android:textSize="14sp"
-                android:letterSpacing="0.1" />
+                android:layout_marginTop="2dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.1"
+                android:text="@string/exercise_count"
+                android:textColor="@color/aurora_ice"
+                android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- 운동 시작 버튼 -->
-        <Button
-            android:id="@+id/btnStartExercise"
+        <FrameLayout
+            android:id="@+id/layoutCameraActions"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="16dp"
-            android:text="운동 시작"
-            android:backgroundTint="@color/color_primary"
-            android:textColor="@color/white"
-            app:cornerRadius="12dp" />
+            android:layout_height="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
-        <!-- 운동 종료 버튼 -->
-        <Button
-            android:id="@+id/btnEndExercise"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="16dp"
-            android:text="운동 종료"
-            android:visibility="gone"
-            android:backgroundTint="@color/color_accent"
-            android:textColor="@color/white"
-            app:cornerRadius="12dp" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnStartExercise"
+                android:layout_width="196dp"
+                android:layout_height="52dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_camera_start_button"
+                android:backgroundTint="@null"
+                android:elevation="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.04"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="@string/exercise_start"
+                android:textAllCaps="false"
+                android:textColor="#FF071426"
+                android:textSize="15sp" />
 
-    </RelativeLayout>
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnEndExercise"
+                android:layout_width="196dp"
+                android:layout_height="52dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_camera_end_button"
+                android:backgroundTint="@null"
+                android:elevation="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.04"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="@string/exercise_end"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:visibility="gone" />
+        </FrameLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>
