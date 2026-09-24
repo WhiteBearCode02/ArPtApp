@@ -16,7 +16,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Auth%20%26%20Data-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Python](https://img.shields.io/badge/Dataset_Pipeline-v0.1.0-3776AB?style=flat-square&logo=python&logoColor=white)](docs/DATASET_PIPELINE.md)
 
-[핵심 기능](#-핵심-기능) · [아키텍처](#-ai-처리-아키텍처) · [시작하기](#-시작하기) · [데이터셋](#-dataset-pipeline) · [로드맵](#-로드맵)
+[핵심 기능](#-핵심-기능) · [아키텍처](#-ai-처리-아키텍처) · [생체역학 근거](#-생체역학-근거와-분석-원칙) · [시작하기](#-시작하기) · [데이터셋](#-dataset-pipeline) · [로드맵](#-로드맵)
 
 </div>
 
@@ -38,8 +38,8 @@
 |---|---|:---:|
 | Pose Tracking | MediaPipe Pose Landmarker로 33개 관절의 `x/y/z/visibility` 추출 | ✅ |
 | Visual Feedback | 추적 중인 사람의 관절점과 스켈레톤을 카메라 위에 표시 | ✅ |
-| Person Selection | 여러 사람이 감지되면 가장 큰 관절 영역의 사용자를 우선 추적 | ✅ |
-| Exercise Analysis | 스쿼트·숄더프레스 관절 각도 추출 및 운동별 분석 | ✅ |
+| Person Selection | 검출된 포즈 중 가장 큰 관절 영역의 사용자를 우선 선택 | 🧪 |
+| Exercise Analysis | 스쿼트·숄더프레스 관절 각도 추출 및 초기 운동별 분석 | 🧪 |
 | Rep Counter | 관절 각도와 `UP/DOWN` 상태 머신을 이용한 반복 횟수 계산 | ✅ |
 | Form Feedback | 무릎 모임과 상체 숙임 등 초기 자세 오류 규칙 분석 | 🧪 |
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
@@ -52,9 +52,10 @@
 
 ## 🧠 AI 처리 아키텍처
 
-AIRPTCoach에서 YOLO와 MediaPipe는 서로 다른 책임을 가집니다.
+AIRPTCoach에서 MediaPipe와 향후 학습할 운동 분류 모델은 서로 다른 책임을 가집니다.
 
-- **YOLO Classification**은 현재 수행 중인 운동 종목을 판단합니다.
+- **Landmark Fallback Classifier**는 현재 MediaPipe 관절 배치를 이용해 운동 종목을 임시 추정합니다.
+- **YOLO Classification**은 전용 데이터로 학습·검증한 모델이 준비된 뒤 운동 종목 판단을 담당할 예정입니다.
 - **MediaPipe Pose**는 운동 중인 사람과 33개 관절 좌표를 지속적으로 추적합니다.
 - **Exercise Analyzer**는 인식된 운동에 맞는 관절과 임계값을 선택합니다.
 - **Overlay & Feedback**은 사용자가 추적 대상과 자세 문제를 즉시 이해하도록 시각화합니다.
@@ -65,8 +66,10 @@ flowchart LR
     CAM -. 학습 모델 준비 후 .-> YOLO[YOLO Classification]
     POSE --> PERSON[Main Person Selection]
     PERSON --> OVERLAY[Skeleton Overlay]
-    PERSON --> JOINT[Joint Coordinates & Angles]
+    PERSON --> JOINT[Landmarks & View-dependent Angles]
+    PERSON --> FALLBACK[Landmark Fallback Classifier]
     YOLO -. Exercise Type .-> ROUTER[Analyzer Router]
+    FALLBACK --> ROUTER
     JOINT --> ROUTER
     ROUTER --> STATE[Rep State Machine]
     ROUTER --> FORM[Form Error Analysis]
@@ -92,12 +95,35 @@ flowchart LR
 | `DashboardActivity` | CameraX 프레임, MediaPipe 추론 및 실시간 UI 연결 |
 | `OverlayView` | 관절점과 관절 연결선을 카메라 위에 렌더링 |
 | `ExerciseClassifier` | 랜드마크 기반 임시 운동 분류 fallback |
-| `PoseAngleExtractor` | 스쿼트·숄더프레스의 3D 관절 각도 벡터 계산 |
+| `PoseAngleExtractor` | 스쿼트·숄더프레스의 2D 내각 및 정규화 랜드마크 벡터각 계산 |
 | `ExerciseCounter` | 운동별 임계값과 상태 전환으로 repetition 계산 |
 | `FormErrorAnalyzer` | 관절 위치 관계를 이용한 자세 오류 후보 검출 |
 | `CoordinateNormalizer` | 골반 중심 이동과 신체 크기 기반 좌표 정규화 |
 | `DTWCalculator` | 사용자 동작 sequence와 표준 sequence 비교 |
 | `AnalyzerFactory` | 운동 종류에 적합한 Analyzer 선택 |
+
+## 📐 생체역학 근거와 분석 원칙
+
+자세 분석은 단순히 관절 좌표 세 개로 각도를 계산하는 것에서 끝나지 않습니다. 같은 숫자라도 카메라 시점, 좌표계, 각도의 정의, 랜드마크 가시성에 따라 의미가 달라집니다. AIRPTCoach는 다음 원칙을 기준으로 분석 구조를 개선하고 있습니다.
+
+- 이미지 2D 각도, 정규화 랜드마크 x/y/z 벡터각, 실제 world 좌표 기반 각도를 서로 다른 측정값으로 관리합니다.
+- 무릎·팔꿈치의 **내각**과 논문에서 사용하는 **굴곡각**을 구분합니다. 같은 평면과 정의에서는 `굴곡각 = 180° - 내각`으로 변환할 수 있습니다.
+- 정면에서는 좌우 대칭과 무릎의 전면 투영 정렬을, 측면에서는 깊이와 몸통·경골 기울기를 우선 분석합니다.
+- 낮은 visibility, 관절 가림, 잘못된 촬영 시점은 정상으로 처리하지 않고 `NOT_EVALUABLE`로 구분할 예정입니다.
+- 논문에 등장하는 집단 평균이나 실험 조건을 개인의 정상/오류 기준으로 바로 사용하지 않습니다.
+
+수치 기준은 출처에 따라 `PAPER_DIRECT`, `PAPER_DERIVED`, `ENGINEERING_INITIAL`, `EXPERT_VERIFIED`로 구분합니다. 현재 반복 카운트와 초기 자세 규칙의 임계값은 모두 `ENGINEERING_INITIAL`이며, 의료적 정상/이상 판정 기준이 아닙니다.
+
+저장소 분석, 각도 정의, 카메라 시점별 지원 범위, 논문별 적용 한계와 안전한 구현 순서는 [생체역학 근거 및 알고리즘 매핑](docs/BIOMECHANICS_REFERENCES.md)에 정리되어 있습니다.
+
+### 참고한 핵심 연구
+
+| 운동 | 연구 | 앱에 반영할 범위 |
+|---|---|---|
+| 스쿼트 | [Straub & Powers, 2024](https://doi.org/10.26603/001c.94600) | 깊이, 몸통·경골 기울기, 스탠스에 따른 생체역학적 차이 |
+| 스쿼트 | [Escamilla, 2001](https://doi.org/10.1097/00005768-200101000-00020) | 굴곡 범위에 따른 무릎 부하 변화의 해석 경계 |
+| 단일다리 스쿼트 | [Gwynne & Curran, 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC4275194/) | 전면 FPPA 정의와 2D 측정의 한계 |
+| 스탠딩 오버헤드 프레스 | [An et al., 2025](https://doi.org/10.5103/KJAB.2025.35.2.76) | 상승·하강 단계별 어깨·팔꿈치·몸통 ROM 구성 |
 
 ## 🛠 기술 스택
 
@@ -148,7 +174,9 @@ ArPtApp/
 │   ├── training/                 # split·validation·향후 학습 entry point
 │   ├── tests/                    # pipeline unit tests
 │   └── dataset/                  # metadata·annotation·pose 구조
-└── docs/DATASET_PIPELINE.md
+└── docs/
+    ├── DATASET_PIPELINE.md        # 데이터셋 생성·검증 정책
+    └── BIOMECHANICS_REFERENCES.md # 논문 근거·각도 정의·적용 한계
 ```
 
 ## 🚀 시작하기
@@ -271,6 +299,10 @@ python -m unittest discover -s ai_module/tests -v
 - [x] 스쿼트·숄더프레스 각도 추출
 - [x] repetition 상태 머신과 세션 리포트
 - [x] Supabase 로그인, 운동 세션·횟수별 분석, 신체 이력 및 알림 설정 동기화
+- [x] 현재 분석 흐름과 생체역학 근거·한계 문서화
+- [ ] 각도 값·정의·좌표계·시점·품질을 포함하는 `AngleMeasurement` 도입
+- [ ] 측정 불가 상태와 정상 상태 분리
+- [ ] 중복 repetition counter 및 Analyzer 실행 경로 통합
 - [ ] 오류 관절별 색상 강조와 상세 코칭 문구
 - [ ] 실기기별 성능·발열·프레임 측정
 
@@ -294,6 +326,15 @@ python -m unittest discover -s ai_module/tests -v
 - [ ] 촬영 방향별 threshold 및 오류 규칙 검증
 - [ ] 실제 데이터 기반 분류·자세 모델 학습
 
+### 현재 검증 기준선
+
+- Android debug 소스 컴파일 단계 통과
+- Android 단위 테스트 12개 중 11개 통과
+- 미해결 테스트: `SquatRepCounterTest.countsOnlyAfterStableDescentAndAscent`
+  - 테스트 입력은 하강 자세로 95°를 사용하지만 구현 임계값은 90° 이하이므로 상태 전이가 발생하지 않음
+  - 생체역학 기준과 카운트 정책을 확정하기 전 임계값이나 테스트 한쪽만 임의로 변경하지 않음
+- Python 데이터셋 파이프라인 테스트는 별도 Python 3.10+ 환경에서 실행 필요
+
 ### Phase 4 · 제품 완성도
 
 - [ ] 관절별 실시간 위험도 시각화
@@ -306,6 +347,10 @@ python -m unittest discover -s ai_module/tests -v
 
 - 포함된 YOLO pose 모델을 운동 Classification 모델처럼 사용해서는 안 됩니다.
 - 자세 오류 규칙과 pseudo label 임계값은 초기값이며 전문가 검증이 필요합니다.
+- 현재 `NormalizedLandmark`의 x/y/z로 계산한 벡터각은 실제 모션캡처 기반 3D 관절각과 동일하지 않습니다.
+- 현재 일부 분석 경로는 측정 불가 상태를 `0.0` 또는 빈 오류 목록으로 처리하므로 품질 상태 분리가 필요합니다.
+- 현재 다인 선택 정책은 가장 큰 바운딩 영역을 사용하지만 Pose Landmarker의 포즈 수와 프레임 간 사용자 지속 추적은 추가 검증이 필요합니다.
+- Room의 명시되지 않은 버전 이동은 `fallbackToDestructiveMigration()` 때문에 기록 손실 가능성이 있어, 스키마 확장 전 명시적 마이그레이션이 필요합니다.
 - 실제 정확도, FPS 및 CPU 절감률은 아직 표준화된 기기 벤치마크로 측정되지 않았습니다.
 - Python 데이터셋 테스트는 Python 3.10 이상 환경에서 별도로 실행해야 합니다.
 - 이 앱의 분석 결과는 운동 보조 정보이며 의료 진단을 대체하지 않습니다.
