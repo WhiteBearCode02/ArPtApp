@@ -11,6 +11,8 @@ import com.example.arptapp.databinding.ActivityHomeBinding
 import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.data.preferences.LoginPreferences
 import com.example.arptapp.data.remote.SupabaseAuthRepository
+import com.example.arptapp.data.remote.UserProfileRepository
+import com.example.arptapp.data.remote.withCloudBodyProfile
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
 
@@ -19,6 +21,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private val authRepository = SupabaseAuthRepository()
+    private val cloudProfileRepository = UserProfileRepository()
     private var isLaunchingTraining = false
     private var currentUserId: String? = null
 
@@ -32,6 +35,10 @@ class HomeActivity : AppCompatActivity() {
         currentUserId?.let { userId ->
             lifecycleScope.launch {
                 settingsRepository.activateUser(userId)
+                val localSettings = settingsRepository.getSettings(userId)
+                cloudProfileRepository.getProfile(userId).getOrNull()?.let { cloudProfile ->
+                    settingsRepository.save(userId, localSettings.withCloudBodyProfile(cloudProfile))
+                }
                 AlarmHelper.syncDailyReminder(this@HomeActivity)
             }
         }

@@ -17,6 +17,8 @@ import com.example.arptapp.data.preferences.UserSettings
 import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.SupabaseAuthRepository
+import com.example.arptapp.data.remote.UserProfileRepository
+import com.example.arptapp.data.remote.withCloudBodyProfile
 import com.example.arptapp.databinding.ActivityProfileBinding
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
@@ -25,6 +27,7 @@ import java.util.Locale
 class ProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProfileBinding
     private val authRepository = SupabaseAuthRepository()
+    private val cloudProfileRepository = UserProfileRepository()
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private var session: AppSession? = null
     private var reminderHour = 20
@@ -70,7 +73,13 @@ class ProfileActivity : AppCompatActivity() {
                     session = restoredSession
                     settingsRepository.activateUser(restoredSession.userId)
                     bindAccount(restoredSession)
-                    bindSettings(settingsRepository.getSettings(restoredSession.userId))
+                    val localSettings = settingsRepository.getSettings(restoredSession.userId)
+                    val settings = cloudProfileRepository.getProfile(restoredSession.userId)
+                        .getOrNull()
+                        ?.let(localSettings::withCloudBodyProfile)
+                        ?: localSettings
+                    settingsRepository.save(restoredSession.userId, settings)
+                    bindSettings(settings)
                     setLoading(false)
                 }
                 .onFailure { error ->
@@ -150,19 +159,26 @@ class ProfileActivity : AppCompatActivity() {
 
         setLoading(true)
         lifecycleScope.launch {
-            runCatching {
-                val settings = settingsRepository.getSettings(currentSession.userId).copy(
+            val settings = settingsRepository.getSettings(currentSession.userId).copy(
                     nickname = nickname,
                     heightCm = height,
                     weightKg = weight,
                     skeletalMuscleMassKg = muscleMass,
                     bodyFatPercentage = bodyFat
-                )
+            )
+            val localSave = runCatching {
                 settingsRepository.save(currentSession.userId, settings)
-            }.onSuccess {
-                showMessage("신체 정보를 저장했습니다.")
-            }.onFailure { error ->
-                showMessage(error.userMessage("신체 정보를 저장하지 못했습니다."))
+            }
+            if (localSave.isFailure) {
+                showMessage(localSave.exceptionOrNull()!!.userMessage("신체 정보를 기기에 저장하지 못했습니다."))
+            } else {
+                cloudProfileRepository.saveBodyProfile(currentSession.userId, settings)
+                    .onSuccess {
+                        showMessage("신체 정보를 기기와 Supabase에 저장했습니다.")
+                    }
+                    .onFailure { error ->
+                        showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
+                    }
             }
             setLoading(false)
         }

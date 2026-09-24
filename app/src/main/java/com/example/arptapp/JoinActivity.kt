@@ -10,6 +10,8 @@ import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityJoinBinding
 import com.example.arptapp.data.remote.SignUpProfile
 import com.example.arptapp.data.preferences.LoginPreferences
+import com.example.arptapp.data.preferences.UserSettings
+import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.viewmodel.LoginState
 import com.example.arptapp.viewmodel.LoginViewModel
 import kotlinx.coroutines.launch
@@ -18,6 +20,8 @@ class JoinActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivityJoinBinding
     private val loginViewModel: LoginViewModel by viewModels()
+    private val settingsRepository by lazy { UserSettingsRepository(this) }
+    private var pendingProfile: SignUpProfile? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +61,11 @@ class JoinActivity : AppCompatActivity() {
                 binding.etJoinName.requestFocus()
                 return
             }
+            name.length > 20 -> {
+                binding.etJoinName.error = "이름은 20자 이하로 입력해 주세요"
+                binding.etJoinName.requestFocus()
+                return
+            }
             !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
                 binding.etJoinEmail.error = "올바른 이메일 형식을 입력해주세요"
                 binding.etJoinEmail.requestFocus()
@@ -74,13 +83,15 @@ class JoinActivity : AppCompatActivity() {
             }
         }
         
-        val weight = readOptionalMeasurement(binding.etJoinWeight) ?: if (binding.etJoinWeight.text.isNullOrBlank()) null else return
-        val muscle = readOptionalMeasurement(binding.etJoinMuscle) ?: if (binding.etJoinMuscle.text.isNullOrBlank()) null else return
-        val fatMass = readOptionalMeasurement(binding.etJoinFatMass) ?: if (binding.etJoinFatMass.text.isNullOrBlank()) null else return
-        val fatPercent = readOptionalMeasurement(binding.etJoinFatPercent, 100.0)
+        val weight = readOptionalMeasurement(binding.etJoinWeight, 350.0) ?: if (binding.etJoinWeight.text.isNullOrBlank()) null else return
+        val muscle = readOptionalMeasurement(binding.etJoinMuscle, 200.0) ?: if (binding.etJoinMuscle.text.isNullOrBlank()) null else return
+        val fatMass = readOptionalMeasurement(binding.etJoinFatMass, 350.0) ?: if (binding.etJoinFatMass.text.isNullOrBlank()) null else return
+        val fatPercent = readOptionalMeasurement(binding.etJoinFatPercent, 75.0)
             ?: if (binding.etJoinFatPercent.text.isNullOrBlank()) null else return
 
-        loginViewModel.signUp(email, password, SignUpProfile(name, weight, muscle, fatMass, fatPercent))
+        val profile = SignUpProfile(name, weight, muscle, fatMass, fatPercent)
+        pendingProfile = profile
+        loginViewModel.signUp(email, password, profile)
     }
 
     private fun readOptionalMeasurement(field: EditText, max: Double = 500.0): Double? {
@@ -108,6 +119,17 @@ class JoinActivity : AppCompatActivity() {
                     }
                     is LoginState.Authenticated -> {
                         LoginPreferences(this@JoinActivity).rememberLogin = false
+                        pendingProfile?.let { profile ->
+                            settingsRepository.save(
+                                state.session.userId,
+                                UserSettings(
+                                    nickname = profile.name,
+                                    weightKg = profile.weightKg?.toFloat(),
+                                    skeletalMuscleMassKg = profile.skeletalMuscleMassKg?.toFloat(),
+                                    bodyFatPercentage = profile.bodyFatPercentage?.toFloat()
+                                )
+                            )
+                        }
                         startActivity(Intent(this@JoinActivity, if (state.session.isAdmin) AdminDashboardActivity::class.java else HomeActivity::class.java).apply {
                             putExtra("USER_ID", state.session.userId)
                             putExtra("USER_EMAIL", state.session.email)
