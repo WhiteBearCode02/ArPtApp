@@ -42,6 +42,12 @@ class JoinActivity : AppCompatActivity() {
         binding.tvBackToLogin.setOnClickListener {
             finish() // 현재 액티비티 종료하고 로그인 화면으로 돌아감
         }
+
+        binding.btnJoinHelp.setOnClickListener {
+            startActivity(Intent(this, HelpActivity::class.java).apply {
+                putExtra(HelpActivity.EXTRA_FROM_SIGN_UP, true)
+            })
+        }
     }
     
     private fun handleJoinSubmit() {

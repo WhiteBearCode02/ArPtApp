@@ -176,6 +176,14 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnJoinHelp"
+                style="@style/Widget.AIRPTCoach.Auth.LinkButton"
+                android:layout_width="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:text="@string/join_help_link" />
+
             <!-- 가입 완료 버튼 -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnJoinSubmit"

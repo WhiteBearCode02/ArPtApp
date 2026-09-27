@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="join_help_link">입력 정보가 왜 필요한가요?</string>
+    <string name="help_title">회원가입 도움말</string>
+    <string name="help_hero_eyebrow">AIRPTCOACH GUIDE</string>
+    <string name="help_hero_title">필요한 정보만, 이유를 알고 입력하세요</string>
+    <string name="help_hero_body">계정 생성에는 이름, 이메일, 비밀번호만 필요합니다. 신체정보는 선택 항목이며 비워 두어도 회원가입과 자세 분석을 이용할 수 있습니다.</string>
+    <string name="help_required_summary">필수  ·  이름 / 이메일 / 비밀번호</string>
+    <string name="help_optional_summary">선택  ·  몸무게 / 골격근량 / 체지방 정보</string>
+    <string name="help_required_title">필수 정보</string>
+    <string name="help_name_title">이름</string>
+    <string name="help_name_body">2~20자로 입력합니다. 앱 안에서 사용자를 구분하고 프로필에 표시할 이름입니다. 실명이 아니어도 알아보기 쉬운 이름이면 됩니다.</string>
+    <string name="help_email_title">이메일</string>
+    <string name="help_email_body">로그인 아이디이자 이메일 인증과 비밀번호 재설정에 사용됩니다. 실제로 메일을 받을 수 있는 주소를 입력하고 오탈자를 확인해 주세요.</string>
+    <string name="help_password_title">비밀번호</string>
+    <string name="help_password_body">현재 가입 조건은 6자 이상입니다. 다른 서비스와 겹치지 않는 8자 이상의 비밀번호를 권장합니다. 비밀번호 원문은 앱의 프로필 데이터베이스에 저장하지 않고 Supabase Auth가 인증을 처리합니다.</string>
+    <string name="help_optional_title">선택 신체정보</string>
+    <string name="help_weight_title">몸무게 (kg)</string>
+    <string name="help_weight_body">운동 기록을 사용자 신체 맥락과 함께 이해하고 향후 개인화된 운동 지표를 제공하기 위한 참고 정보입니다.</string>
+    <string name="help_muscle_title">골격근량 (kg)</string>
+    <string name="help_muscle_body">근육량 변화와 운동 목표를 프로필에서 관리하기 위한 참고값입니다. 최근 측정값이 없다면 비워 두어도 됩니다.</string>
+    <string name="help_fat_title">체지방량 (kg) · 체지방률 (%)</string>
+    <string name="help_fat_body">체성분 변화를 이해하기 위한 선택 정보입니다. 체지방량은 현재 분석 점수에 직접 사용되지 않으며, 개인설정에서 관리하는 핵심 체성분 항목은 체지방률입니다.</string>
+    <string name="help_optional_note">측정값을 모르면 추측해서 입력하지 않아도 됩니다. 가입 후 개인설정에서 몸무게, 골격근량, 체지방률을 수정할 수 있습니다.</string>
+    <string name="help_analysis_title">자세 분석에는 어떻게 사용되나요?</string>
+    <string name="help_analysis_body">현재 실시간 자세 인식과 횟수 분석은 카메라에서 감지한 MediaPipe 관절 좌표를 중심으로 동작합니다. 따라서 선택 신체정보를 입력하지 않아도 운동을 시작할 수 있습니다. 모든 신체정보가 현재 정확도 점수나 예상 칼로리에 직접 반영되는 것은 아닙니다.</string>
+    <string name="help_analysis_notice">AIRPTCoach의 결과는 운동 보조용 참고 정보이며 의료 진단이나 치료를 대신하지 않습니다.</string>
+    <string name="help_privacy_title">저장과 보안</string>
+    <string name="help_privacy_body">이메일과 인증 정보는 Supabase Auth에서 처리합니다. 프로필 정보는 로그인한 계정과 연결되며, 지원되는 항목은 기기 설정과 Supabase 프로필에 동기화될 수 있습니다. 공용 기기에서는 로그인 유지를 해제하고 사용 후 로그아웃해 주세요.</string>
+    <string name="help_flow_title">가입 후 이용 순서</string>
+    <string name="help_flow_1">1  정보 입력\n필수 정보와 원하는 선택 정보만 입력합니다.</string>
+    <string name="help_flow_2">2  이메일 확인\n인증 메일이 전송되면 받은편지함과 스팸함을 확인합니다.</string>
+    <string name="help_flow_3">3  로그인 후 시작\n인증한 이메일로 로그인하고 개인설정과 운동 분석을 이용합니다.</string>
+    <string name="help_create_account">내용을 확인했어요 · 계정 만들기</string>
+    <string name="help_close">로그인으로 돌아가기</string>
+    <string name="help_back_to_signup">회원가입으로 돌아가기</string>
+</resources>

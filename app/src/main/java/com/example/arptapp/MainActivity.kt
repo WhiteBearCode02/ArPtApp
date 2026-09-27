@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
 
         // 도움말
         binding.tvHelp.setOnClickListener {
-            Toast.makeText(this, "도움말 화면으로 이동합니다", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HelpActivity::class.java))
         }
     }
 

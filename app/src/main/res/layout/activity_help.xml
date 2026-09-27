@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_home_aurora"
+    android:orientation="vertical"
+    tools:context=".HelpActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarHelp"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@android:drawable/ic_media_previous"
+        app:navigationIconTint="@color/text_primary"
+        app:title="@string/help_title"
+        app:titleTextColor="@color/text_primary" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="32dp">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.AIRPTCoach.Help.Card"
+                app:cardBackgroundColor="#E6173451"
+                app:strokeColor="@color/aurora_mint">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="22dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.12"
+                        android:text="@string/help_hero_eyebrow"
+                        android:textColor="@color/aurora_mint"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/help_hero_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="24sp" />
+
+                    <TextView
+                        style="@style/TextAppearance.AIRPTCoach.Help.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/help_hero_body" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/bg_help_required_chip"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="10dp"
+                        android:text="@string/help_required_summary"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_help_optional_chip"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="10dp"
+                        android:text="@string/help_optional_summary"
+                        android:textColor="@color/aurora_lilac"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Help.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/help_required_title" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/Widget.AIRPTCoach.Help.Card">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_name_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_name_body" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="18dp" android:background="@color/color_border" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_email_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_email_body" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="18dp" android:background="@color/color_border" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_password_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_password_body" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Help.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/help_optional_title" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/Widget.AIRPTCoach.Help.Card">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_weight_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_weight_body" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="18dp" android:background="@color/color_border" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_muscle_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_muscle_body" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="18dp" android:background="@color/color_border" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.ItemTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/help_fat_title" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/help_fat_body" />
+                    <TextView
+                        style="@style/TextAppearance.AIRPTCoach.Help.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/bg_help_note"
+                        android:padding="14dp"
+                        android:text="@string/help_optional_note"
+                        android:textColor="@color/aurora_mint" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Help.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/help_analysis_title" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/Widget.AIRPTCoach.Help.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/help_analysis_body" />
+                    <TextView
+                        style="@style/TextAppearance.AIRPTCoach.Help.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_help_notice"
+                        android:padding="14dp"
+                        android:text="@string/help_analysis_notice"
+                        android:textColor="@color/aurora_lilac" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Help.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/help_privacy_title" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/Widget.AIRPTCoach.Help.Card">
+                <TextView
+                    style="@style/TextAppearance.AIRPTCoach.Help.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="20dp"
+                    android:text="@string/help_privacy_body" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Help.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/help_flow_title" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/Widget.AIRPTCoach.Help.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/help_flow_1" android:textColor="@color/aurora_ice" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/help_flow_2" android:textColor="@color/aurora_ice" />
+                    <TextView style="@style/TextAppearance.AIRPTCoach.Help.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/help_flow_3" android:textColor="@color/aurora_ice" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHelpCreateAccount"
+                style="@style/Widget.AIRPTCoach.Auth.ActionButton.Primary"
+                android:layout_marginTop="28dp"
+                android:text="@string/help_create_account" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHelpClose"
+                style="@style/Widget.AIRPTCoach.Auth.LinkButton"
+                android:layout_width="match_parent"
+                android:layout_marginTop="8dp"
+                android:text="@string/help_close" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
