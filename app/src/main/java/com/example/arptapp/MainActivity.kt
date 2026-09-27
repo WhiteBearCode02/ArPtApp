@@ -29,6 +29,10 @@ class MainActivity : AppCompatActivity() {
 
         setupClickListeners()
         observeLoginState()
+        intent.getStringExtra(EXTRA_NOTICE)?.let {
+            Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+            intent.removeExtra(EXTRA_NOTICE)
+        }
         if (intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
     }
 
@@ -81,7 +85,9 @@ class MainActivity : AppCompatActivity() {
 
         // 비밀번호 찾기
         binding.tvForgotPassword.setOnClickListener {
-            Toast.makeText(this, "비밀번호 찾기 기능은 준비 중입니다", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ForgotPasswordActivity::class.java).apply {
+                putExtra(ForgotPasswordActivity.EXTRA_EMAIL, binding.etEmail.text?.toString()?.trim())
+            })
         }
 
         // 도움말
@@ -146,5 +152,9 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
+    }
+
+    companion object {
+        const val EXTRA_NOTICE = "extra_notice"
     }
 }

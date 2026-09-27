@@ -72,6 +72,33 @@ class SupabaseAuthRepository {
         client.auth.signInWith(Google, REDIRECT_URI)
     }
 
+    suspend fun requestPasswordReset(email: String): Result<Unit> = runCatching {
+        require(email.isNotBlank()) { "이메일을 입력해 주세요." }
+        client.auth.resetPasswordForEmail(
+            email = email.trim(),
+            redirectUrl = PASSWORD_RESET_REDIRECT_URI
+        )
+    }
+
+    suspend fun handlePasswordRecovery(intent: Intent): Result<Unit> = runCatching {
+        val callbackUri = intent.data
+        require(
+            callbackUri?.scheme == REDIRECT_SCHEME &&
+                callbackUri.host == REDIRECT_HOST &&
+                callbackUri.path == PASSWORD_RESET_PATH
+        ) { "유효하지 않은 재설정 링크입니다." }
+        client.handleDeeplinks(intent)
+        check(client.auth.currentUserOrNull() != null) { "재설정 링크가 만료되었거나 유효하지 않습니다." }
+    }
+
+    suspend fun updateRecoveredPassword(newPassword: String): Result<Unit> = runCatching {
+        check(client.auth.currentUserOrNull() != null) { "재설정 인증이 필요합니다." }
+        client.auth.updateUser {
+            password = newPassword
+        }
+        Unit
+    }
+
     suspend fun handleAuthCallback(intent: Intent): Result<AppSession?> = runCatching {
         client.handleDeeplinks(intent)
         refreshSession()
@@ -157,5 +184,9 @@ class SupabaseAuthRepository {
 
     private companion object {
         const val REDIRECT_URI = "arptapp://auth/callback"
+        const val PASSWORD_RESET_REDIRECT_URI = "arptapp://auth/reset-password"
+        const val REDIRECT_SCHEME = "arptapp"
+        const val REDIRECT_HOST = "auth"
+        const val PASSWORD_RESET_PATH = "/reset-password"
     }
 }

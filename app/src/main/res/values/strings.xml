@@ -22,6 +22,9 @@
     <string name="calendar_event_title">AIRPTCoach 운동 시간</string>
     <string name="calendar_event_description">AIRPTCoach와 함께 오늘의 운동을 시작해 보세요.</string>
     <string name="calendar_app_not_found">사용할 수 있는 캘린더 앱을 찾지 못했습니다.</string>
+    <string name="password_reset_email_sent">%1$s 주소로 재설정 링크를 요청했습니다.</string>
+    <string name="password_reset_link_checking">재설정 링크를 확인하고 있습니다.</string>
+    <string name="password_reset_link_invalid">재설정 링크가 만료되었거나 올바르지 않습니다. 새 링크를 요청해 주세요.</string>
 
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
