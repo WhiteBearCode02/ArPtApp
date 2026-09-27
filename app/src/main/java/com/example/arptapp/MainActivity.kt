@@ -96,12 +96,10 @@ class MainActivity : AppCompatActivity() {
                 loginViewModel.state.collect { state ->
                     when (state) {
                         LoginState.Loading -> {
-                            binding.btnLogin.isEnabled = false
-                            binding.btnGoogleLogin.isEnabled = false
+                            setAuthActionsEnabled(false)
                         }
                         LoginState.Idle -> {
-                            binding.btnLogin.isEnabled = true
-                            binding.btnGoogleLogin.isEnabled = true
+                            setAuthActionsEnabled(true)
                         }
                         is LoginState.Authenticated -> {
                             loginPreferences.rememberLogin =
@@ -116,8 +114,7 @@ class MainActivity : AppCompatActivity() {
                         ).show()
                         is LoginState.Error -> {
                             loginPreferences.pendingGoogleRememberLogin = null
-                            binding.btnLogin.isEnabled = true
-                            binding.btnGoogleLogin.isEnabled = true
+                            setAuthActionsEnabled(true)
                             binding.tilPassword.error = state.message
                             Toast.makeText(this@MainActivity, state.message, Toast.LENGTH_SHORT).show()
                         }
@@ -125,6 +122,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun setAuthActionsEnabled(enabled: Boolean) {
+        binding.btnLogin.isEnabled = enabled
+        binding.btnGoogleLogin.isEnabled = enabled
+        binding.btnSignUp.isEnabled = enabled
+        binding.tvForgotPassword.isEnabled = enabled
+        binding.tvHelp.isEnabled = enabled
     }
 
     private fun navigateForSession(session: com.example.arptapp.data.remote.AppSession) {

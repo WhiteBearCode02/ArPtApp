@@ -114,7 +114,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ACCOUNT LOGIN"
+                    android:text="계정 로그인"
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
                     android:textStyle="bold"
@@ -133,22 +133,10 @@
                 <!-- 이메일 입력 필드 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilEmail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    style="@style/Widget.AIRPTCoach.Auth.TextInput"
                     android:layout_marginBottom="20dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxBackgroundColor="#1E1E1E"
-                    app:boxStrokeColor="#2196F3"
-                    app:boxStrokeWidth="2dp"
-                    app:boxCornerRadiusTopStart="16dp"
-                    app:boxCornerRadiusTopEnd="16dp"
-                    app:boxCornerRadiusBottomStart="16dp"
-                    app:boxCornerRadiusBottomEnd="16dp"
-                    app:hintTextColor="#B0B0B0"
                     app:startIconDrawable="@android:drawable/ic_dialog_email"
-                    app:startIconTint="#2196F3"
-                    app:endIconMode="clear_text"
-                    app:endIconTint="#B0B0B0">
+                    app:endIconMode="clear_text">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etEmail"
@@ -157,10 +145,10 @@
                         android:hint="example@email.com"
                         android:textColor="#FFFFFF"
                         android:textColorHint="#666666"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:inputType="textEmailAddress"
                         android:maxLines="1"
-                        android:paddingVertical="20dp" />
+                        android:paddingVertical="16dp" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -177,21 +165,9 @@
                 <!-- 비밀번호 입력 필드 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPassword"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:boxBackgroundMode="outline"
-                    app:boxBackgroundColor="#1E1E1E"
-                    app:boxStrokeColor="#2196F3"
-                    app:boxStrokeWidth="2dp"
-                    app:boxCornerRadiusTopStart="16dp"
-                    app:boxCornerRadiusTopEnd="16dp"
-                    app:boxCornerRadiusBottomStart="16dp"
-                    app:boxCornerRadiusBottomEnd="16dp"
-                    app:hintTextColor="#B0B0B0"
+                    style="@style/Widget.AIRPTCoach.Auth.TextInput"
                     app:startIconDrawable="@android:drawable/ic_lock_lock"
-                    app:startIconTint="#2196F3"
-                    app:endIconMode="password_toggle"
-                    app:endIconTint="#B0B0B0">
+                    app:endIconMode="password_toggle">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassword"
@@ -200,10 +176,10 @@
                         android:hint="••••••••"
                         android:textColor="#FFFFFF"
                         android:textColorHint="#666666"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:inputType="textPassword"
                         android:maxLines="1"
-                        android:paddingVertical="20dp" />
+                        android:paddingVertical="16dp" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -221,157 +197,116 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- 로그인 버튼 -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogin"
+        <!-- 인증 액션 모듈 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAuthActions"
             android:layout_width="0dp"
-            android:layout_height="68dp"
-            android:text="로그인"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02"
-            android:gravity="center"
-            app:backgroundTint="#2196F3"
-            app:cornerRadius="20dp"
-            app:elevation="8dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            app:cardBackgroundColor="#B30A1D31"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
             app:layout_constraintTop_toBottomOf="@id/cardLoginForm"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:strokeColor="@color/aurora_border"
+            app:strokeWidth="1dp">
 
-        <!-- 설명 텍스트 -->
-        <TextView
-            android:id="@+id/tvLoginHint"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="이메일과 비밀번호를 입력한 후 로그인하세요"
-            android:textColor="#B0B0B0"
-            android:textSize="13sp"
-            android:gravity="center"
-            android:layout_marginTop="8dp"
-            app:layout_constraintTop_toBottomOf="@id/btnLogin"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnGoogleLogin"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:text="Google로 로그인"
-            android:textColor="#1F1F1F"
-            android:textSize="14sp"
-            android:textAllCaps="false"
-            app:icon="@drawable/ic_google_g"
-            app:iconGravity="textStart"
-            app:iconSize="20dp"
-            app:iconPadding="12dp"
-            app:iconTint="@null"
-            app:backgroundTint="#FFFFFF"
-            app:cornerRadius="12dp"
-            app:strokeColor="#DADCE0"
-            app:strokeWidth="1dp"
-            android:layout_marginTop="12dp"
-            app:layout_constraintTop_toBottomOf="@id/tvLoginHint"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- 구분선 -->
-        <LinearLayout
-            android:id="@+id/dividerContainer"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="32dp"
-            app:layout_constraintTop_toBottomOf="@id/btnGoogleLogin"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"
-                android:background="#3C3C3C" />
-
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="또는"
-                android:textColor="#B0B0B0"
-                android:textSize="12sp"
-                android:paddingHorizontal="16dp" />
+                android:orientation="vertical"
+                android:padding="18dp">
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"
-                android:background="#3C3C3C" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLogin"
+                    style="@style/Widget.AIRPTCoach.Auth.ActionButton.Primary"
+                    android:text="로그인" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/tvLoginHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="이메일과 비밀번호로 로그인하세요"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
 
-        <!-- 회원가입 버튼 -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSignUp"
-            android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:text="새 계정 만들기"
-            android:textColor="#2196F3"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            app:backgroundTint="#2C2C2C"
-            app:cornerRadius="20dp"
-            app:strokeColor="#2196F3"
-            app:strokeWidth="2dp"
-            android:layout_marginTop="16dp"
-            app:layout_constraintTop_toBottomOf="@id/dividerContainer"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                <LinearLayout
+                    android:id="@+id/dividerContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-        <!-- 추가 옵션 -->
-        <LinearLayout
-            android:id="@+id/optionsContainer"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="24dp"
-            app:layout_constraintTop_toBottomOf="@id/btnSignUp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/color_border" />
 
-            <TextView
-                android:id="@+id/tvForgotPassword"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="비밀번호 찾기"
-                android:textColor="#2196F3"
-                android:textSize="13sp"
-                android:padding="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="14dp"
+                        android:text="또는"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
 
-            <View
-                android:layout_width="1dp"
-                android:layout_height="16dp"
-                android:background="#3C3C3C"
-                android:layout_marginHorizontal="12dp" />
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/color_border" />
+                </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvHelp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="도움말"
-                android:textColor="#2196F3"
-                android:textSize="13sp"
-                android:padding="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGoogleLogin"
+                    style="@style/Widget.AIRPTCoach.Auth.ActionButton.Google"
+                    android:text="Google로 로그인"
+                    app:icon="@drawable/ic_google_g"
+                    app:iconGravity="textStart"
+                    app:iconPadding="10dp"
+                    app:iconSize="20dp"
+                    app:iconTint="@null" />
 
-        </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSignUp"
+                    style="@style/Widget.AIRPTCoach.Auth.ActionButton.Secondary"
+                    android:layout_marginTop="10dp"
+                    android:text="새 계정 만들기" />
+
+                <LinearLayout
+                    android:id="@+id/optionsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tvForgotPassword"
+                        style="@style/Widget.AIRPTCoach.Auth.LinkButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="비밀번호 찾기" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="18dp"
+                        android:background="@color/color_border" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tvHelp"
+                        style="@style/Widget.AIRPTCoach.Auth.LinkButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="도움말" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- 하단 버전 정보 -->
         <TextView
@@ -381,9 +316,9 @@
             android:text="AIRPTCoach  ·  VERSION 1.0"
             android:textColor="#666666"
             android:textSize="11sp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             android:layout_marginBottom="16dp"
-            app:layout_constraintTop_toBottomOf="@id/optionsContainer"
+            app:layout_constraintTop_toBottomOf="@id/cardAuthActions"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
