@@ -26,6 +26,9 @@ class HistoryActivity : AppCompatActivity() {
 
         // 리사이클러뷰 설정 (수직 리스트 형태)
         binding.rvHistory.layoutManager = LinearLayoutManager(this)
+        binding.btnOpenStatistics.setOnClickListener {
+            startActivity(Intent(this, WorkoutStatisticsActivity::class.java))
+        }
 
         // 데이터 로딩 실행
         loadExerciseHistory()

@@ -15,6 +15,13 @@
         android:textStyle="bold"
         android:layout_marginBottom="20dp"/>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnOpenStatistics"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="주간 · 월간 운동 분석"
+        android:layout_marginBottom="12dp" />
+
     <TextView
         android:id="@+id/tvEmptyMessage"
         android:layout_width="match_parent"

@@ -5,8 +5,15 @@ import org.junit.Test
 
 class SquatRepCounterTest {
     @Test
+    fun defaultPolicyDoesNotAccept95DegreesAsBottom() {
+        val counter = SquatRepCounter()
+        repeat(3) { counter.update(95.0, 0.9, it * 100L) }
+        repeat(5) { counter.update(170.0, 1.3, 800L + it * 100) }
+        assertEquals(0, counter.count)
+    }
+    @Test
     fun countsOnlyAfterStableDescentAndAscent() {
-        val counter = SquatRepCounter(requiredStableFrames = 3, minimumRepDurationMs = 600)
+        val counter = SquatRepCounter(requiredStableFrames = 3, minimumRepDurationMs = 600, downKneeAngle = 100.0)
 
         repeat(3) { frame -> counter.update(95.0, 0.9, frame * 100L) }
         repeat(5) { frame -> counter.update(170.0, 1.3, 800L + frame * 100L) }

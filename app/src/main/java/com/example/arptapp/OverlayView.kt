@@ -19,6 +19,14 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     private var landmarks: List<NormalizedLandmark>? = null
     private var isFrontCamera = true
+    private var highlightedJoints: Set<Int> = emptySet()
+    private var evaluable = false
+
+    fun setFeedback(feedback: com.example.arptapp.domain.analyzer.CoachingFeedback) {
+        highlightedJoints = feedback.jointIndices
+        evaluable = feedback.evaluable
+        invalidate()
+    }
 
     private var imageWidth: Int = 1
     private var imageHeight: Int = 1
@@ -68,6 +76,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     fun clearResults() {
         landmarks = null
+        highlightedJoints = emptySet()
+        evaluable = false
         invalidate()
     }
 
@@ -81,7 +91,13 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
             offsetY = (height - imageHeight * scaleFactor) / 2f
 
             // 각 포인트 그리기
-            for (point in points) {
+            for ((index, point) in points.withIndex()) {
+                if (!point.x().isFinite() || !point.y().isFinite() || point.visibility().orElse(0f) < 0.65f) continue
+                pointPaint.color = when {
+                    index in highlightedJoints -> Color.rgb(255, 177, 92)
+                    !evaluable -> Color.rgb(148, 169, 189)
+                    else -> Color.rgb(129, 232, 211)
+                }
                 canvas.drawCircle(getCanvasX(point.x()), getCanvasY(point.y()), 12f, pointPaint)
             }
 
@@ -133,6 +149,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
             if (conn.first < points.size && conn.second < points.size) {
                 val start = points[conn.first]
                 val end = points[conn.second]
+                if (listOf(start, end).any { !it.x().isFinite() || !it.y().isFinite() || it.visibility().orElse(0f) < 0.65f }) continue
+                linePaint.color = when {
+                    conn.first in highlightedJoints || conn.second in highlightedJoints -> Color.rgb(255, 177, 92)
+                    !evaluable -> Color.rgb(148, 169, 189)
+                    else -> Color.rgb(129, 232, 211)
+                }
 
                 canvas.drawLine(
                     getCanvasX(start.x()), getCanvasY(start.y()),

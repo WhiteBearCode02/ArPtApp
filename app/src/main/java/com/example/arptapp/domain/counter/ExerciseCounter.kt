@@ -3,7 +3,7 @@ package com.example.arptapp.domain.counter
 import com.example.arptapp.data.model.StandardPose
 
 /** Counts complete down/up repetitions for supported exercises. */
-class ExerciseCounter {
+class ExerciseCounter(private val requiredStableFrames: Int = 3, private val minimumRepDurationMs: Long = 600L) {
     enum class State {
         UP,
         DOWN
@@ -17,6 +17,14 @@ class ExerciseCounter {
     private var downStartedAtMs = 0L
     private var lastEccentricDurationMs = 0L
     private var lastConcentricDurationMs = 0L
+    private var transitionFrames = 0
+
+    /** Abandon an incomplete repetition after occlusion; preserve completed counts. */
+    fun invalidatePendingRep() {
+        currentState = State.UP
+        currentMaxAngle = 0.0
+        transitionFrames = 0
+    }
 
     /**
      * Processes one frame's representative joint angle.
@@ -29,12 +37,16 @@ class ExerciseCounter {
     ): Boolean {
         val normalizedType = exerciseType.uppercase()
         if (normalizedType != "SQUAT" && normalizedType != "SHOULDER_PRESS") return false
-        if (!angle.isFinite()) return false
+        if (!angle.isFinite() || angle !in 0.0..180.0) {
+            invalidatePendingRep()
+            return false
+        }
 
         if (activeExerciseType != normalizedType) {
             activeExerciseType = normalizedType
             currentState = State.UP
             currentMaxAngle = 0.0
+            transitionFrames = 0
             upStartedAtMs = timestampMs
         }
 
@@ -64,16 +76,19 @@ class ExerciseCounter {
         downStartedAtMs = 0L
         lastEccentricDurationMs = 0L
         lastConcentricDurationMs = 0L
+        transitionFrames = 0
     }
 
     private fun processSquatAngle(angle: Double, timestampMs: Long): Boolean {
         return when (currentState) {
             State.UP -> {
-                if (angle <= StandardPose.SQUAT_DOWN_THRESHOLD) {
+                transitionFrames = if (angle <= StandardPose.SQUAT_DOWN_THRESHOLD) transitionFrames + 1 else 0
+                if (transitionFrames >= requiredStableFrames) {
                     currentState = State.DOWN
                     currentMaxAngle = angle
                     downStartedAtMs = timestampMs
                     lastEccentricDurationMs = (downStartedAtMs - upStartedAtMs).coerceAtLeast(0L)
+                    transitionFrames = 0
                 }
                 false
             }
@@ -88,11 +103,13 @@ class ExerciseCounter {
     private fun processShoulderPressAngle(angle: Double, timestampMs: Long): Boolean {
         return when (currentState) {
             State.UP -> {
-                if (angle <= StandardPose.SHOULDER_BOTTOM_THRESHOLD) {
+                transitionFrames = if (angle <= StandardPose.SHOULDER_BOTTOM_THRESHOLD) transitionFrames + 1 else 0
+                if (transitionFrames >= requiredStableFrames) {
                     currentState = State.DOWN
                     currentMaxAngle = angle
                     downStartedAtMs = timestampMs
                     lastEccentricDurationMs = (downStartedAtMs - upStartedAtMs).coerceAtLeast(0L)
+                    transitionFrames = 0
                 }
                 false
             }
@@ -105,11 +122,18 @@ class ExerciseCounter {
     }
 
     private fun completeRepIf(isComplete: Boolean, timestampMs: Long): Boolean {
-        if (!isComplete) return false
+        transitionFrames = if (isComplete) transitionFrames + 1 else 0
+        if (transitionFrames < requiredStableFrames) return false
+        if (timestampMs - downStartedAtMs < minimumRepDurationMs) {
+            invalidatePendingRep()
+            upStartedAtMs = timestampMs
+            return false
+        }
         lastConcentricDurationMs = (timestampMs - downStartedAtMs).coerceAtLeast(0L)
         currentState = State.UP
         repCount++
         upStartedAtMs = timestampMs
+        transitionFrames = 0
         return true
     }
 }

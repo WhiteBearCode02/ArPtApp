@@ -46,6 +46,10 @@
 | Authentication | Supabase 이메일 회원가입·로그인·비밀번호 재설정 | ✅ |
 | Persistence | Room 로컬 기록 + Supabase 운동·신체·알림 설정 동기화 | ✅ |
 | Calendar Reminder | 개인설정에서 Google 캘린더 반복 운동 일정 생성·관리 화면 연결 | ✅ |
+| Joint Coaching | 촬영 방향별 코칭·오류 관절 주황 강조·측정 대기 구분 | 🧪 |
+| Workout Statistics | 최근 7일·30일 운동 통계 및 날짜별 반복 기록 | ✅ |
+| Personal Reference | 계정·종목·촬영 방향별 온디바이스 개인 동작 기준 저장·비교·삭제 | 🧪 |
+| Diagnostics | 처리 FPS·응답 지연·발열 단계 표시와 추론 제출 빈도 제한 | ✅ |
 | Exercise Classification | 학습된 YOLO Classification 모델 기반 자동 종목 인식 | 🚧 |
 | Dataset Pipeline | repetition 단위 pose sequence·metadata·annotation 생성 | 🧪 |
 
@@ -102,6 +106,11 @@ flowchart LR
 | `CoordinateNormalizer` | 골반 중심 이동과 신체 크기 기반 좌표 정규화 |
 | `DTWCalculator` | 사용자 동작 sequence와 표준 sequence 비교 |
 | `AnalyzerFactory` | 운동 종류에 적합한 Analyzer 선택 |
+| `JointAngleMeasurement` | 정의·좌표계·촬영 방향·품질을 보존하는 각도 API |
+| `CoachingFeedbackFactory` | 코칭 문구와 MediaPipe 오류 관절 인덱스 생성 |
+| `WorkoutStatistics` | 날짜 범위와 계정 격리를 적용한 로컬 운동 통계 |
+| `PersonalMotionReferenceRepository` | 계정·종목·시점별 개인 각도 시퀀스 로컬 저장 |
+| `FramePerformanceMonitor` | 60개 표본으로 제한된 로컬 FPS·지연 측정 |
 
 ## 📐 생체역학 근거와 분석 원칙
 
@@ -110,7 +119,7 @@ flowchart LR
 - 이미지 2D 각도, 정규화 랜드마크 x/y/z 벡터각, 실제 world 좌표 기반 각도를 서로 다른 측정값으로 관리합니다.
 - 무릎·팔꿈치의 **내각**과 논문에서 사용하는 **굴곡각**을 구분합니다. 같은 평면과 정의에서는 `굴곡각 = 180° - 내각`으로 변환할 수 있습니다.
 - 정면에서는 좌우 대칭과 무릎의 전면 투영 정렬을, 측면에서는 깊이와 몸통·경골 기울기를 우선 분석합니다.
-- 낮은 visibility, 관절 가림, 잘못된 촬영 시점은 정상으로 처리하지 않고 `NOT_EVALUABLE`로 구분할 예정입니다.
+- 실시간 각도 API는 낮은 visibility, 관절 가림, 퇴화 벡터, 비유한 값을 측정 불가로 구분합니다. 방향 미선택/가림으로 코칭이 불가능한 경우 별도로 대기 안내를 표시합니다.
 - 논문에 등장하는 집단 평균이나 실험 조건을 개인의 정상/오류 기준으로 바로 사용하지 않습니다.
 
 수치 기준은 출처에 따라 `PAPER_DIRECT`, `PAPER_DERIVED`, `ENGINEERING_INITIAL`, `EXPERT_VERIFIED`로 구분합니다. 현재 반복 카운트와 초기 자세 규칙의 임계값은 모두 `ENGINEERING_INITIAL`이며, 의료적 정상/이상 판정 기준이 아닙니다.
@@ -305,10 +314,10 @@ python -m unittest discover -s ai_module/tests -v
 - [x] repetition 상태 머신과 세션 리포트
 - [x] Supabase 로그인, 운동 세션·횟수별 분석, 신체 이력 및 알림 설정 동기화
 - [x] 현재 분석 흐름과 생체역학 근거·한계 문서화
-- [ ] 각도 값·정의·좌표계·시점·품질을 포함하는 `AngleMeasurement` 도입
-- [ ] 측정 불가 상태와 정상 상태 분리
-- [ ] 중복 repetition counter 및 Analyzer 실행 경로 통합
-- [ ] 오류 관절별 색상 강조와 상세 코칭 문구
+- [x] 각도 값·정의·좌표계·시점·품질을 포함하는 `AngleMeasurement` 도입
+- [x] 실시간 각도·코칭의 측정 불가 상태와 관찰 가능한 상태 분리
+- [x] 실시간 스쿼트·숄더프레스와 Analyzer 어댑터의 카운터 통합
+- [x] 오류 관절별 색상 강조와 초기 상세 코칭 문구
 - [ ] 실기기별 성능·발열·프레임 측정
 
 ### Phase 2 · 운동 자동 인식
@@ -318,7 +327,7 @@ python -m unittest discover -s ai_module/tests -v
 - [ ] `READY / SQUAT / SHOULDER_PRESS` 데이터 수집
 - [ ] YOLO Classification 학습·정량 평가
 - [ ] 모델 metadata/label 검증 및 Android 연결
-- [ ] 오인식 방지를 위한 temporal smoothing
+- [x] 연속 유효 프레임 근거 기반 temporal smoothing 및 세션 종목 고정
 
 ### Phase 3 · 자세 품질 데이터셋
 
@@ -331,29 +340,33 @@ python -m unittest discover -s ai_module/tests -v
 - [ ] 촬영 방향별 threshold 및 오류 규칙 검증
 - [ ] 실제 데이터 기반 분류·자세 모델 학습
 
-### 현재 검증 기준선
+### 검증 방법과 정책
 
-- Android debug 소스 컴파일 단계 통과
-- Android 단위 테스트 12개 중 11개 통과
-- 미해결 테스트: `SquatRepCounterTest.countsOnlyAfterStableDescentAndAscent`
-  - 테스트 입력은 하강 자세로 95°를 사용하지만 구현 임계값은 90° 이하이므로 상태 전이가 발생하지 않음
-  - 생체역학 기준과 카운트 정책을 확정하기 전 임계값이나 테스트 한쪽만 임의로 변경하지 않음
-- Python 데이터셋 파이프라인 테스트는 별도 Python 3.10+ 환경에서 실행 필요
+- 기본 90° 하강 임계값을 유지합니다. 기존 95° 테스트는 커스텀 100° 정책을 명시해 상태 머신을 검증하고, 기본 정책에서는 95°로 카운트하지 않는 별도 회귀 테스트를 추가했습니다.
+- 측정 품질·가림·연속 프레임·계정별 기간 통계·개인 기준 품질·진단 버퍼를 단위 테스트로 검증합니다.
+- Python 테스트는 Python 3.10 이상과 NumPy 환경이 필요합니다.
+- 이번 진행 범위, 실제 검증 결과와 실기기 확인 절차는 [로드맵 검증 문서](docs/ROADMAP_VALIDATION.md)에 기록합니다.
 
 ### Phase 4 · 제품 완성도
 
-- [ ] 관절별 실시간 위험도 시각화
-- [ ] 주간·월간 운동 분석 대시보드
-- [ ] 사용자별 표준 동작 calibration
+- [x] 관절별 실시간 관찰·코칭 상태 시각화 (의학적 위험도 아님)
+- [x] 주간·월간 운동 분석 대시보드 (최근 7일·30일)
+- [x] 사용자별 개인 비교 동작 calibration 초기 구현 (전문가 표준 인증 아님)
 - [ ] 접근성 및 다양한 화면 크기 대응
 - [ ] CI 기반 Android/Python 자동 테스트
+
+카메라 가로 화면 레이아웃, 48dp 주요 조작 버튼, 색상과 문구를 함께 사용하는 코칭 안내를 추가했습니다. 다양한 실기기·글꼴 확대·TalkBack 검증은 진행이 필요합니다. CI는 비용 정책에 따라 자동 실행하지 않는 [비활성 템플릿](.github/workflow-templates/quality-checks.yml.example)으로 준비했습니다.
+
+개인 기준은 카메라 화면의 `내 기준 기록`에서 촬영 방향과 종목을 선택해 저장합니다. 같은 버튼을 길게 누르면 현재 촬영 방향의 개인 기준을 삭제합니다. 관절 각도만 현재 기기에 저장하며 백업·외부 업로드를 하지 않습니다. 개인 기준은 사용자의 이전 동작과의 비교용이지 올바른 자세 판정 기준이 아닙니다.
+
+`운동 기록 → 주간 · 월간 운동 분석`에서 현재 로그인 계정의 날짜별 반복 기록과 기간 통계를 확인합니다.
 
 ## ⚠️ 현재 알려진 제한사항
 
 - 포함된 YOLO pose 모델을 운동 Classification 모델처럼 사용해서는 안 됩니다.
 - 자세 오류 규칙과 pseudo label 임계값은 초기값이며 전문가 검증이 필요합니다.
 - 현재 `NormalizedLandmark`의 x/y/z로 계산한 벡터각은 실제 모션캡처 기반 3D 관절각과 동일하지 않습니다.
-- 현재 일부 분석 경로는 측정 불가 상태를 `0.0` 또는 빈 오류 목록으로 처리하므로 품질 상태 분리가 필요합니다.
+- 실시간 경로는 명시적 품질 API를 사용합니다. 과거 호환 API 일부는 `0.0`/빈 목록을 반환하므로 새 호출부에서는 측정·코칭 품질 API를 사용해야 합니다.
 - 현재 다인 선택 정책은 가장 큰 바운딩 영역을 사용하지만 Pose Landmarker의 포즈 수와 프레임 간 사용자 지속 추적은 추가 검증이 필요합니다.
 - Room의 명시되지 않은 버전 이동은 `fallbackToDestructiveMigration()` 때문에 기록 손실 가능성이 있어, 스키마 확장 전 명시적 마이그레이션이 필요합니다.
 - 실제 정확도, FPS 및 CPU 절감률은 아직 표준화된 기기 벤치마크로 측정되지 않았습니다.

@@ -87,7 +87,7 @@ class MainViewModel : ViewModel() {
     private fun describeRep(record: RepRecord, exerciseType: String): String {
         val observations = mutableListOf<String>()
         observations += if (record.poseScore != null) {
-            "표준 동작과의 관절 각도 비교 점수를 반영했어요."
+            "저장된 기준 동작과의 관절 각도 비교 점수를 반영했어요. 개인 기준은 올바른 자세를 인증하지 않아요."
         } else {
             "관절 각도 기준으로 추정한 점수예요."
         }
@@ -125,9 +125,9 @@ class MainViewModel : ViewModel() {
             .map { (tag, count) -> formatErrorFeedback(tag, count) }
 
         val scoreFeedback = when {
-            averageScore >= 90 -> "전문가 수준의 완벽한 자세입니다!"
-            averageScore >= 75 -> "안정적이지만 하강 시 미세한 흔들림이 있습니다."
-            else -> "코어에 긴장을 유지하고 가동 범위를 일정하게 가져가세요."
+            averageScore >= 90 -> "현재 분석 기준과 유사한 동작이 기록됐습니다. 편안한 범위에서 일정하게 반복해 보세요."
+            averageScore >= 75 -> "회차별 관절 각도와 관찰 내용을 확인하고 동작 속도를 일정하게 유지해 보세요."
+            else -> "촬영 방향과 관절 가시성을 확인하고 무리하지 않는 범위에서 천천히 반복해 보세요."
         }
         return (errorFeedback + scoreFeedback).joinToString("\n")
     }

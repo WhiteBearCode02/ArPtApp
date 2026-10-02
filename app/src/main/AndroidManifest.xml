@@ -70,6 +70,7 @@ xmlns:tools="http://schemas.android.com/tools">
     <activity
         android:name=".HistoryActivity"
         android:exported="false" />
+    <activity android:name=".WorkoutStatisticsActivity" android:exported="false" />
 
     <!-- 운동 결과 리포트 Activity (신규) -->
     <activity

@@ -5,6 +5,13 @@ import org.junit.Test
 
 class ExerciseClassifierTest {
     @Test
+    fun unknownFrameBreaksConsecutiveEvidence() {
+        val classifier = ExerciseClassifier(requiredStableFrames = 3)
+        repeat(2) { classifier.classifyAngles(100f, 100f) }
+        classifier.classifyAngles(170f, 170f)
+        assertEquals(ExerciseType.UNKNOWN, classifier.classifyAngles(100f, 100f))
+    }
+    @Test
     fun switchesExerciseOnlyAfterStableLandmarkEvidence() {
         val classifier = ExerciseClassifier(requiredStableFrames = 3)
 

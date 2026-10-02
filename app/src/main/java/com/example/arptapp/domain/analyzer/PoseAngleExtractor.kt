@@ -12,24 +12,26 @@ object PoseAngleExtractor {
     private const val MIN_VECTOR_MAGNITUDE = 0.0001f
 
     fun analyzePose(exerciseType: String, poseData: PoseData): Double {
-        val landmarks = poseData.landmarks
-        val points = when (exerciseType.uppercase()) {
-            "SQUAT" -> intArrayOf(23, 25, 27)
-            "SHOULDER_PRESS" -> intArrayOf(11, 13, 15)
-            else -> return 0.0
-        }
+        return measurePose(exerciseType, poseData).valueDeg ?: 0.0
+    }
 
-        if (points.any { index ->
-                index >= landmarks.size || landmarks[index].visibility < MIN_VISIBILITY
-            }) {
-            return 0.0
+    fun measurePose(
+        exerciseType: String, poseData: PoseData,
+        view: CameraView = CameraView.UNKNOWN, imageAspectRatio: Double = 1.0
+    ): AngleMeasurement {
+        val joints = when (exerciseType.uppercase()) {
+            "SQUAT" -> listOf(listOf(23, 25, 27), listOf(24, 26, 28))
+            "SHOULDER_PRESS" -> listOf(listOf(11, 13, 15), listOf(12, 14, 16))
+            else -> emptyList()
         }
-
-        return calculateAngle(
-            landmarks[points[0]],
-            landmarks[points[1]],
-            landmarks[points[2]]
-        )
+        val measurements = joints.mapIndexed { index, indices ->
+            JointAngleMeasurement.measure(poseData.landmarks, indices,
+                "${exerciseType.lowercase()}_${if (index == 0) "left" else "right"}_interior",
+                view = view, imageAspectRatio = imageAspectRatio)
+        }
+        return measurements.filter { it.isEvaluable }.maxByOrNull { it.minVisibility }
+            ?: measurements.firstOrNull()
+            ?: JointAngleMeasurement.measure(emptyList(), emptyList(), "unsupported", view = view)
     }
 
     fun extractSquatAngles(landmarks: List<NormalizedLandmark>): FloatArray? {
@@ -62,6 +64,7 @@ object PoseAngleExtractor {
         middle: NormalizedLandmark,
         last: NormalizedLandmark
     ): Float? {
+        if (listOf(first, middle, last).any { !it.x().isFinite() || !it.y().isFinite() || !it.z().isFinite() }) return null
         val firstVector = floatArrayOf(first.x() - middle.x(), first.y() - middle.y(), first.z() - middle.z())
         val lastVector = floatArrayOf(last.x() - middle.x(), last.y() - middle.y(), last.z() - middle.z())
         val firstMagnitude = sqrt(firstVector.sumOf { (it * it).toDouble() }).toFloat()

@@ -56,8 +56,8 @@
 
         <ImageButton
             android:id="@+id/btnClose"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/bg_camera_icon_button"
             android:contentDescription="@string/camera_close"
             android:padding="12dp"
@@ -173,6 +173,58 @@
                 android:textColor="@color/aurora_ice"
                 android:textSize="11sp" />
         </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCameraView"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="촬영 방향 선택"
+            android:textAllCaps="false"
+            android:textColor="@color/aurora_ice"
+            app:backgroundTint="#B3102640"
+            app:cornerRadius="16dp"
+            app:layout_constraintTop_toBottomOf="@id/layoutDetectedExercise"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/tvPoseFeedback"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="민트: 추적 중 · 주황: 확인할 관절 · 회색: 측정 대기"
+            android:textColor="@color/aurora_ice"
+            android:textSize="14sp"
+            android:accessibilityLiveRegion="polite"
+            app:layout_constraintTop_toBottomOf="@id/btnCameraView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPersonalReference"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="내 기준 기록"
+            android:textAllCaps="false"
+            android:textColor="@color/aurora_ice"
+            app:backgroundTint="#B3102640"
+            app:cornerRadius="16dp"
+            app:layout_constraintTop_toBottomOf="@id/tvPoseFeedback"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/tvPerformance"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="11sp"
+            android:textColor="@color/aurora_ice"
+            android:layout_marginTop="4dp"
+            app:layout_constraintTop_toBottomOf="@id/btnPersonalReference"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <FrameLayout
             android:id="@+id/layoutCameraActions"

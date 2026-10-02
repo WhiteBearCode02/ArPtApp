@@ -5,6 +5,7 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="personal_motion_references.xml" />
         <exclude domain="file" path="datastore/user_settings.preferences_pb" />
         <!-- TODO: Use <include> and <exclude> to control what is backed up.
         <include .../>
@@ -12,6 +13,7 @@
         -->
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="personal_motion_references.xml" />
         <exclude domain="file" path="datastore/user_settings.preferences_pb" />
     </device-transfer>
     <!--

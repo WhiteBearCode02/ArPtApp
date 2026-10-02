@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/black">
+    <androidx.camera.view.PreviewView android:id="@+id/viewFinder" android:layout_width="match_parent" android:layout_height="match_parent" app:implementationMode="compatible" app:scaleType="fillCenter" />
+    <com.example.arptapp.OverlayView android:id="@+id/overlayView" android:layout_width="match_parent" android:layout_height="match_parent" android:clickable="false" android:focusable="false" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp" android:fitsSystemWindows="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:background="#99071426">
+            <ImageButton android:id="@+id/btnClose" android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp" android:background="@drawable/bg_camera_icon_button" android:src="@drawable/ic_camera_close" android:contentDescription="@string/camera_close" app:tint="@color/white" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingHorizontal="12dp">
+                <TextView android:id="@+id/tvDashboardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/exercise_ready" android:textSize="18sp" android:textColor="@color/white" />
+                <TextView android:id="@+id/tvDetectedExercise" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/exercise_detecting" android:textSize="13sp" android:textColor="@color/aurora_ice" />
+            </LinearLayout>
+            <ImageButton android:id="@+id/btnSwitchCamera" android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp" android:background="@drawable/bg_camera_icon_button" android:src="@drawable/ic_camera_flip" android:contentDescription="@string/camera_switch" app:tint="@color/white" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="bottom">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/tvCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_camera_count_panel" android:paddingHorizontal="24dp" android:text="0" android:textSize="40sp" android:textColor="@color/white" />
+                <TextView android:id="@+id/tvCountUnit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/exercise_count" android:textSize="13sp" android:textColor="@color/white" />
+                <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnStartExercise" android:layout_width="wrap_content" android:layout_height="48dp" android:paddingHorizontal="20dp" android:background="@drawable/bg_camera_start_button" android:text="@string/exercise_start" android:textColor="#071426" android:textAllCaps="false" />
+                <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnEndExercise" android:layout_width="wrap_content" android:layout_height="48dp" android:paddingHorizontal="20dp" android:background="@drawable/bg_camera_end_button" android:text="@string/exercise_end" android:textColor="@color/white" android:textAllCaps="false" android:visibility="gone" />
+            </LinearLayout>
+            <ScrollView android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#B3071426">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="8dp">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnCameraView" android:layout_width="match_parent" android:layout_height="52dp" android:text="촬영 방향 선택" android:textAllCaps="false" />
+                    <TextView android:id="@+id/tvPoseFeedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="민트: 추적 중 · 주황: 확인할 관절 · 회색: 측정 대기" android:textSize="14sp" android:textColor="@color/aurora_ice" android:accessibilityLiveRegion="polite" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnPersonalReference" android:layout_width="match_parent" android:layout_height="52dp" android:text="내 기준 기록" android:textAllCaps="false" />
+                    <TextView android:id="@+id/tvPerformance" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/aurora_ice" />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

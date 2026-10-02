@@ -24,7 +24,9 @@ plugins {
 
 // Keep generated artifacts out of the module source tree so IDE language servers
 // do not index and lock generated jars such as R.jar on Windows.
-layout.buildDirectory.set(rootProject.layout.buildDirectory.dir("app"))
+val artifactFolder = providers.gradleProperty("verificationBuildDir").getOrElse("app")
+require(artifactFolder.matches(Regex("[A-Za-z0-9_-]+"))) { "Build directory must be a simple folder name" }
+layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(artifactFolder))
 
 android {
     namespace = "com.example.arptapp"

@@ -25,7 +25,7 @@ class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
             }
         }
 
-        val angles = PoseAngleExtractor.extractSquatAngles(landmarks) ?: return stableExercise
+        val angles = PoseAngleExtractor.extractSquatAngles(landmarks) ?: return stabilize(ExerciseType.UNKNOWN)
         return classifyAngles(angles[0], angles[1])
     }
 
@@ -41,7 +41,11 @@ class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
     }
 
     private fun stabilize(frameExercise: ExerciseType): ExerciseType {
-        if (frameExercise == ExerciseType.UNKNOWN) return stableExercise
+        if (frameExercise == ExerciseType.UNKNOWN) {
+            candidate = ExerciseType.UNKNOWN
+            candidateFrameCount = 0
+            return stableExercise
+        }
 
         if (frameExercise == candidate) {
             candidateFrameCount++

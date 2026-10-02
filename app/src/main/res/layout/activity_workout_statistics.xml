@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/bg_home_aurora">
+    <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbarStatistics" android:layout_width="match_parent" android:layout_height="?attr/actionBarSize"
+        app:title="운동 분석" app:titleTextColor="@color/white" app:navigationIcon="@android:drawable/ic_media_previous" app:navigationIconTint="@color/white" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnWeek" android:layout_width="0dp" android:layout_weight="1" android:layout_height="52dp" android:text="최근 7일" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnMonth" android:layout_width="0dp" android:layout_weight="1" android:layout_height="52dp" android:layout_marginStart="12dp" android:text="최근 30일" />
+            </LinearLayout>
+            <TextView android:id="@+id/tvSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:padding="20dp"
+                android:background="@drawable/bg_panel" android:textColor="@color/aurora_ice" android:textSize="18sp" android:lineSpacingExtra="6dp" android:accessibilityLiveRegion="polite" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="날짜별 반복 기록" android:textColor="@color/white" android:textSize="20sp" />
+            <TextView android:id="@+id/tvDaily" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:padding="20dp"
+                android:background="@drawable/bg_panel" android:textColor="@color/aurora_ice" android:textSize="16sp" android:lineSpacingExtra="10dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="이 기기에 저장된 현재 계정의 기록을 기준으로 표시합니다. 분석 점수는 의료적 판단 기준이 아닙니다." android:textColor="@color/text_secondary" android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

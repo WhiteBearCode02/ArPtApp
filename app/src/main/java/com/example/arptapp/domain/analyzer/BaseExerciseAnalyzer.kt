@@ -14,6 +14,8 @@ interface BaseExerciseAnalyzer {
     // 2. 운동을 처음부터 다시 시작할 때 데이터를 초기화합니다.
     fun reset()
 
-    // 3. 현재 운동이 '내려간 상태(Down)'인지 확인하는 상태값입니다 (피드백용).
+    /** Legacy name: indicates landmark evaluability, not proof of correct posture. */
     fun isProperForm(): Boolean
+
+    fun isEvaluable(): Boolean = isProperForm()
 }
