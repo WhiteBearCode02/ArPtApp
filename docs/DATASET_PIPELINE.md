@@ -56,6 +56,21 @@ python -m unittest discover -s ai_module/tests -v
 
 validator는 ID·label·시간·annotation·pose 파일·shape·NaN·visibility·참조 불일치를 검사합니다. split은 `subject_id` 단위로 사람을 격리하며, ID가 없으면 경고 후 sample 단위 fallback을 사용합니다.
 
+### 영상 의존성 없이 테스트하기
+
+프로젝트 루트의 전용 가상환경을 사용하면 전역 Python 패키지를 변경하지 않고 재실행할 수 있습니다. 단위·통합 테스트에는 NumPy만 필요합니다.
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r ai_module/requirements-test.txt
+.\.venv\Scripts\python.exe -m unittest discover -s ai_module/tests -v
+.\.venv\Scripts\python.exe -m ai_module.pipeline.dataset_validator --dataset-root ai_module/dataset
+```
+
+2026-10-02 Python 3.11.9 / NumPy 2.4.6에서 10개 테스트가 모두 통과했습니다. 통합 테스트는 임시 합성 샘플 12개를 이용하여 NPZ/metadata 검증, manifest 생성, 실제 split CLI, 사람별 격리와 동일 seed 재현성을 확인합니다. 잘못된 pose shape 및 운동에 맞지 않는 오류 라벨도 거부하는지 검사합니다.
+
+현재 저장소에는 실제 sample metadata가 없어 validator가 `dataset contains no sample metadata` 경고를 출력합니다. 이를 실제 데이터 품질 검증 완료로 해석하지 않습니다. 영상 추출에는 기존 `requirements.txt`의 MediaPipe/OpenCV와 사용 권한이 있는 원본 영상이 별도로 필요합니다.
+
 ## YouTube source 정책
 
 YouTube metadata는 `video_id`, URL, timestamp 등의 reference 정보만 저장합니다. YouTube 영상 파일을 자동 다운로드하거나 우회 다운로드하는 기능은 본 파이프라인에 포함하지 않습니다. 실제 학습 원본은 사용 권한이 명확한 영상, 직접 촬영 영상 또는 사용 가능한 공개 데이터셋을 전제로 합니다.

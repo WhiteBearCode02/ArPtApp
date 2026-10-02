@@ -1,0 +1,2 @@
+# Unit/integration tests use synthetic landmarks; video inference dependencies are optional.
+numpy>=1.24,<3

@@ -18,12 +18,18 @@
 
 ```powershell
 .\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --offline -PverificationBuildDir=roadmap-verification
-py -3 -m unittest discover -s ai_module/tests -v
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r ai_module/requirements-test.txt
+.\.venv\Scripts\python.exe -m unittest discover -s ai_module/tests -v
 ```
 
 별도 빌드 폴더는 Android Studio가 `R.jar`를 점유할 때 검증 경로로 사용합니다. 기본 APK 경로는 유지됩니다. 검증용 APK는 `build/roadmap-verification/outputs/apk/debug/app-debug.apk`입니다.
 
-Python 테스트는 Python 3.10 이상과 NumPy가 필요합니다. 현재 검증 PC에는 Python이 없어 Python 실행 검증을 완료하지 못했습니다.
+Python 검증도 2026-10-02 완료했습니다. Python 3.11.9 / NumPy 2.4.6의 프로젝트 전용 `.venv` 환경에서 단위·통합 테스트 10개 모두 통과했습니다. `pip check`는 의존성 충돌이 없었으며 `compileall` 문법 검사도 통과했습니다.
+
+합성 샘플 12개를 임시 폴더에 저장하고 pose NPZ/메타데이터 검증 → manifest 생성 → 실제 split CLI 실행을 확인했습니다. 사람별 train/validation/test 격리, 동일 seed 재현성, 잘못된 배열 크기·운동 오류 라벨 거부도 검증했습니다. 임시 샘플은 테스트 종료 후 삭제됩니다.
+
+저장소의 `ai_module/dataset` 검증은 오류 0개, 경고 1개였습니다. 경고는 실제 sample metadata가 없다는 의미이며 실제 데이터 품질·추론 정확도를 확인한 결과는 아닙니다. 이번 검증에는 실제 영상 추출이나 모델 학습을 포함하지 않았습니다. `.venv`와 Python bytecode는 Git에서 제외합니다.
 
 ## 자동 테스트 준비
 

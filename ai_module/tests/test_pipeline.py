@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 import warnings
@@ -9,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from ai_module.pipeline.dataset_builder import DatasetBuilder
+from ai_module.pipeline.dataset_validator import validate_dataset
 from ai_module.pipeline.metadata_collector import SampleIdGenerator
 from ai_module.pipeline.pose_normalizer import normalize_pose
 from ai_module.pipeline.rep_segmenter import ThresholdRepSegmenter
@@ -28,6 +31,68 @@ def mock_pose() -> np.ndarray:
 
 
 class PipelineTests(unittest.TestCase):
+    def test_saved_pose_manifest_and_split_cli_are_consistent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            samples = root / "metadata" / "samples"
+            samples.mkdir(parents=True)
+            pose_dir = root / "pose" / "squat"
+            pose_dir.mkdir(parents=True)
+            pose = np.stack([mock_pose()] * 5)
+            sample_data = []
+            for index in range(12):
+                sample_id = f"SQ_LOCAL_{index:06d}"
+                pose_file = f"pose/squat/{sample_id}.npz"
+                np.savez_compressed(root / pose_file, raw_pose=pose, normalized_pose=pose)
+                metadata = {
+                    "sample_id": sample_id, "exercise": "SQUAT", "view": "SIDE",
+                    "source": {"type": "LOCAL", "subject_id": f"synthetic_{index // 2}"},
+                    "segment": {"start_sec": 0.0, "end_sec": 1.0},
+                    "annotation": {"form_quality": "UNKNOWN", "error_labels": []},
+                    "repetitions": [{"pose_file": pose_file}],
+                }
+                sample_data.append(metadata)
+                (samples / f"{sample_id}.json").write_text(json.dumps(metadata), "utf-8")
+
+            report = validate_dataset(root)
+            self.assertEqual(report.errors, [])
+            self.assertEqual(report.warnings, [])
+            manifest = json.loads(DatasetBuilder(root).update_manifest().read_text("utf-8"))
+            self.assertEqual(manifest["samples"], 12)
+            project_root = Path(__file__).resolve().parents[2]
+            command = [sys.executable, "-m", "ai_module.training.dataset_split",
+                       "--dataset-root", str(root), "--seed", "42"]
+            result = subprocess.run(command, cwd=project_root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            split_path = root / "metadata" / "dataset_split.json"
+            split = json.loads(split_path.read_text("utf-8"))
+            membership = {sample: group for group, values in split.items() for sample in values}
+            self.assertEqual(len(membership), 12)
+            self.assertEqual(sum(map(len, split.values())), 12)
+            for index in range(0, 12, 2):
+                self.assertEqual(membership[sample_data[index]["sample_id"]],
+                                 membership[sample_data[index + 1]["sample_id"]])
+            repeated = subprocess.run(command, cwd=project_root, capture_output=True, text=True)
+            self.assertEqual(repeated.returncode, 0, repeated.stderr)
+            self.assertEqual(split, json.loads(split_path.read_text("utf-8")))
+
+    def test_validator_rejects_invalid_shape_and_exercise_label(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            samples = root / "metadata" / "samples"
+            samples.mkdir(parents=True)
+            np.savez_compressed(root / "invalid.npz", raw_pose=np.zeros((5, 32, 4)))
+            (samples / "invalid.json").write_text(json.dumps({
+                "sample_id": "invalid", "exercise": "SQUAT",
+                "segment": {"start_sec": 0, "end_sec": 1},
+                "annotation": {"error_labels": ["INCOMPLETE_ROM"]},
+                "repetitions": [{"pose_file": "invalid.npz"}],
+            }), "utf-8")
+            report = validate_dataset(root)
+            self.assertFalse(report.valid)
+            self.assertTrue(any("invalid error labels" in error for error in report.errors))
+            self.assertTrue(any("invalid raw_pose shape" in error for error in report.errors))
+
     def test_pose_shape_and_normalization(self) -> None:
         result = normalize_pose(mock_pose())
         self.assertEqual(result.shape, (33, 4))
