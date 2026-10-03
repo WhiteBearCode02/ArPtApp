@@ -102,6 +102,9 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.cardview:cardview:1.0.0")
 
+    // Foreground-only, one-shot device location for external map navigation; no API key or billing API.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // --- Jetpack Navigation (여기에 추가되었습니다!) ---
     // 화면 간 이동(NavGraph)과 데이터 전달을 체계적으로 관리하기 위한 라이브러리
     val navVersion = "2.7.7"

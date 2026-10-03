@@ -16,11 +16,13 @@ import com.example.arptapp.data.remote.UserPreferencesRepository
 import com.example.arptapp.data.remote.withCloudBodyProfile
 import com.example.arptapp.data.remote.withCloudReminderPreferences
 import com.example.arptapp.utils.AlarmHelper
+import com.example.arptapp.ui.gym.NearbyGymController
 import kotlinx.coroutines.launch
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
+    private lateinit var nearbyGymController: NearbyGymController
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private val authRepository = SupabaseAuthRepository()
     private val cloudProfileRepository = UserProfileRepository()
@@ -32,6 +34,12 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        nearbyGymController = NearbyGymController(
+            this,
+            binding.btnFindNearbyGym,
+            binding.progressNearbyGym,
+            binding.tvNearbyGymStatus
+        )
 
         currentUserId = intent.getStringExtra("USER_ID")
             ?: com.example.arptapp.data.remote.AuthSessionStore.current?.userId

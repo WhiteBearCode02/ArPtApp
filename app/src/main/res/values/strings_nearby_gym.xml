@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nearby_gym_title">내 주변 헬스장</string>
+    <string name="nearby_gym_description">현재 위치 주변의 헬스장을\n지도에서 확인해보세요.</string>
+    <string name="nearby_gym_find">주변 헬스장 찾기</string>
+    <string name="nearby_gym_privacy">버튼을 누를 때만 위치를 확인하며, 위치를 저장하거나 서버에 보내지 않습니다.</string>
+    <string name="nearby_gym_loading">현재 위치 확인 중…</string>
+    <string name="nearby_gym_permission">위치 권한을 허용하면 주변 헬스장을 확인할 수 있습니다.</string>
+    <string name="nearby_gym_location_disabled">기기의 위치 서비스를 켜주세요.</string>
+    <string name="nearby_gym_location_timeout">위치를 확인하는 데 시간이 걸리고 있습니다. 잠시 후 다시 시도해주세요.</string>
+    <string name="nearby_gym_location_unavailable">현재 위치를 확인할 수 없습니다. 위치 서비스와 Google Play 서비스를 확인한 뒤 다시 시도해주세요.</string>
+    <string name="nearby_gym_map_unavailable">지도 서비스를 열 수 없습니다.</string>
+    <string name="nearby_gym_map_hint">NAVER 지도에서 현재 위치 버튼을 눌러 주변 헬스장을 확인하세요.</string>
+    <string name="nearby_gym_external_notice">외부 NAVER 지도 검색으로 연결합니다. 지도에서 현재 위치 버튼을 눌러 주변을 확인하세요.</string>
+</resources>
