@@ -24,6 +24,16 @@
 
 ## 프로젝트가 해결하려는 문제
 
+### 공개 연구·라이선스 정책
+
+본 프로젝트는 졸업작품·졸업논문·취업 포트폴리오를 위한 비상업적 공개 연구 프로젝트입니다. 사용자 학습 **Ultralytics YOLO26n** 모델의 운동 탐지 연동을 준비하며, Ultralytics 관련 부분은 AGPL-3.0 조건의 영향을 받는 것으로 관리합니다. [공식 라이선스 안내](https://www.ultralytics.com/license)
+
+프로젝트 전체를 AGPL-3.0으로 운영하는 방향이지만, 현재 정식 LICENSE는 미적용입니다. 사용자 승인으로 Google Play services 위치 SDK를 Android 기본 LocationManager로 교체했습니다. 학습 출처는 사용자 설명에 따라 AI-Hub로 기록하되, 정확한 데이터셋/weight 재배포 조건 확인 전 YOLO 앱 통합·모델 공개는 보류합니다. 상용화 또는 폐쇄형 배포 시 추가 검토가 필요하며, 공개 프로젝트라는 이유만으로 법적 안전이나 재배포 권리를 보증하지 않습니다.
+
+[검토 결과·다음 승인 사항](docs/LICENSE_REVIEW.md) · [모델 카드](MODEL_CARD.md) · [데이터 출처/라이선스](DATASET_LICENSES.md) · [주요 외부 구성요소 고지](THIRD_PARTY_NOTICES.md)
+
+모델·체크포인트·원본 데이터·비밀키는 자동 commit/push하지 않습니다. `.gitignore`는 APK에 포함된 모델의 라이선스 의무를 제거하지 않습니다.
+
 혼자 운동할 때는 자신의 자세가 어떻게 보이는지, 어느 관절에서 동작이 무너지는지 확인하기 어렵습니다. AIRPTCoach는 스마트폰 카메라 한 대로 다음 질문에 답하는 것을 목표로 합니다.
 
 - 앱이 지금 누구를 운동 주체로 추적하고 있는가?
@@ -323,6 +333,7 @@ python -m unittest discover -s ai_module/tests -v
 ### 내 주변 헬스장
 
 - Home의 **주변 헬스장 찾기** 버튼을 누를 때만 위치를 확인합니다. 백그라운드 위치 추적은 없습니다.
+- Android 기본 LocationManager와 기존 AndroidX Core를 사용하며 Google Play Services Location SDK에 의존하지 않습니다.
 - 외부 NAVER 지도 검색으로 연결하며, 지도 안의 현재 위치 버튼으로 주변 헬스장을 확인합니다.
 - 지도 앱이 없으면 웹으로 연결합니다. 앱 내부에 검색 결과 목록·캐시·거리순 정렬을 만들지 않습니다.
 - 위치정보를 저장하거나 서버/지도 링크로 보내지 않습니다. NAVER Search API·API HUB·지도 SDK·API 키 없이 연결하므로 이 기능의 외부 API 운영비는 없습니다.

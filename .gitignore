@@ -33,6 +33,7 @@ local.properties
 *.aab
 *.apks
 *.hprof
+*.dump
 *.log
 hs_err_pid*
 replay_pid*
@@ -41,14 +42,37 @@ replay_pid*
 /.venv/
 __pycache__/
 *.py[cod]
+.ipynb_checkpoints/
+wandb/
 # Local training outputs/checkpoints are not application source.
 /runs/
 /ai_module/runs/
+runs/
 *.pt
 *.pth
 *.onnx
 
-# Temporary publication guard until the custom model's license/release policy is approved.
+# Training media/archives: reviewed metadata is allowed only by the explicit rules below.
+raw/
+dataset/
+datasets/
+frames/
+images/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+*.tar
+*.tar.gz
+!/ai_module/dataset/
+/ai_module/dataset/**
+!/ai_module/dataset/metadata/
+!/ai_module/dataset/metadata/dataset_manifest.json
+!/ai_module/dataset/metadata/local_sources.json
+!/ai_module/dataset/metadata/youtube_sources.json
+
+# Publication guard: AGPL project intent does not settle the training data's weight redistribution terms.
 # Git ignore does NOT exclude this asset from the APK or remove licensing obligations.
 /app/src/main/assets/airptcoach_yolo26n_exp02_fp32.tflite
 
