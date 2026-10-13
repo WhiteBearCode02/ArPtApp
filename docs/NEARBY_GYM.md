@@ -97,7 +97,7 @@ JVM 테스트는 대략적/정확한 권한, 권한 대기·거부, 중복 클�
 - 전체 JVM 테스트 121개 통과(실패/오류/skip 0), 이번 제공자/완료 정책 테스트 10개 포함.
 - debugRuntimeClasspath에서 play-services에 일치하는 의존성 없음. 소스의 GMS 참조도 없음.
 - 병합 Manifest의 위치 권한은 FINE/COARSE만 확인했습니다. BACKGROUND_LOCATION 없음.
-- APK: `build/location-manager-verification/outputs/apk/debug/app-debug.apk`. 현재 로컬 assets의 모델이 포함될 수 있으므로 AI-Hub 데이터/weight 공개 검토 전 외부 배포하지 않습니다.
+- APK: `build/location-manager-verification/outputs/apk/debug/app-debug.apk`. 현재 로컬 assets의 모델이 포함될 수 있으므로 Dataset A(RickyRiccio similar_dataset) 학습 weight 재배포 검토 전 외부 배포하지 않습니다. AI-Hub Dataset B는 YOLO EXP02 학습 데이터가 아닙니다.
 - UI·지도 Intent·Manifest 원본은 변경하지 않았습니다. 위치의 앱 서버 전송/저장·좌표 로그·새 유료 API 없음.
 - 기존 TensorFlow Lite namespace/네이티브 strip 및 Gradle deprecation 경고는 별도 정리 대상입니다.
 - 연결된 기기가 없어 실제 GPS/권한 거부/대략적 위치/지도 실행 검증은 미수행입니다.

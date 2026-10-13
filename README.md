@@ -28,9 +28,9 @@
 
 본 프로젝트는 졸업작품·졸업논문·취업 포트폴리오를 위한 비상업적 공개 연구 프로젝트입니다. 사용자 학습 **Ultralytics YOLO26n** 모델의 운동 탐지 연동을 준비하며, Ultralytics 관련 부분은 AGPL-3.0 조건의 영향을 받는 것으로 관리합니다. [공식 라이선스 안내](https://www.ultralytics.com/license)
 
-프로젝트 전체를 AGPL-3.0으로 운영하는 방향이지만, 현재 정식 LICENSE는 미적용입니다. 사용자 승인으로 Google Play services 위치 SDK를 Android 기본 LocationManager로 교체했습니다. 학습 출처는 사용자 설명에 따라 AI-Hub로 기록하되, 정확한 데이터셋/weight 재배포 조건 확인 전 YOLO 앱 통합·모델 공개는 보류합니다. 상용화 또는 폐쇄형 배포 시 추가 검토가 필요하며, 공개 프로젝트라는 이유만으로 법적 안전이나 재배포 권리를 보증하지 않습니다.
+프로젝트 전체를 AGPL-3.0으로 운영하는 방향이지만, 현재 정식 LICENSE는 미적용입니다. 사용자 승인으로 Google Play services 위치 SDK를 Android 기본 LocationManager로 교체했습니다. YOLO EXP01/EXP02는 Dataset A(RickyRiccio의 similar_dataset) 기반이며, AI-Hub 크로스핏 데이터는 Dataset B 자세 분석용입니다. 학습 weight 재배포 조건 확인 전 YOLO 앱 통합·모델 공개는 보류합니다. 상용화 또는 폐쇄형 배포 시 추가 검토가 필요하며, 공개 프로젝트라는 이유만으로 법적 안전이나 재배포 권리를 보증하지 않습니다.
 
-[검토 결과·다음 승인 사항](docs/LICENSE_REVIEW.md) · [모델 카드](MODEL_CARD.md) · [데이터 출처/라이선스](DATASET_LICENSES.md) · [주요 외부 구성요소 고지](THIRD_PARTY_NOTICES.md)
+[검토 결과·다음 승인 사항](docs/LICENSE_REVIEW.md) · [모델 카드](MODEL_CARD.md) · [데이터 출처/라이선스](DATASET_LICENSES.md) · [주요 외부 구성요소 고지](THIRD_PARTY_NOTICES.md) · [EXP01/EXP02 실험 이력](docs/ML_EXPERIMENTS.md)
 
 모델·체크포인트·원본 데이터·비밀키는 자동 commit/push하지 않습니다. `.gitignore`는 APK에 포함된 모델의 라이선스 의무를 제거하지 않습니다.
 
@@ -53,56 +53,58 @@
 | Rep Counter | 관절 각도와 `UP/DOWN` 상태 머신을 이용한 반복 횟수 계산 | ✅ |
 | Form Feedback | 무릎 모임과 상체 숙임 등 초기 자세 오류 규칙 분석 | 🧪 |
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
-| Authentication | Supabase 이메일 회원가입·로그인·비밀번호 재설정 | ✅ |
-| Persistence | Room 로컬 기록 + Supabase 운동·신체·알림 설정 동기화 | ✅ |
-| Calendar Reminder | 개인설정에서 Google 캘린더 반복 운동 일정 생성·관리 화면 연결 | ✅ |
-| Nearby Gym | 버튼 클릭 시 위치를 확인하고 외부 NAVER 지도 앱/웹 검색으로 연결 | ✅ |
+| Authentication | Supabase 이메일 회원가입·로그인·비밀번호 재설정 | 🧪 |
+| Persistence | Room 로컬 기록 + Supabase 운동·신체·알림 설정 동기화 | 🧪 |
+| Calendar Reminder | 개인설정에서 Google 캘린더 반복 운동 일정 생성·관리 화면 연결 | 🧪 |
+| Nearby Gym | 버튼 클릭 시 위치를 확인하고 외부 NAVER 지도 앱/웹 검색으로 연결 | 🧪 |
 | Joint Coaching | 촬영 방향별 코칭·오류 관절 주황 강조·측정 대기 구분 | 🧪 |
 | Workout Statistics | 최근 7일·30일 운동 통계 및 날짜별 반복 기록 | ✅ |
 | Personal Reference | 계정·종목·촬영 방향별 온디바이스 개인 동작 기준 저장·비교·삭제 | 🧪 |
 | Diagnostics | 처리 FPS·응답 지연·발열 단계 표시와 추론 제출 빈도 제한 | ✅ |
-| Exercise Classification | 학습된 YOLO Classification 모델 기반 자동 종목 인식 | 🚧 |
+| YOLO Exercise Detection | YOLO26n 2클래스 detector · LiteRT export 완료, Android 통합 전/pending license review | 🚧 |
 | Dataset Pipeline | repetition 단위 pose sequence·metadata·annotation 생성 | 🧪 |
 
-> `✅ 구현됨` · `🧪 초기 구현/검증 필요` · `🚧 개발 예정 또는 진행 중`
+> `✅ 구현 및 기본 검증 완료` · `🧪 구현됨, 실제 환경 검증 추가 필요` · `🚧 개발 예정/통합 전`
+>
+> 기본 검증과 실기기·원격 서비스 E2E는 구분합니다. 학습/export 평가 수치도 Android 통합 검증이 아닙니다.
 
 ## 🧠 AI 처리 아키텍처
 
-AIRPTCoach에서 MediaPipe와 향후 학습할 운동 분류 모델은 서로 다른 책임을 가집니다.
+현재 실행 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier fallback → 운동별 분석**입니다. YOLO26n Exercise Detection은 학습·LiteRT FP32 export 이력이 있으나 **Android integration은 아직 미완료(🚧)**입니다.
 
-- **Landmark Fallback Classifier**는 현재 MediaPipe 관절 배치를 이용해 운동 종목을 임시 추정합니다.
-- **YOLO Classification**은 전용 데이터로 학습·검증한 모델이 준비된 뒤 운동 종목 판단을 담당할 예정입니다.
-- **MediaPipe Pose**는 운동 중인 사람과 33개 관절 좌표를 지속적으로 추적합니다.
-- **Exercise Analyzer**는 인식된 운동에 맞는 관절과 임계값을 선택합니다.
-- **Overlay & Feedback**은 사용자가 추적 대상과 자세 문제를 즉시 이해하도록 시각화합니다.
+- **YOLO26n Exercise Detection (향후)**: 운동 종류·bbox·confidence 탐지. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다.
+- **MediaPipe Pose (현재)**: 분석 대상의 33개 관절 좌표를 추적합니다. YOLO 통합 후에도 유지합니다.
+- **Landmark Fallback Classifier (현재)**: 관절 배치로 운동을 임시 추정합니다. 향후 YOLO 오류/사용 불가 시 fallback 역할을 유지할 계획입니다.
+- **Analyzer / Overlay / Feedback**: 운동별 관절·횟수·오류 후보 분석과 스켈레톤·교정 안내를 담당합니다.
 
 ```mermaid
 flowchart LR
     CAM[CameraX Frame] --> POSE[MediaPipe Pose]
-    CAM -. 학습 모델 준비 후 .-> YOLO[YOLO Classification]
+    CAM -. 통합 예정 .-> YOLO[YOLO26n Exercise Detection]
     POSE --> PERSON[Main Person Selection]
     PERSON --> OVERLAY[Skeleton Overlay]
-    PERSON --> JOINT[Landmarks & View-dependent Angles]
+    PERSON --> JOINT[Landmarks and View-dependent Angles]
     PERSON --> FALLBACK[Landmark Fallback Classifier]
-    YOLO -. Exercise Type .-> ROUTER[Analyzer Router]
+    YOLO -. SQUAT or SHOULDER_PRESS .-> ROUTER[Analyzer Router]
     FALLBACK --> ROUTER
     JOINT --> ROUTER
     ROUTER --> STATE[Rep State Machine]
     ROUTER --> FORM[Form Error Analysis]
     STATE --> REPORT[Session Report]
-    FORM --> FEEDBACK[Visual & Voice Feedback]
+    FORM --> FEEDBACK[Visual and Voice Feedback]
 ```
 
-### 현재 모델 상태
+`READY`는 실제 YOLO class가 아닙니다. `UNKNOWN`은 valid detection 없음·confidence 미달·탐지 실패 시 application logic으로 처리할 상태이지 별도 학습 class가 아닙니다.
 
-저장소의 `yolo11n-pose_int8.tflite`는 운동 종류를 분류하도록 학습·검증된 Classification 모델이 아닙니다. 따라서 현재 앱은 **MediaPipe 관절 추적이 YOLO 결과 때문에 중단되지 않도록 독립적으로 실행**합니다.
+### 현재 모델 자산
 
-최종 목표는 학습 완료된 `READY / SQUAT / SHOULDER_PRESS` 분류 모델을 연결하여 아래 흐름을 완성하는 것입니다.
+| 자산 | 현재 상태 |
+|---|---|
+| `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
+| `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
+| `airptcoach_yolo26n_exp02_fp32.tflite` | 로컬 존재/Git 제외, FLOAT32 입력 `[1,3,640,640]`·출력 `[1,6,8400]`, Android 통합 전 |
 
-```text
-운동 종목 인식 → 대상 사용자 관절 추적 → 운동별 관절 선택
-→ 반복 구간 판정 → 오류 관절 식별 → 화면·음성 피드백
-```
+shape만으로 RGB/BGR·normalization·bbox format·xywh/xyxy·class score·NMS 포함 여부를 정하지 않습니다. export pipeline과 실제 inference verification이 필요합니다. 원본 데이터·weight 재배포 및 자산 고지 검토 전 모델 공개/새 APK 포함 작업을 하지 않습니다. 이번 문서 정리에서는 앱 코드·Gradle·모델 파일을 변경하거나 APK를 생성하지 않았습니다. `assets`에 남아 있는 파일은 향후 기본 빌드에 포함될 수 있으므로 `.gitignore`와 APK 제외를 혼동하지 않습니다.
 
 ## 🧩 주요 분석 구성요소
 
@@ -284,10 +286,30 @@ build/app/outputs/apk/debug/app-debug.apk
 
 학습 데이터는 목적에 따라 분리합니다.
 
-| Dataset | 목적 | 초기 클래스/라벨 |
+| Dataset | 실제 출처·사용 범위 | 역할 |
 |---|---|---|
-| Dataset A | YOLO 등 운동 종목 분류 | `READY`, `SQUAT`, `SHOULDER_PRESS` |
-| Dataset B | pose sequence 기반 자세 오류 분석 | 스쿼트·숄더프레스 오류 label |
+| Dataset A | RickyRiccio/Real_Time_Exercise_Recognition_Dataset의 similar_dataset | YOLO EXP01/EXP02 운동 탐지: SQUAT·SHOULDER_PRESS |
+| Dataset B | AI-Hub 크로스핏 동작 데이터: 에어스쿼트·숄더프레스 | pose/form/biomechanics; label 검토·subject-like ID split 설계·subject-disjoint manifest 생성 이력. YOLO detector 학습에 사용하지 않음 |
+
+### EXP01 → EXP02 → LiteRT
+
+EXP01은 SQUAT 18개 + SHOULDER_PRESS 18개, 총 36개 영상의 video-level baseline입니다. 이후 **SQUAT GROUP_g02/g04/g06의 train + val leakage**가 발견돼 최종 generalization 성능으로 과도하게 해석하지 않습니다.
+
+EXP02는 같은 Dataset A의 group-aware train/val/test split과 다른 운동/background negative를 적용했습니다. 낮아진 일부 수치는 더 엄격한 평가 조건과 함께 해석하며 실패로 단정하지 않습니다.
+
+| 사용자 제공 test 지표 | EXP01 | EXP02 PT | EXP02 LiteRT FP32 |
+|---|---:|---:|---:|
+| Precision | 0.9929 | 0.9557 | 0.9339 |
+| Recall | 0.9996 | 0.9193 | 0.8913 |
+| F1 | 0.9962 | 0.9372 | 미제공 |
+| mAP50 | 0.9950 | 0.9440 | 0.9383 |
+| mAP50-95 | 0.9562 | 0.8482 | 0.8652 |
+| SQUAT mAP50-95 | 0.9678 | 0.8262 | 0.829 |
+| SHOULDER_PRESS mAP50-95 | 0.9446 | 0.8703 | 0.902 |
+
+위 값은 특정 test dataset 기준이며 이번에 재평가하지 않았습니다. 실제 모바일 사용자 정확도·mobile FPS·external subject-disjoint test 결과가 아닙니다. [실험 상세와 한계](docs/ML_EXPERIMENTS.md), [출처·라이선스](DATASET_LICENSES.md)를 참조합니다.
+
+아래는 저장소의 일반 pose/repetition 도구 흐름이며 EXP01/EXP02의 detector 학습/export pipeline을 재현했다고 주장하지 않습니다. 기존 도구의 레거시 READY 폴더/schema도 YOLO class 계약과 별개입니다.
 
 ```mermaid
 flowchart LR
@@ -360,11 +382,12 @@ python -m unittest discover -s ai_module/tests -v
 
 ### Phase 2 · 운동 자동 인식
 
-- [x] TensorFlow Lite 추론 wrapper 기반
 - [x] 랜드마크 기반 fallback classifier
-- [ ] `READY / SQUAT / SHOULDER_PRESS` 데이터 수집
-- [ ] YOLO Classification 학습·정량 평가
-- [ ] 모델 metadata/label 검증 및 Android 연결
+- [x] 사용자 제공 Dataset A 기반 YOLO26n EXP01/EXP02 학습·test 평가 이력 문서화
+- [x] EXP02 LiteRT FP32 export 및 실제 tensor 구조 검사 이력 기록
+- [ ] 모델 재배포/자산 고지·라이선스 검토 및 사용자 승인
+- [ ] 검증된 YOLO Exercise Detection Interpreter·전처리·후처리 구현
+- [ ] 실제 export metadata/class mapping 검증 및 Android 연결
 - [x] 연속 유효 프레임 근거 기반 temporal smoothing 및 세션 종목 고정
 
 ### Phase 3 · 자세 품질 데이터셋
@@ -376,7 +399,7 @@ python -m unittest discover -s ai_module/tests -v
 - [x] dataset validator와 subject-independent split
 - [ ] 전문가 annotation 기준 확정
 - [ ] 촬영 방향별 threshold 및 오류 규칙 검증
-- [ ] 실제 데이터 기반 분류·자세 모델 학습
+- [ ] Dataset B 실제 데이터 기반 자세 모델 학습·오류 규칙 평가
 
 ### 검증 방법과 정책
 
@@ -401,7 +424,9 @@ python -m unittest discover -s ai_module/tests -v
 
 ## ⚠️ 현재 알려진 제한사항
 
-- 포함된 YOLO pose 모델을 운동 Classification 모델처럼 사용해서는 안 됩니다.
+- 휴면 YOLO11 pose wrapper를 검증된 YOLO26n 운동 detector로 간주해서는 안 됩니다.
+- Dataset A는 작은 규모·2개 target·출처 다양성 제한이 있으며, pseudo bbox 및 video→frame label 전파로 transition/neutral label noise가 가능해 후속 검수가 필요합니다.
+- 실제 스마트폰 YOLO 검증·mobile FPS·external subject-disjoint test는 미완료이며 background false positive 추가 평가가 필요합니다.
 - 자세 오류 규칙과 pseudo label 임계값은 초기값이며 전문가 검증이 필요합니다.
 - 현재 `NormalizedLandmark`의 x/y/z로 계산한 벡터각은 실제 모션캡처 기반 3D 관절각과 동일하지 않습니다.
 - 실시간 경로는 명시적 품질 API를 사용합니다. 과거 호환 API 일부는 `0.0`/빈 목록을 반환하므로 새 호출부에서는 측정·코칭 품질 API를 사용해야 합니다.

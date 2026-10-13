@@ -6,10 +6,11 @@
 
 ## Dataset A와 Dataset B
 
-- Dataset A — Exercise Classification: `READY`, `SQUAT`, `SHOULDER_PRESS` 이미지/프레임 분류용입니다. 기존 `data_preprocessor` CLI가 source·frame·timestamp가 포함된 CSV를 스트리밍 방식으로 생성합니다.
-- Dataset B — Exercise Form: `SQUAT`, `SHOULDER_PRESS`의 `(T, 33, 4)` raw/normalized pose, 관절 feature, repetition 경계와 자세 annotation을 저장합니다.
+- 실제 Dataset A — YOLO Exercise Detection: RickyRiccio/Real_Time_Exercise_Recognition_Dataset의 similar_dataset으로 EXP01/EXP02를 학습했습니다. detector class는 SQUAT/SHOULDER_PRESS 두 개이며 READY/UNKNOWN은 학습 class가 아닙니다.
+- 실제 Dataset B — AI-Hub 크로스핏 동작 데이터: 에어스쿼트/숄더프레스 label 검토·target 추출·subject-like ID split 설계·subject-disjoint manifest 생성 이력이 있습니다. pose/form/biomechanics 목적이며 YOLO EXP02 학습에 사용하지 않았습니다.
+- 이 문서의 로컬 도구는 일반 `(T, 33, 4)` raw/normalized pose, 관절 feature, repetition 경계와 자세 annotation을 저장하는 v0.1.0 파이프라인입니다. 외부 detector 실험/AI-Hub manifest를 재검증하거나 재현한 것으로 취급하지 않습니다. [실험 이력](ML_EXPERIMENTS.md)을 참조합니다.
 
-분류용 이미지 산출물은 `dataset/classification/<class>/`, 자세 sequence는 `dataset/pose/<exercise>/`로 물리적으로도 분리합니다. 생성된 대용량 이미지·NPZ 파일은 Git에서 제외되고 metadata와 annotation만 버전 관리됩니다.
+레거시 도구의 이미지 산출물 경로는 `dataset/classification/<class>/`, 자세 sequence 경로는 `dataset/pose/<exercise>/`입니다. 폴더명이 classification이어도 현재 YOLO 실험은 object detection입니다. 원본·대용량 이미지·NPZ는 Git 제외하며 metadata/annotation도 공개 검토 후에만 포함합니다. 현재 .gitignore는 검토한 빈 metadata 템플릿만 명시적으로 허용합니다.
 
 운동명, 오류명, 촬영 방향, 심각도 및 annotation 출처는 `pipeline/schema.py`의 enum으로 관리합니다. pseudo label의 `AUTO`는 검수된 `HUMAN` 또는 `AUTO_VERIFIED`와 구분됩니다.
 
@@ -40,7 +41,7 @@ python -m ai_module.pipeline.dataset_builder --video ./data/test_squat.mp4 --exe
 python -m ai_module.data_preprocessor --data ./data --output raw_data.csv
 ```
 
-기존 폴더 관례는 `data/READY`, `data/SQUAT`, `data/SHOULDER_PRESS`입니다. 이전의 `LUNGE` 입력은 현재 명시된 초기 schema에 포함되지 않아 더 이상 자동 처리하지 않습니다.
+레거시 CLI의 폴더 관례는 `data/READY`, `data/SQUAT`, `data/SHOULDER_PRESS`입니다. 이 호환 schema는 YOLO26n detector class 계약과 별개이며 이번 문서 정리에서 코드를 변경하지 않았습니다. 이전의 `LUNGE` 입력은 해당 초기 schema에 포함되지 않아 자동 처리하지 않습니다.
 
 ## Annotation과 pseudo labeling
 

@@ -45,7 +45,7 @@ CameraX ImageProxy
 | `DashboardActivity` | Pose Landmarker 초기화, 사람 선택, 분류·카운트·점수·오버레이 연결 | CameraX/MediaPipe 연결과 세션 흐름 | 콜백의 주요 분석이 UI 스레드에서 수행됨. `setNumPoses`가 명시되지 않아 다인 검출 의도와 설정을 재확인해야 함 |
 | `selectMainPerson` | 검출된 포즈 중 이미지상 바운딩 박스가 가장 큰 포즈 선택 | 사용자 주체 선택 정책의 시작점 | 거리·지속 추적 ID가 없어 프레임 사이 대상 전환 가능. 기본 포즈 수가 1이면 비교 로직이 실질적으로 동작하지 않음 |
 | `ExerciseClassifier` | 손목이 양쪽 어깨 위면 숄더 프레스, 양 무릎 내각이 130° 이하면 스쿼트, 비대칭이면 런지로 분류 | 학습 모델 전 fallback | 운동 자세의 일부 구간만 보고 종목을 추정하며, `UNKNOWN`에서 이전 종목을 유지해 오인식이 지속될 수 있음 |
-| `Yolo26Classifier` | `yolo11n-pose_int8.tflite` 출력을 3개 운동 라벨 점수처럼 해석하는 코드 | 향후 검증된 분류 모델 어댑터 형태 | 현재 대시보드에서 사용되지 않음. 자산이 운동 분류용으로 학습·검증됐다는 근거가 없어 연결하면 잘못된 분류 가능 |
+| `Yolo26Classifier` | `yolo11n-pose_int8.tflite` 출력을 3개 라벨 점수처럼 해석하는 휴면 코드 | 향후 검증된 YOLO26n Exercise Detection 어댑터(통합 전) | 현재 실행 경로에서 호출 미확인, unused asset candidate. 실제 EXP02는 SQUAT/SHOULDER_PRESS 2클래스 detector이며 이 wrapper를 재사용하면 안 됨. 승인 없이 자산을 삭제하지 않음 |
 | `PoseAngleExtractor.analyzePose` | 좌측 한 관절의 2D 내각을 대표값으로 반환 | 단순 상태 전이용 각도 계산 | 가시성이 낮으면 `0.0`을 반환해 실제 0°와 측정 불가를 구분하지 못함 |
 | `PoseAngleExtractor.extract*Angles` | 정규화 랜드마크의 x/y/z 벡터 내적으로 무릎·엉덩이·팔꿈치 내각 계산 | 양측 관절 벡터 구성 | `NormalizedLandmark.z`를 포함하지만 실제 미터 단위 world 좌표가 아니므로 해부학적 3D 각도로 부를 수 없음 |
 | `CoordinateNormalizer` | 골반 중심 이동, 어깨-엉덩이 거리로 스케일 정규화, 전면 카메라 x 반전 | 기기/거리 변화 완화 아이디어 | 현재 주요 실행 흐름에서 사용되지 않음. 스케일이 0에 가까울 때 보호가 없고, 주석의 3D 표현과 달리 각도는 2D 계산 |
@@ -83,7 +83,7 @@ CameraX ImageProxy
 | 무릎 안쪽 이동 비율 | >0.08 | `ERROR_KNEE_VALGUS` | `ENGINEERING_INITIAL` | FPPA가 아니며 시점 의존 |
 | 몸통 영상 기울기 | >20° | `ERROR_FORWARD_LEAN` | `ENGINEERING_INITIAL` | 부하·목적·경골 기울기 미고려 |
 | DTW 프레임 차이 | 30° | 유사도 점수 | `ENGINEERING_INITIAL` | 표준 데이터 및 타당도 검증 없음 |
-| YOLO 분류 confidence | 0.45 | 휴면 분류기 출력 허용 | `ENGINEERING_INITIAL` | 모델-라벨 계약 자체가 검증되지 않음 |
+| 휴면 Yolo26Classifier confidence | 0.45 | 비활성 wrapper의 출력 허용 값 | `ENGINEERING_INITIAL` | EXP02 detector threshold가 아님. 모델-라벨 계약 자체가 검증되지 않음 |
 
 ## 3. 2단계: 논문-알고리즘 매핑
 
