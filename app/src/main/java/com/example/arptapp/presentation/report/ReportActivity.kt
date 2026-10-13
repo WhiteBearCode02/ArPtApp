@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.example.arptapp.data.RepAnalysisCodec
 import com.example.arptapp.databinding.ActivityReportBinding
 import com.example.arptapp.model.RepAnalysis
 import com.github.mikephil.charting.components.XAxis
@@ -25,19 +24,12 @@ class ReportActivity : AppCompatActivity() {
         binding = ActivityReportBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        // Intent에서 데이터 받기
-        val exerciseType = intent.getStringExtra("EXERCISE_TYPE") ?: "스쿼트"
-        val totalCount = intent.getIntExtra("TOTAL_COUNT", 0)
-        val avgScore = intent.getFloatExtra("AVG_SCORE", 0f)
-        val analyses = RepAnalysisCodec.decode(intent.getStringExtra("REP_ANALYSES_JSON")
-            ?: org.json.JSONArray(intent.getFloatArrayExtra("SCORES")?.toList() ?: emptyList<Float>()).toString())
-        val workoutDate = intent.getStringExtra("WORKOUT_DATE").orEmpty()
-        val duration = intent.getLongExtra("EXERCISE_TIME", 0L)
-        val calories = intent.getDoubleExtra("BURNED_CALORIES", 0.0)
-        val storedFeedback = intent.getStringExtra("FEEDBACK_MESSAGE").orEmpty()
+        // 결과/과거 기록 모두 같은 계약으로 읽는다. 손상된 구버전 회차 JSON은 빈 상태로 표시한다.
+        val report = ReportNavigation.read(intent)
+        val analyses = ReportNavigation.analyses(report)
         
         // UI 업데이트
-        setupUI(exerciseType, totalCount, avgScore, analyses, workoutDate, duration, calories, storedFeedback)
+        setupUI(report, analyses)
         
         // 차트 그리기
         if (analyses.isNotEmpty()) {
@@ -59,36 +51,27 @@ class ReportActivity : AppCompatActivity() {
         }
     }
     
-    private fun setupUI(
-        exerciseType: String,
-        totalCount: Int,
-        avgScore: Float,
-        analyses: List<RepAnalysis>,
-        workoutDate: String,
-        duration: Long,
-        calories: Double,
-        storedFeedback: String
-    ) {
-        binding.tvExerciseType.text = exerciseType
-        binding.tvTotalCount.text = "총 $totalCount 회"
-        binding.tvWorkoutDate.text = workoutDate.ifBlank { "운동 일시 정보 없음" }
-        binding.tvDuration.text = "운동 시간: ${formatDuration(duration)}"
+    private fun setupUI(report: WorkoutReportData, analyses: List<RepAnalysis>) {
+        binding.tvExerciseType.text = report.exerciseType
+        binding.tvTotalCount.text = "총 ${report.totalCount} 회"
+        binding.tvWorkoutDate.text = report.workoutDate.ifBlank { "운동 일시 정보 없음" }
+        binding.tvDuration.text = "운동 시간: ${WorkoutReportPresentation.formatDuration(report.durationSeconds)}"
         binding.tvCalories.text = String.format(
             Locale.getDefault(),
             "예상 소모 칼로리: %.1f kcal",
-            calories
+            report.burnedCalories ?: 0.0
         )
 
         if (analyses.isEmpty()) {
             binding.tvAvgScore.text = "자세 점수: 기록 없음"
             binding.tvAvgScore.setTextColor(Color.parseColor("#B0B0B0"))
-            binding.tvFeedback.text = storedFeedback.ifBlank {
+            binding.tvFeedback.text = report.feedbackMessage.ifBlank {
                 "이전 버전에서 저장된 기록으로, 회차별 자세 분석 데이터가 없습니다."
             }
             return
         }
 
-        val displayScore = if (avgScore > 0f) avgScore else analyses.map { it.score }.average().toFloat()
+        val displayScore = WorkoutReportPresentation.displayScore(report, analyses) ?: return
         binding.tvAvgScore.text = "평균 자세 점수: ${displayScore.toInt()}점"
         
         // 평균 점수에 따른 색상 변경
@@ -100,19 +83,10 @@ class ReportActivity : AppCompatActivity() {
             }
         )
         
-        // 피드백 메시지
-        val feedback = when {
-            avgScore >= 90 -> "완벽합니다! 훌륭한 자세를 유지했습니다."
-            avgScore >= 70 -> "좋습니다! 조금만 더 신경쓰면 완벽해질 거예요."
-            else -> "자세를 더 신경써주세요. 천천히 정확하게 해보세요."
+        // 저장된 관찰 내용을 우선한다. 요약이 없을 때도 점수를 임상적 자세 판정으로 표현하지 않는다.
+        binding.tvFeedback.text = report.feedbackMessage.ifBlank {
+            WorkoutReportPresentation.feedback(displayScore)
         }
-        binding.tvFeedback.text = storedFeedback.ifBlank { feedback }
-    }
-
-    private fun formatDuration(totalSeconds: Long): String {
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return String.format(Locale.getDefault(), "%02d분 %02d초", minutes, seconds)
     }
     
     private fun setupChart(analyses: List<RepAnalysis>) {

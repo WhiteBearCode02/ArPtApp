@@ -1,6 +1,7 @@
 package com.example.arptapp.data.preferences
 
 import android.content.Context
+import com.example.arptapp.data.repository.UserSettingsStore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -21,18 +22,8 @@ private val Context.userSettingsDataStore: DataStore<Preferences> by preferences
     name = "user_settings"
 )
 
-data class UserSettings(
-    val nickname: String = "",
-    val heightCm: Float? = null,
-    val weightKg: Float? = null,
-    val skeletalMuscleMassKg: Float? = null,
-    val bodyFatPercentage: Float? = null,
-    val reminderEnabled: Boolean = true,
-    val reminderHour: Int = 20,
-    val reminderMinute: Int = 0
-)
-
-class UserSettingsRepository(context: Context) {
+/** DataStore 어댑터. 키에 userId를 포함해 같은 기기의 여러 계정 설정을 분리합니다. */
+class UserSettingsRepository(context: Context) : UserSettingsStore {
     private val dataStore = context.applicationContext.userSettingsDataStore
 
     fun settings(userId: String): Flow<UserSettings> = dataStore.data
@@ -41,7 +32,7 @@ class UserSettingsRepository(context: Context) {
         }
         .map { preferences -> toUserSettings(preferences, SettingsKeys(userId)) }
 
-    suspend fun getSettings(userId: String): UserSettings = settings(userId).first()
+    override suspend fun getSettings(userId: String): UserSettings = settings(userId).first()
 
     suspend fun getActiveSettings(): UserSettings? {
         val preferences = dataStore.data.first()
@@ -49,7 +40,7 @@ class UserSettingsRepository(context: Context) {
         return toUserSettings(preferences, SettingsKeys(userId))
     }
 
-    suspend fun activateUser(userId: String) {
+    override suspend fun activateUser(userId: String) {
         dataStore.edit { preferences -> preferences[ACTIVE_USER_ID] = userId }
     }
 
@@ -57,7 +48,7 @@ class UserSettingsRepository(context: Context) {
         dataStore.edit { preferences -> preferences.remove(ACTIVE_USER_ID) }
     }
 
-    suspend fun save(userId: String, settings: UserSettings) {
+    override suspend fun save(userId: String, settings: UserSettings) {
         val keys = SettingsKeys(userId)
         dataStore.edit { preferences ->
             preferences[ACTIVE_USER_ID] = userId

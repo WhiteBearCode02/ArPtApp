@@ -3,8 +3,6 @@ package com.example.arptapp
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -21,11 +19,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.camera.core.*
-import androidx.camera.lifecycle.ProcessCameraProvider
-import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.vision.core.RunningMode
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.data.remote.SupabaseRepository
 import com.example.arptapp.domain.analyzer.DTWCalculator
@@ -38,47 +31,39 @@ import com.example.arptapp.data.model.Landmark
 import com.example.arptapp.data.model.PoseData
 import com.example.arptapp.data.model.toAngleSequence
 import com.example.arptapp.data.repository.ExerciseRepository
-import com.example.arptapp.presentation.report.ReportActivity
 import com.example.arptapp.viewmodel.MainViewModel
+import com.example.arptapp.presentation.report.ReportNavigation
+import com.example.arptapp.presentation.report.WorkoutReportData
+import com.example.arptapp.ui.camera.CameraPipelineStage
+import com.example.arptapp.ui.camera.MainPersonSelector
+import com.example.arptapp.ui.camera.PoseCameraController
+import com.example.arptapp.ui.camera.PoseFrameResult
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import kotlinx.coroutines.launch
 import kotlin.jvm.java
 
 /**
  * 실시간 AI 기반 운동 자세 분석 대시보드
  *
- * [핵심 기능]
- * - 가로/세로 자동 대응
- * - 다중 인식 필터링 (가장 큰 사람만 추적)
- * - MediaPipe Pose Landmarker 실시간 추론
- * - [방법1] 프레임 회전 정규화: 270도/90도 프레임을 0도로 변환하여 MediaPipe에 전달
+ * 권한·세션 전환·센서·화면 표시를 연결하는 운동 화면.
+ * 카메라/native 자원의 소유권은 [PoseCameraController], 대상 선택은 [MainPersonSelector],
+ * 각도/오류/횟수/DTW 정책은 기존 domain 모듈에 위임한다. 카메라 콜백은 메인 스레드에서 받는다.
  */
 class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, SensorEventListener {
 
     companion object {
         private const val TAG = "DashboardActivity"
-
-        init {
-            try {
-                System.loadLibrary("mediapipe_tasks_vision_jni")
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "MediaPipe JNI 라이브러리 로드 실패: ${e.message}")
-            }
-        }
     }
 
     private lateinit var binding: ActivityDashboardBinding
-    private lateinit var cameraExecutor: ExecutorService
+    private lateinit var cameraController: PoseCameraController
     private val mainViewModel: MainViewModel by viewModels()
     private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
     private val exerciseCounter = ExerciseCounter()
     private val fallbackExerciseClassifier = ExerciseClassifier()
-    private var poseLandmarker: PoseLandmarker? = null
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
@@ -96,7 +81,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var isExercising = false
     private var currentExerciseType = ExerciseType.UNKNOWN
     private var cameraView = com.example.arptapp.domain.analyzer.CameraView.UNKNOWN
-    private var lastFrameSubmittedAt = 0L
     private val referenceRepository by lazy { com.example.arptapp.data.preferences.PersonalMotionReferenceRepository(this) }
     private val calibrationFrames = mutableListOf<List<Float>>()
     private var calibrationExercise: ExerciseType? = null
@@ -104,18 +88,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var lastDiagnosticsAt = 0L
     private var personalSequence: List<FloatArray> = emptyList()
 
-    // 카메라 관련
-    private var camera: Camera? = null
-    private var cameraProvider: ProcessCameraProvider? = null
-    private var lensFacing = CameraSelector.LENS_FACING_FRONT
-    private var imageAnalyzer: ImageAnalysis? = null
-    private var preview: Preview? = null
-
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            startCamera()
+            cameraController.start()
         } else {
             Toast.makeText(this, "카메라 권한이 필요합니다", Toast.LENGTH_SHORT).show()
         }
@@ -128,13 +105,19 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         tts = TextToSpeech(this, this)
         feedbackManager = FeedbackManager(this)
-        cameraExecutor = Executors.newSingleThreadExecutor()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         standardSquatSequence = ExerciseRepository(this)
             .loadStandardPose("SQUAT")
             ?.toAngleSequence()
             .orEmpty()
-        setupPoseLandmarker()
+        cameraController = PoseCameraController(
+            context = this,
+            lifecycleOwner = this,
+            previewView = binding.viewFinder,
+            onResult = ::onPoseFrame,
+            onError = ::onCameraPipelineError
+        )
+        cameraController.initialize()
         checkCameraPermission()
         setupButtons()
     }
@@ -191,15 +174,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             Toast.makeText(this, "운동 또는 기준 기록을 마친 뒤 카메라를 전환해 주세요", Toast.LENGTH_SHORT).show()
             return
         }
-        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
-            CameraSelector.LENS_FACING_BACK
-        } else {
-            CameraSelector.LENS_FACING_FRONT
-        }
-        bindCameraUseCases()
+        cameraController.switchCamera()
         Toast.makeText(
             this,
-            if (lensFacing == CameraSelector.LENS_FACING_FRONT) "전면 카메라" else "후면 카메라",
+            if (cameraController.isFrontFacing) "전면 카메라" else "후면 카메라",
             Toast.LENGTH_SHORT
         ).show()
     }
@@ -298,7 +276,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 durationSeconds = elapsedTime,
                 burnedCalories = burnedCalories
             )
-                .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패", it) }
+                // 서버 예외 본문에는 계정/리포트 정보가 포함될 수 있어 원문을 로그에 남기지 않는다.
+                .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패") }
         }
 
         showSessionReport(report) {
@@ -321,22 +300,18 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private fun openResultActivity(report: com.example.arptapp.model.SessionReport, elapsedTime: Long) {
 
-        // 1. 목적지를 ResultActivity로 변경합니다.
-        val intent = Intent(this, ResultActivity::class.java).apply {
-            putExtra("TOTAL_COUNT", report.totalReps)
-            putExtra("EXERCISE_TIME", elapsedTime)
-            putExtra("EXERCISE_TYPE", currentExerciseType.displayName)
-
-            // 각 회차의 점수와 관찰 내용을 함께 전달합니다.
-            putExtra("REP_ANALYSES_JSON", com.example.arptapp.data.RepAnalysisCodec.encode(
+        // 결과/기록/상세 화면이 같은 키·단위·구버전 읽기 계약을 사용한다.
+        val data = WorkoutReportData.create(
+            exerciseType = currentExerciseType.displayName,
+            totalCount = report.totalReps,
+            durationSeconds = elapsedTime,
+            analysesJson = com.example.arptapp.data.RepAnalysisCodec.encode(
                 mainViewModel.getRepAnalyses(report.exerciseType)
-            ))
-
-            // 3. 평균 점수도 미리 계산해서 넘겨주면 결과 화면에서 바로 쓰기 좋습니다.
-            putExtra("AVG_SCORE", report.averageScore.toFloat())
-            putExtra("FEEDBACK_MESSAGE", report.feedbackMessage)
-        }
-        startActivity(intent)
+            ),
+            averageScore = report.averageScore.toFloat(),
+            feedbackMessage = report.feedbackMessage
+        )
+        startActivity(ReportNavigation.resultIntent(this, data))
         finish()
     }
 
@@ -350,130 +325,72 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    /**
-     * MediaPipe Pose Landmarker 초기화
-     */
-    private fun setupPoseLandmarker() {
-        val baseOptionsBuilder = BaseOptions.builder()
-            .setModelAssetPath("pose_landmarker_lite.task")
-
-        val optionsBuilder = PoseLandmarker.PoseLandmarkerOptions.builder()
-            .setBaseOptions(baseOptionsBuilder.build())
-            .setRunningMode(RunningMode.LIVE_STREAM)
-            .setResultListener { result, inputImage ->
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    val now = SystemClock.uptimeMillis()
-                    val stats = performanceMonitor.record(result.timestampMs(), now)
-                    if (now - lastDiagnosticsAt >= 1000L) {
-                        lastDiagnosticsAt = now
-                        val thermal = if (android.os.Build.VERSION.SDK_INT >= 29) {
-                            (getSystemService(POWER_SERVICE) as android.os.PowerManager).currentThermalStatus
-                        } else -1
-                        binding.tvPerformance.text = String.format(Locale.KOREA, "처리 %.1f FPS · %.0f ms · 발열 단계 %s", stats.processedFps, stats.averageLatencyMs,
-                            if (thermal < 0) "미지원" else thermal.toString())
-                    }
-                    // 다중 인식 필터링: 가장 큰 사람만 선택
-                    val mainPersonLandmarks = selectMainPerson(result)
-
-                    if (mainPersonLandmarks != null) {
-                        captureReferenceFrame(mainPersonLandmarks)
-                        val landmarkExerciseType = fallbackExerciseClassifier.detectExercise(mainPersonLandmarks)
-                        updateCurrentExerciseType(landmarkExerciseType)
-
-                        if (isExercising) {
-                            processLandmarks(mainPersonLandmarks, inputImage.width.toDouble() / inputImage.height)
-                        }
-                        // 오버레이 업데이트 (필터링된 결과 전달)
-                        // [방법1] 이미 정규화된 비트맵으로 처리되었으므로
-                        // imageWidth, imageHeight는 회전 후의 최종 크기
-                        updateOverlay(mainPersonLandmarks, inputImage)
-                    } else {
-                        if (calibrationExercise != null) {
-                            calibrationFrames.clear()
-                            binding.tvPoseFeedback.text = "관절을 다시 찾는 중 · 기준 동작을 처음부터 반복해 주세요"
-                        }
-                        invalidatePendingAnalysis()
-                        binding.tvPoseFeedback.text = "측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요"
-                        updateCurrentExerciseType(ExerciseType.UNKNOWN)
-                        binding.overlayView.clearResults()
-                    }
-                }
+    /** 회전 정규화된 결과만 받아 도메인 분석과 화면 표시를 연결한다. */
+    private fun onPoseFrame(frame: PoseFrameResult) {
+        if (isFinishing || isDestroyed) return
+        val now = SystemClock.uptimeMillis()
+        val stats = performanceMonitor.record(frame.timestampMs, now)
+        if (now - lastDiagnosticsAt >= 1000L) {
+            lastDiagnosticsAt = now
+            val thermal = if (android.os.Build.VERSION.SDK_INT >= 29) {
+                (getSystemService(POWER_SERVICE) as android.os.PowerManager).currentThermalStatus
+            } else -1
+            binding.tvPerformance.text = String.format(
+                Locale.KOREA,
+                "처리 %.1f FPS · %.0f ms · 발열 단계 %s",
+                stats.processedFps,
+                stats.averageLatencyMs,
+                if (thermal < 0) "미지원" else thermal.toString()
+            )
+        }
+        val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
+        if (mainPersonLandmarks != null) {
+            captureReferenceFrame(mainPersonLandmarks)
+            updateCurrentExerciseType(fallbackExerciseClassifier.detectExercise(mainPersonLandmarks))
+            if (isExercising) {
+                processLandmarks(mainPersonLandmarks, frame.imageWidth.toDouble() / frame.imageHeight)
             }
-            .setErrorListener { error ->
-                Log.e(TAG, "PoseLandmarker 오류: ${error.message}")
-                runOnUiThread {
-                    binding.tvDetectedExercise.text = "자세 인식을 다시 시도하는 중"
-                    binding.overlayView.clearResults()
-                }
+            updateOverlay(mainPersonLandmarks, frame)
+        } else {
+            if (calibrationExercise != null) {
+                calibrationFrames.clear()
+                binding.tvPoseFeedback.text = "관절을 다시 찾는 중 · 기준 동작을 처음부터 반복해 주세요"
             }
-
-        try {
-            poseLandmarker = PoseLandmarker.createFromOptions(this, optionsBuilder.build())
-        } catch (e: Exception) {
-            Log.e(TAG, "PoseLandmarker 초기화 실패", e)
-            binding.tvDetectedExercise.text = "자세 인식 모델을 불러오지 못했습니다"
+            invalidatePendingAnalysis()
+            binding.tvPoseFeedback.text = "측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요"
+            updateCurrentExerciseType(ExerciseType.UNKNOWN)
+            binding.overlayView.clearResults()
         }
     }
 
-    /**
-     * 다중 인식 필터링: 가장 큰 바운딩 박스를 가진 사람 선택
-     *
-     * [로직]
-     * 1. 여러 사람 감지 시 바운딩 박스 면적 계산
-     * 2. 가장 큰 면적을 가진 사람 = 카메라에 가장 가까운 사람
-     * 3. 거울 반사나 배경 사람 자동 필터링
-     */
-    private fun selectMainPerson(
-        result: com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-    ): List<NormalizedLandmark>? {
-        val allLandmarks = result.landmarks()
-
-        if (allLandmarks.isEmpty()) {
-            return null
-        }
-
-        // 사람이 1명이면 바로 반환
-        if (allLandmarks.size == 1) {
-            return allLandmarks[0]
-        }
-
-        // 여러 사람 중 바운딩 박스가 가장 큰 사람 선택
-        return allLandmarks.maxByOrNull { landmarks ->
-            calculateBoundingBoxArea(landmarks)
+    /** 오류의 기술 단계는 컨트롤러가 구분하고, 사용자 문구/표시는 화면이 결정한다. */
+    private fun onCameraPipelineError(stage: CameraPipelineStage, error: Throwable) {
+        if (isFinishing || isDestroyed) return
+        Log.e(TAG, "카메라 파이프라인 오류: $stage", error)
+        when (stage) {
+            CameraPipelineStage.MODEL_INITIALIZATION ->
+                binding.tvDetectedExercise.text = "자세 인식 모델을 불러오지 못했습니다"
+            CameraPipelineStage.CAMERA_BINDING ->
+                Toast.makeText(this, "카메라 연결 실패", Toast.LENGTH_SHORT).show()
+            CameraPipelineStage.POSE_INFERENCE -> {
+                binding.tvDetectedExercise.text = "자세 인식을 다시 시도하는 중"
+                binding.overlayView.clearResults()
+            }
+            CameraPipelineStage.FRAME_PROCESSING -> Unit
         }
     }
 
-    /**
-     * 바운딩 박스 면적 계산
-     *
-     * @param landmarks 한 사람의 33개 관절 좌표
-     * @return 면적 (0~1 범위)
-     */
-    private fun calculateBoundingBoxArea(landmarks: List<NormalizedLandmark>): Float {
-        val xCoords = landmarks.map { it.x() }
-        val yCoords = landmarks.map { it.y() }
-
-        val minX = xCoords.minOrNull() ?: 0f
-        val maxX = xCoords.maxOrNull() ?: 0f
-        val minY = yCoords.minOrNull() ?: 0f
-        val maxY = yCoords.maxOrNull() ?: 0f
-
-        val width = maxX - minX
-        val height = maxY - minY
-
-        return width * height
-    }
-
-    /**
-     * 운동 동작 분석 (스쿼트 카운팅)
-     */
+    /** 관절 유실/촬영 방향 변경 시 미완성 회차를 폐기해 서로 다른 동작을 합산하지 않는다. */
     private fun invalidatePendingAnalysis() {
         exerciseCounter.invalidatePendingRep()
         currentRepAngles.clear()
         currentRepErrorTags.clear()
     }
 
+    /**
+     * 측정 가능 여부 → 코칭 → 회차 카운팅 → 회차 기록의 순서를 유지한다.
+     * 측정 불가능한 프레임은 회차를 중단하며, DTW 입력은 최대 300프레임으로 제한한다.
+     */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>, aspectRatio: Double) {
         val measurement = poseAngleExtractor.measurePose(currentExerciseType.name, landmarks.toPoseData(), cameraView, aspectRatio)
         val assessment = if (currentExerciseType == ExerciseType.SQUAT && measurement.isEvaluable) {
@@ -489,7 +406,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             invalidatePendingAnalysis()
             return
         }
-        // Prevent unbounded DTW memory/time during long pauses between repetitions.
+        // 긴 정지 구간에도 DTW 메모리/계산량이 무한히 증가하지 않도록 최근 프레임만 보관한다.
         if (currentRepAngles.size >= 300) currentRepAngles.removeAt(0)
         when (currentExerciseType) {
             ExerciseType.SQUAT -> {
@@ -555,33 +472,26 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             weights = dtwCalculator.getExerciseWeights(currentExerciseType.name)
         )
         currentRepAngles.clear()
-        Log.d(TAG, "회차: $repetitionCount, 자세 점수: $score")
         return score.takeIf { it.isFinite() && it in 0f..100f }
     }
 
     /**
-     * 오버레이 업데이트
-     *
-     * [중요] 방법1: 이미 회전된 비트맵으로 처리되었으므로
-     * inputImage의 width, height는 회전 후의 최종 크기입니다.
-     * OverlayView에서는 단순한 좌표 변환만 수행하면 됩니다.
+     * 카메라 컨트롤러가 정규화한 크기를 그대로 사용한다. 여기서 재회전하면 관절이 어긋난다.
      */
     private fun updateOverlay(
         landmarks: List<NormalizedLandmark>,
-        inputImage: com.google.mediapipe.framework.image.MPImage
+        frame: PoseFrameResult
     ) {
-        // 필터링된 단일 사람 데이터를 OverlayView에 전달
-        // rotationDegrees 파라미터 제거 - 이미 정규화됨
         binding.overlayView.setResults(
             landmarks,
-            inputImage.width,
-            inputImage.height,
-            lensFacing == CameraSelector.LENS_FACING_FRONT
+            frame.imageWidth,
+            frame.imageHeight,
+            frame.isFrontFacing
         )
     }
 
     private fun updateCurrentExerciseType(nextExerciseType: ExerciseType) {
-        // Keep one exercise per report; prevent a noisy classifier from mixing records.
+        // 하나의 리포트에 종목이 섞이지 않도록 운동 중 최초 확정 종목을 고정한다.
         if (isExercising && currentExerciseType != ExerciseType.UNKNOWN) {
             updateDetectedExerciseUi(currentExerciseType)
             return
@@ -618,126 +528,18 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED) {
-            startCamera()
+            cameraController.start()
         } else {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases()
-        }, ContextCompat.getMainExecutor(this))
-    }
-
-    private fun bindCameraUseCases() {
-        val cameraProvider = cameraProvider ?: return
-
-        val cameraSelector = CameraSelector.Builder()
-            .requireLensFacing(lensFacing)
-            .build()
-
-        preview = Preview.Builder()
-            .build()
-            .also {
-                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-            }
-
-        imageAnalyzer = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-            .build()
-            .also {
-                it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    analyzeImage(imageProxy)
-                }
-            }
-
-        try {
-            cameraProvider.unbindAll()
-            camera = cameraProvider.bindToLifecycle(
-                this,
-                cameraSelector,
-                preview,
-                imageAnalyzer
-            )
-        } catch (exc: Exception) {
-            Log.e(TAG, "카메라 바인딩 실패", exc)
-            Toast.makeText(this, "카메라 연결 실패", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    /**
-     * 프레임 분석
-     *
-     * [방법1 핵심] 여기서 회전된 프레임을 정규화(0도)로 변환하여 MediaPipe에 전달
-     * - 전면 카메라: 270도 회전 프레임 → 0도로 정규화
-     * - 후면 카메라: 90도 회전 프레임 → 0도로 정규화
-     */
-    private fun analyzeImage(imageProxy: ImageProxy) {
-        try {
-            val landmarker = poseLandmarker ?: return
-            val timestamp = SystemClock.uptimeMillis()
-            if (timestamp - lastFrameSubmittedAt < 66L) return
-            lastFrameSubmittedAt = timestamp
-            val bitmap = imageProxy.toBitmap()
-            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-
-            val rotatedBitmap = if (rotationDegrees != 0) {
-                rotateMatrix(bitmap, rotationDegrees)
-            } else {
-                bitmap
-            }
-
-            val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(rotatedBitmap).build()
-
-            // 현재 포함된 yolo11n-pose 모델은 운동 분류 모델이 아닙니다. 미학습 YOLO
-            // 결과가 MediaPipe 실행을 막지 않도록 관절 추론을 독립적으로 수행합니다.
-            landmarker.detectAsync(mpImage, timestamp)
-        } catch (error: Exception) {
-            Log.e(TAG, "카메라 프레임 분석 실패", error)
-        } finally {
-            // 예외가 발생해도 다음 CameraX 프레임이 계속 전달되도록 반드시 닫습니다.
-            imageProxy.close()
-        }
-    }
-
-    /**
-     * 비트맵 회전 함수
-     *
-     * @param bitmap 원본 비트맵
-     * @param degrees 회전 각도 (270 또는 90)
-     * @return 회전된 비트맵
-     */
-    private fun rotateMatrix(bitmap: Bitmap, degrees: Int): Bitmap {
-        if (degrees == 0) return bitmap
-
-        val matrix = Matrix().apply {
-            // 비트맵 중심을 기준으로 회전
-            postRotate(degrees.toFloat(), bitmap.width / 2f, bitmap.height / 2f)
-        }
-
-        // 회전된 비트맵 생성
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-        )
-
-        // 원본 비트맵과 다른 객체면 메모리 정리
-        if (rotatedBitmap != bitmap) {
-            bitmap.recycle()
-        }
-
-        return rotatedBitmap
-    }
-
     override fun onDestroy() {
+        // 모델/카메라를 먼저 닫아 native 결과가 종료 중인 화면에 도착하는 것을 차단한다.
+        if (::cameraController.isInitialized) cameraController.close()
         super.onDestroy()
         tts?.stop()
         tts?.shutdown()
-        cameraExecutor.shutdown()
-        poseLandmarker?.close()
         feedbackManager.release()
     }
 

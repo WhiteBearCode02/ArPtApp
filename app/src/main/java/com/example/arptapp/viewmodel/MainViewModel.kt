@@ -8,8 +8,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.abs
+import com.example.arptapp.domain.report.RepReportAnalyzer
 
+/**
+ * 운동 세션의 화면 상태와 수집 기록만 소유합니다.
+ * 기록은 복사본으로 공개하고, 점수·코칭 정책은 RepReportAnalyzer에 위임합니다.
+ * 사용자 데이터는 이 객체에서 네트워크/영구 저장하지 않습니다.
+ */
 class MainViewModel : ViewModel() {
+    private val reportAnalyzer = RepReportAnalyzer()
     private val records = mutableListOf<RepRecord>()
     private val _exerciseType = MutableStateFlow("IDLE")
     val exerciseType: StateFlow<String> = _exerciseType.asStateFlow()
@@ -49,94 +56,9 @@ class MainViewModel : ViewModel() {
 
     fun getRepRecords(): List<RepRecord> = records.toList()
 
-    fun getRepAnalyses(exerciseType: String): List<RepAnalysis> = records.mapIndexed { index, record ->
-        RepAnalysis(
-            repNumber = record.repNumber.takeIf { it > 0 } ?: index + 1,
-            score = scoreRep(record, exerciseType.uppercase()).toFloat(),
-            detail = describeRep(record, exerciseType.uppercase())
-        )
-    }
+    fun getRepAnalyses(exerciseType: String): List<RepAnalysis> =
+        reportAnalyzer.analyze(records, exerciseType)
 
-    fun generateFinalReport(exerciseType: String): SessionReport {
-        val normalizedType = exerciseType.uppercase()
-        if (records.isEmpty()) {
-            return SessionReport(normalizedType, 0, 0, "유효한 운동 데이터가 부족합니다.")
-        }
-
-        val averageScore = getRepAnalyses(normalizedType).map { it.score }.average().toInt()
-        return SessionReport(
-            exerciseType = normalizedType,
-            totalReps = records.size,
-            averageScore = averageScore,
-            feedbackMessage = buildFeedback(normalizedType, averageScore)
-        )
-    }
-
-    private fun scoreRep(record: RepRecord, exerciseType: String): Int {
-        val angleScore = if (exerciseType == "SQUAT") {
-            if (record.maxAngle <= 90.0) 100 else 70
-        } else {
-            if (record.maxAngle >= 160.0) 100 else 75
-        }
-        // swayX comes from the phone accelerometer, not the person's joints.
-        // It must not be presented as a measure of body stability.
-        val formErrorPenalty = record.errorTags.size * 5
-        return ((record.poseScore?.toInt() ?: angleScore) - formErrorPenalty).coerceIn(0, 100)
-    }
-
-    private fun describeRep(record: RepRecord, exerciseType: String): String {
-        val observations = mutableListOf<String>()
-        observations += if (record.poseScore != null) {
-            "저장된 기준 동작과의 관절 각도 비교 점수를 반영했어요. 개인 기준은 올바른 자세를 인증하지 않아요."
-        } else {
-            "관절 각도 기준으로 추정한 점수예요."
-        }
-        if (exerciseType == "SQUAT") {
-            observations += "가장 낮은 지점의 무릎 각도 약 ${record.maxAngle.toInt()}°가 측정됐어요."
-            if (record.maxAngle > 90.0) {
-                observations += "다음 회차에는 무리하지 않는 범위에서 동작 깊이를 일정하게 해 보세요."
-            }
-        } else if (exerciseType == "SHOULDER_PRESS") {
-            observations += "팔을 올렸을 때 팔꿈치 각도 약 ${record.maxAngle.toInt()}°가 측정됐어요."
-            if (record.maxAngle < 160.0) {
-                observations += "다음 회차에는 팔을 올리는 범위를 천천히 확인해 보세요."
-            }
-        }
-        if ("ERROR_KNEE_VALGUS" in record.errorTags) {
-            observations += "무릎이 안쪽으로 모이는 움직임이 감지됐어요. 무릎 방향을 발끝과 맞춰 보세요."
-        }
-        if ("ERROR_FORWARD_LEAN" in record.errorTags) {
-            observations += "상체가 앞으로 기우는 움직임이 감지됐어요. 가슴을 세우고 천천히 반복해 보세요."
-        }
-        if (record.errorTags.isEmpty()) {
-            observations += "이 회차에서 별도 자세 오류 태그는 감지되지 않았어요."
-        }
-        return observations.joinToString(" ").ifBlank { "이 회차의 세부 관절 분석 데이터가 부족합니다." }
-    }
-
-    private fun buildFeedback(exerciseType: String, averageScore: Int): String {
-        val errorFeedback = records
-            .flatMap { it.errorTags }
-            .groupingBy { it }
-            .eachCount()
-            .entries
-            .sortedByDescending { it.value }
-            .take(2)
-            .map { (tag, count) -> formatErrorFeedback(tag, count) }
-
-        val scoreFeedback = when {
-            averageScore >= 90 -> "현재 분석 기준과 유사한 동작이 기록됐습니다. 편안한 범위에서 일정하게 반복해 보세요."
-            averageScore >= 75 -> "회차별 관절 각도와 관찰 내용을 확인하고 동작 속도를 일정하게 유지해 보세요."
-            else -> "촬영 방향과 관절 가시성을 확인하고 무리하지 않는 범위에서 천천히 반복해 보세요."
-        }
-        return (errorFeedback + scoreFeedback).joinToString("\n")
-    }
-
-    private fun formatErrorFeedback(tag: String, count: Int): String = when (tag) {
-        "ERROR_KNEE_VALGUS" ->
-            "스쿼트 ${count}회에서 무릎이 안쪽으로 모이는 현상이 감지되었습니다. 발끝 방향으로 무릎을 열어주세요."
-        "ERROR_FORWARD_LEAN" ->
-            "스쿼트 ${count}회에서 상체 전방 경사가 감지되었습니다. 가슴을 세우고 코어를 고정해주세요."
-        else -> "$tag 문제가 ${count}회 감지되었습니다. 자세를 천천히 교정해주세요."
-    }
+    fun generateFinalReport(exerciseType: String): SessionReport =
+        reportAnalyzer.report(records, exerciseType)
 }

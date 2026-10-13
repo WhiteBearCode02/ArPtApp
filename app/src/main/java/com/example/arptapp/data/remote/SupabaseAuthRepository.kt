@@ -1,6 +1,7 @@
 package com.example.arptapp.data.remote
 
 import android.content.Intent
+import com.example.arptapp.core.coroutines.suspendResult
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import io.github.jan.supabase.auth.providers.Google
@@ -30,7 +31,13 @@ data class AppSession(
 )
 
 object AuthSessionStore {
-    var current: AppSession? = null
+    private val mutableSession = MutableStateFlow<AppSession?>(null)
+    val session: StateFlow<AppSession?> = mutableSession.asStateFlow()
+
+    // 기존 current API도 같은 상태를 읽고 써서 저장소 인스턴스 사이의 세션 불일치를 막는다.
+    var current: AppSession?
+        get() = mutableSession.value
+        set(value) { mutableSession.value = value }
 }
 
 internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata
@@ -39,13 +46,17 @@ internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata
     ?.contentOrNull
     ?.equals("admin", ignoreCase = true) == true
 
+/**
+ * Supabase Auth SDK 어댑터. 인증·재인증·딥링크 검증만 담당하며 화면 이동/신체정보 저장은 하지 않습니다.
+ * 관리자 권한은 사용자 편집이 불가능한 appMetadata에서만 읽습니다. 최종 데이터 접근 권한은 서버 RLS가 검증합니다.
+ * suspendResult로 lifecycle 취소를 상위 호출자에게 전달하고 암호/토큰을 로그에 남기지 않습니다.
+ */
 class SupabaseAuthRepository {
     private val client get() = SupabaseClientProvider.client
 
-    private val _session = MutableStateFlow<AppSession?>(AuthSessionStore.current)
-    val session: StateFlow<AppSession?> = _session.asStateFlow()
+    val session: StateFlow<AppSession?> = AuthSessionStore.session
 
-    suspend fun signUp(email: String, password: String, profile: SignUpProfile): Result<AppSession?> = runCatching {
+    suspend fun signUp(email: String, password: String, profile: SignUpProfile): Result<AppSession?> = suspendResult {
         client.auth.signUpWith(Email, redirectUrl = REDIRECT_URI) {
             this.email = email
             this.password = password
@@ -60,7 +71,7 @@ class SupabaseAuthRepository {
         refreshSession()
     }
 
-    suspend fun signIn(email: String, password: String): Result<AppSession> = runCatching {
+    suspend fun signIn(email: String, password: String): Result<AppSession> = suspendResult {
         client.auth.signInWith(Email) {
             this.email = email
             this.password = password
@@ -68,11 +79,11 @@ class SupabaseAuthRepository {
         refreshSession() ?: error("인증 세션을 확인할 수 없습니다.")
     }
 
-    suspend fun startGoogleSignIn(): Result<Unit> = runCatching {
+    suspend fun startGoogleSignIn(): Result<Unit> = suspendResult {
         client.auth.signInWith(Google, REDIRECT_URI)
     }
 
-    suspend fun requestPasswordReset(email: String): Result<Unit> = runCatching {
+    suspend fun requestPasswordReset(email: String): Result<Unit> = suspendResult {
         require(email.isNotBlank()) { "이메일을 입력해 주세요." }
         client.auth.resetPasswordForEmail(
             email = email.trim(),
@@ -80,7 +91,7 @@ class SupabaseAuthRepository {
         )
     }
 
-    suspend fun handlePasswordRecovery(intent: Intent): Result<Unit> = runCatching {
+    suspend fun handlePasswordRecovery(intent: Intent): Result<Unit> = suspendResult {
         val callbackUri = intent.data
         require(
             callbackUri?.scheme == REDIRECT_SCHEME &&
@@ -91,7 +102,7 @@ class SupabaseAuthRepository {
         check(client.auth.currentUserOrNull() != null) { "재설정 링크가 만료되었거나 유효하지 않습니다." }
     }
 
-    suspend fun updateRecoveredPassword(newPassword: String): Result<Unit> = runCatching {
+    suspend fun updateRecoveredPassword(newPassword: String): Result<Unit> = suspendResult {
         check(client.auth.currentUserOrNull() != null) { "재설정 인증이 필요합니다." }
         client.auth.updateUser {
             password = newPassword
@@ -99,17 +110,17 @@ class SupabaseAuthRepository {
         Unit
     }
 
-    suspend fun handleAuthCallback(intent: Intent): Result<AppSession?> = runCatching {
+    suspend fun handleAuthCallback(intent: Intent): Result<AppSession?> = suspendResult {
         client.handleDeeplinks(intent)
         refreshSession()
     }
 
-    suspend fun restoreSession(): Result<AppSession?> = runCatching {
+    suspend fun restoreSession(): Result<AppSession?> = suspendResult {
         client.auth.awaitInitialization()
         refreshSession()
     }
 
-    suspend fun updateEmail(newEmail: String): Result<Unit> = runCatching {
+    suspend fun updateEmail(newEmail: String): Result<Unit> = suspendResult {
         check(client.auth.currentUserOrNull() != null) { "로그인이 필요한 작업입니다." }
         client.auth.updateUser {
             email = newEmail
@@ -121,7 +132,7 @@ class SupabaseAuthRepository {
     suspend fun updatePassword(
         currentPassword: String,
         newPassword: String
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = suspendResult {
         val user = client.auth.currentUserOrNull()
             ?: error("로그인이 필요한 작업입니다.")
         val email = user.email
@@ -141,7 +152,7 @@ class SupabaseAuthRepository {
         Unit
     }
 
-    suspend fun verifyCurrentPassword(currentPassword: String): Result<Unit> = runCatching {
+    suspend fun verifyCurrentPassword(currentPassword: String): Result<Unit> = suspendResult {
         val user = client.auth.currentUserOrNull() ?: error("로그인이 필요합니다.")
         require(user.identities.orEmpty().any { it.provider == "email" }) {
             "Google 계정의 비밀번호는 Google 계정에서 변경해 주세요."
@@ -162,13 +173,11 @@ class SupabaseAuthRepository {
         client.auth.awaitInitialization()
         client.auth.signOut()
         AuthSessionStore.current = null
-        _session.value = null
     }
 
     private fun refreshSession(): AppSession? {
         val user = client.auth.currentUserOrNull() ?: run {
             AuthSessionStore.current = null
-            _session.value = null
             return null
         }
         val appSession = AppSession(
@@ -178,7 +187,6 @@ class SupabaseAuthRepository {
             requiresCurrentPassword = user.identities.orEmpty().any { it.provider == "email" }
         )
         AuthSessionStore.current = appSession
-        _session.value = appSession
         return appSession
     }
 

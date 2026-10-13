@@ -5,6 +5,7 @@ import com.example.arptapp.data.model.StandardPose
 import com.google.gson.Gson
 import java.io.InputStreamReader
 
+/** 표준 자세 asset의 읽기 전용 어댑터. 운동 판정/점수 계산은 domain analyzer에서 수행합니다. */
 class ExerciseRepository(private val context: Context) {
     
     private val gson = Gson()
@@ -15,9 +16,9 @@ class ExerciseRepository(private val context: Context) {
     fun loadStandardPose(exerciseType: String): StandardPose? {
         return try {
             val fileName = "${exerciseType.lowercase()}.json"
-            val inputStream = context.assets.open("standard_poses/$fileName")
-            val reader = InputStreamReader(inputStream)
-            gson.fromJson(reader, StandardPose::class.java)
+            InputStreamReader(context.assets.open("standard_poses/$fileName")).use { reader ->
+                gson.fromJson(reader, StandardPose::class.java)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null

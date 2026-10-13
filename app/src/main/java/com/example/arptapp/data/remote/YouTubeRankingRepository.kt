@@ -1,6 +1,7 @@
 package com.example.arptapp.data.remote
 
 import com.example.arptapp.BuildConfig
+import com.example.arptapp.core.coroutines.suspendResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -32,10 +33,14 @@ data class YouTubeRanking(
     val message: String?
 )
 
-/** The YouTube API key stays in the Supabase Edge Function secret. */
+/**
+ * 공개 영상 순위의 Edge Function HTTP 어댑터. 사용자 검색 기록을 읽는 기능이 아닙니다.
+ * YouTube 키/외부 호출량 제한은 기존 서버가 소유합니다. 앱에는 Supabase 공개 키만 전달합니다.
+ * 연결/read timeout과 finally의 disconnect를 유지하며 화면 취소는 Result 실패로 삼키지 않습니다.
+ */
 class YouTubeRankingRepository {
     suspend fun load(category: RankingCategory): Result<YouTubeRanking> = withContext(Dispatchers.IO) {
-        runCatching {
+        suspendResult {
             require(BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()) {
                 "Supabase 연결 설정이 없습니다."
             }

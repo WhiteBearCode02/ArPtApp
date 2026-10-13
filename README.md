@@ -98,7 +98,10 @@ flowchart LR
 
 | 구성요소 | 역할 |
 |---|---|
-| `DashboardActivity` | CameraX 프레임, MediaPipe 추론 및 실시간 UI 연결 |
+| `DashboardActivity` | 권한·운동 세션·센서·실시간 UI 연결; 카메라 처리는 컨트롤러에 위임 |
+| `PoseCameraController` | 카메라·MediaPipe 생명주기와 메인 스레드 결과 전달 |
+| `CameraFrameTracker` | 전환 전 프레임 폐기와 제출 당시 렌즈 방향 보존 |
+| `RepReportAnalyzer` | Android와 분리된 회차 점수·관찰 설명·세션 피드백 계산 |
 | `OverlayView` | 관절점과 관절 연결선을 카메라 위에 렌더링 |
 | `ExerciseClassifier` | 랜드마크 기반 임시 운동 분류 fallback |
 | `PoseAngleExtractor` | 스쿼트·숄더프레스의 2D 내각 및 정규화 랜드마크 벡터각 계산 |
@@ -112,6 +115,12 @@ flowchart LR
 | `WorkoutStatistics` | 날짜 범위와 계정 격리를 적용한 로컬 운동 통계 |
 | `PersonalMotionReferenceRepository` | 계정·종목·시점별 개인 각도 시퀀스 로컬 저장 |
 | `FramePerformanceMonitor` | 60개 표본으로 제한된 로컬 FPS·지연 측정 |
+
+### 유지보수 구조
+
+카메라, 신체정보 검증, 설정 동기화, 보고서 전달·저장을 책임별 API로 분리했습니다. 원격 조회 실패와 데이터 부재를 구분하고, 화면 종료·로그아웃 시 취소 전파를 공통 처리합니다. 현재는 하나의 Gradle `:app` 모듈 안에서 패키지별로 분리한 구조입니다.
+
+공개 API, 좌표·단위, 자원 수명, 구버전 호환, 보안 경계와 남은 한계는 [모듈 구조와 유지보수 가이드](docs/ARCHITECTURE.md)를 참고하세요.
 
 ## 📐 생체역학 근거와 분석 원칙
 
@@ -169,12 +178,20 @@ flowchart LR
 ArPtApp/
 ├── app/src/main/
 │   ├── java/com/example/arptapp/
+│   │   ├── core/coroutines/      # 취소 안전 결과 처리
 │   │   ├── data/                 # Room, Supabase, pose models
 │   │   ├── domain/
 │   │   │   ├── analyzer/         # 운동별 자세 분석
 │   │   │   ├── classifier/       # 운동 종목 판단
-│   │   │   └── counter/          # repetition state machine
-│   │   ├── ui/feedback/          # 음성·진동 피드백
+│   │   │   ├── counter/          # repetition state machine
+│   │   │   └── report/           # 순수 회차 점수·설명 계산
+│   │   ├── presentation/report/  # 보고서 계약·전달·저장 상태
+│   │   ├── ui/
+│   │   │   ├── camera/           # CameraX/MediaPipe·프레임·대상 선택
+│   │   │   ├── feedback/         # 음성·진동 피드백
+│   │   │   ├── gym/              # 사용자 요청 기반 외부 지도 연결
+│   │   │   └── profile/          # 신체 폼·검증·시각·캘린더 연결
+│   │   ├── viewmodel/            # 운동 화면 상태·기록 수집
 │   │   ├── utils/                # 좌표 정규화, TFLite, 알림
 │   │   ├── DashboardActivity.kt  # 실시간 운동 분석 화면
 │   │   └── OverlayView.kt        # 관절 구조 시각화
@@ -186,6 +203,7 @@ ArPtApp/
 │   ├── tests/                    # pipeline unit tests
 │   └── dataset/                  # metadata·annotation·pose 구조
 └── docs/
+    ├── ARCHITECTURE.md            # 모듈 API·단위·수명·유지보수 경계
     ├── DATASET_PIPELINE.md        # 데이터셋 생성·검증 정책
     └── BIOMECHANICS_REFERENCES.md # 논문 근거·각도 정의·적용 한계
 ```

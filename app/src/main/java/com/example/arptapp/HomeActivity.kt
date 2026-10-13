@@ -13,22 +13,26 @@ import com.example.arptapp.data.preferences.LoginPreferences
 import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.data.remote.UserProfileRepository
 import com.example.arptapp.data.remote.UserPreferencesRepository
-import com.example.arptapp.data.remote.withCloudBodyProfile
-import com.example.arptapp.data.remote.withCloudReminderPreferences
+import com.example.arptapp.data.repository.UserSettingsSyncRepository
+import com.example.arptapp.core.coroutines.suspendResult
 import com.example.arptapp.utils.AlarmHelper
 import com.example.arptapp.ui.gym.NearbyGymController
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
+/** 화면 이동·버튼 바인딩을 담당합니다. 설정 병합/위치 획득은 각 전용 모듈에 위임합니다. */
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private lateinit var nearbyGymController: NearbyGymController
     private val settingsRepository by lazy { UserSettingsRepository(this) }
     private val authRepository = SupabaseAuthRepository()
-    private val cloudProfileRepository = UserProfileRepository()
-    private val cloudPreferencesRepository = UserPreferencesRepository()
+    private val settingsSync by lazy {
+        UserSettingsSyncRepository(settingsRepository, UserProfileRepository(), UserPreferencesRepository())
+    }
     private var isLaunchingTraining = false
     private var currentUserId: String? = null
+    private var settingsSyncJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,24 +45,16 @@ class HomeActivity : AppCompatActivity() {
             binding.tvNearbyGymStatus
         )
 
-        currentUserId = intent.getStringExtra("USER_ID")
-            ?: com.example.arptapp.data.remote.AuthSessionStore.current?.userId
+        currentUserId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId
+            ?: intent.getStringExtra("USER_ID")
         currentUserId?.let { userId ->
-            lifecycleScope.launch {
-                settingsRepository.activateUser(userId)
-                val localSettings = settingsRepository.getSettings(userId)
-                var mergedSettings = cloudProfileRepository.getProfile(userId)
-                    .getOrNull()
-                    ?.let(localSettings::withCloudBodyProfile)
-                    ?: localSettings
-                val cloudPreferences = cloudPreferencesRepository.getPreferences(userId).getOrNull()
-                if (cloudPreferences == null) {
-                    cloudPreferencesRepository.savePreferences(userId, mergedSettings)
-                } else {
-                    mergedSettings = mergedSettings.withCloudReminderPreferences(cloudPreferences)
-                }
-                settingsRepository.save(userId, mergedSettings)
-                AlarmHelper.syncDailyReminder(this@HomeActivity)
+            settingsSyncJob = lifecycleScope.launch {
+                suspendResult { settingsSync.synchronize(userId) }
+                    .onSuccess {
+                        if (com.example.arptapp.data.remote.AuthSessionStore.current?.userId == userId) {
+                            AlarmHelper.syncDailyReminder(this@HomeActivity)
+                        }
+                    }
             }
         }
 
@@ -104,8 +100,13 @@ class HomeActivity : AppCompatActivity() {
         }
         binding.btnLogout.setOnClickListener {
             binding.btnLogout.isEnabled = false
+            // 늦게 끝난 조회가 로그아웃 뒤 이전 계정 설정/알람을 복구하지 않도록 먼저 취소한다.
+            settingsSyncJob?.cancel()
             lifecycleScope.launch {
-                runCatching { authRepository.signOut() }
+                suspendResult {
+                    settingsSyncJob?.join()
+                    authRepository.signOut()
+                }
                     .onSuccess {
                         LoginPreferences(this@HomeActivity).apply {
                             rememberLogin = false

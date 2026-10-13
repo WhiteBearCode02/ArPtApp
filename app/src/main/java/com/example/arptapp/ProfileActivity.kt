@@ -1,13 +1,11 @@
 package com.example.arptapp
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.CalendarContract
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.Toast
@@ -15,29 +13,39 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.arptapp.core.coroutines.suspendResult
 import com.example.arptapp.data.preferences.UserSettings
 import com.example.arptapp.data.preferences.UserSettingsRepository
 import com.example.arptapp.data.remote.AppSession
 import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.data.remote.UserProfileRepository
 import com.example.arptapp.data.remote.UserPreferencesRepository
-import com.example.arptapp.data.remote.withCloudBodyProfile
-import com.example.arptapp.data.remote.withCloudReminderPreferences
+import com.example.arptapp.data.repository.UserSettingsSyncRepository
 import com.example.arptapp.databinding.ActivityProfileBinding
+import com.example.arptapp.ui.profile.BodyProfileForm
+import com.example.arptapp.ui.profile.ProfileCalendarNavigator
+import com.example.arptapp.ui.profile.ReminderTime
 import com.example.arptapp.utils.AlarmHelper
 import kotlinx.coroutines.launch
-import java.util.Calendar
-import java.util.Locale
 
+/**
+ * 개인설정 화면의 이벤트/인증된 계정 저장 흐름을 연결한다.
+ * 신체정보 폼/검증과 캘린더 연결/시각 계산은 ui.profile 모듈에 위임한다.
+ * 신체정보와 알림은 별도로 저장하며 외부 캘린더 편집은 앱 알림 저장과 독립적이다.
+ */
 class ProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProfileBinding
     private val authRepository = SupabaseAuthRepository()
     private val cloudProfileRepository = UserProfileRepository()
     private val cloudPreferencesRepository = UserPreferencesRepository()
     private val settingsRepository by lazy { UserSettingsRepository(this) }
+    private val settingsSyncRepository by lazy {
+        UserSettingsSyncRepository(settingsRepository, cloudProfileRepository, cloudPreferencesRepository)
+    }
+    private val bodyProfileForm by lazy { BodyProfileForm(binding) }
+    private val calendarNavigator by lazy { ProfileCalendarNavigator(this) }
     private var session: AppSession? = null
-    private var reminderHour = 20
-    private var reminderMinute = 0
+    private var reminderTime = ReminderTime(20, 0)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -71,37 +79,27 @@ class ProfileActivity : AppCompatActivity() {
     private fun loadProfile() {
         setLoading(true)
         lifecycleScope.launch {
-            authRepository.restoreSession()
-                .onSuccess { restoredSession ->
-                    if (restoredSession == null) {
+            try {
+                suspendResult {
+                    // 화면 Intent 값이 아닌 복원된 인증 세션으로만 저장 대상 계정을 결정한다.
+                    val restoredSession = authRepository.restoreSession().getOrThrow()
+                        ?: return@suspendResult null
+                    session = restoredSession
+                    bindAccount(restoredSession)
+                    settingsSyncRepository.synchronize(restoredSession.userId)
+                }.onSuccess { settings ->
+                    if (settings == null) {
                         showMessage("로그인 정보가 없습니다. 다시 로그인해 주세요.")
                         finish()
-                        return@onSuccess
-                    }
-                    session = restoredSession
-                    settingsRepository.activateUser(restoredSession.userId)
-                    bindAccount(restoredSession)
-                    val localSettings = settingsRepository.getSettings(restoredSession.userId)
-                    var settings = cloudProfileRepository.getProfile(restoredSession.userId)
-                        .getOrNull()
-                        ?.let(localSettings::withCloudBodyProfile)
-                        ?: localSettings
-                    val cloudPreferences = cloudPreferencesRepository
-                        .getPreferences(restoredSession.userId)
-                        .getOrNull()
-                    if (cloudPreferences == null) {
-                        cloudPreferencesRepository.savePreferences(restoredSession.userId, settings)
                     } else {
-                        settings = settings.withCloudReminderPreferences(cloudPreferences)
+                        bindSettings(settings)
                     }
-                    settingsRepository.save(restoredSession.userId, settings)
-                    bindSettings(settings)
-                    setLoading(false)
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     showMessage(error.userMessage("설정을 불러오지 못했습니다."))
-                    setLoading(false)
                 }
+            } finally {
+                setLoading(false)
+            }
         }
     }
 
@@ -118,85 +116,58 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun bindSettings(settings: UserSettings) {
-        binding.etProfileNickname.setText(settings.nickname)
-        binding.etProfileHeight.setText(settings.heightCm.toInputText())
-        binding.etProfileWeight.setText(settings.weightKg.toInputText())
-        binding.etMuscleMass.setText(settings.skeletalMuscleMassKg.toInputText())
-        binding.etBodyFat.setText(settings.bodyFatPercentage.toInputText())
+        bodyProfileForm.bind(settings)
         binding.switchReminder.isChecked = settings.reminderEnabled
-        reminderHour = settings.reminderHour
-        reminderMinute = settings.reminderMinute
+        reminderTime = ReminderTime.normalized(settings.reminderHour, settings.reminderMinute)
         updateReminderTimeText()
     }
 
     private fun showTimePicker() {
         TimePickerDialog(this, { _, hour, minute ->
-            reminderHour = hour
-            reminderMinute = minute
+            reminderTime = ReminderTime(hour, minute)
             binding.switchReminder.isChecked = true
             updateReminderTimeText()
-        }, reminderHour.coerceIn(0, 23), reminderMinute.coerceIn(0, 59),
+        }, reminderTime.hour, reminderTime.minute,
             DateFormat.is24HourFormat(this)).show()
     }
 
     private fun updateReminderTimeText() {
-        binding.tvReminderTime.text = String.format(
-            Locale.KOREA,
-            "매일 %02d:%02d",
-            reminderHour,
-            reminderMinute
-        )
+        binding.tvReminderTime.text = reminderTime.dailyLabel()
     }
 
     private fun saveBodyInfo() {
         val currentSession = session ?: return
-        clearBodyErrors()
-
-        val nickname = binding.etProfileNickname.text?.toString()?.trim().orEmpty()
-        if (nickname.length !in 2..20) {
-            binding.tilNickname.error = "닉네임은 2~20자로 입력해 주세요."
-            return
-        }
-
-        val height = requiredNumber(binding.etProfileHeight.text?.toString(), 80f, 250f) {
-            binding.tilHeight.error = "키는 80~250cm 범위로 입력해 주세요."
-        } ?: return
-        val weight = requiredNumber(binding.etProfileWeight.text?.toString(), 20f, 350f) {
-            binding.tilWeight.error = "몸무게는 20~350kg 범위로 입력해 주세요."
-        } ?: return
-        val muscleMass = optionalNumber(binding.etMuscleMass.text?.toString(), 0f, 200f) {
-            binding.tilMuscleMass.error = "골격근량은 0~200kg 범위로 입력해 주세요."
-        }
-        if (binding.tilMuscleMass.error != null) return
-        val bodyFat = optionalNumber(binding.etBodyFat.text?.toString(), 0f, 75f) {
-            binding.tilBodyFat.error = "체지방률은 0~75% 범위로 입력해 주세요."
-        }
-        if (binding.tilBodyFat.error != null) return
+        val bodyProfile = bodyProfileForm.validatedValues() ?: return
 
         setLoading(true)
         lifecycleScope.launch {
-            val settings = settingsRepository.getSettings(currentSession.userId).copy(
-                    nickname = nickname,
-                    heightCm = height,
-                    weightKg = weight,
-                    skeletalMuscleMassKg = muscleMass,
-                    bodyFatPercentage = bodyFat
-            )
-            val localSave = runCatching {
-                settingsRepository.save(currentSession.userId, settings)
+            try {
+                // 신체정보만 갱신하여 별도로 저장하는 알림 설정을 덮어쓰지 않는다.
+                // 화면 종료에 따른 취소는 실패 메시지나 후속 클라우드 저장으로 이어지지 않는다.
+                suspendResult {
+                    val settings = settingsRepository.getSettings(currentSession.userId).copy(
+                        nickname = bodyProfile.nickname,
+                        heightCm = bodyProfile.heightCm,
+                        weightKg = bodyProfile.weightKg,
+                        skeletalMuscleMassKg = bodyProfile.skeletalMuscleMassKg,
+                        bodyFatPercentage = bodyProfile.bodyFatPercentage
+                    )
+                    settingsRepository.save(currentSession.userId, settings)
+                    settings
+                }.onSuccess { settings ->
+                    cloudProfileRepository.saveBodyProfile(currentSession.userId, settings)
+                        .onSuccess {
+                            showMessage("신체 정보를 기기와 Supabase에 저장했습니다.")
+                        }
+                        .onFailure { error ->
+                            showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
+                        }
+                }.onFailure { error ->
+                    showMessage(error.userMessage("신체 정보를 기기에 저장하지 못했습니다."))
+                }
+            } finally {
+                setLoading(false)
             }
-            if (localSave.isFailure) {
-                showMessage(localSave.exceptionOrNull()!!.userMessage("신체 정보를 기기에 저장하지 못했습니다."))
-            } else {
-                cloudProfileRepository.saveBodyProfile(currentSession.userId, settings)
-                    .onSuccess {
-                        showMessage("신체 정보를 기기와 Supabase에 저장했습니다.")
-                    }
-                    .onFailure { error ->
-                        showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
-                    }
-            }
-            setLoading(false)
         }
     }
 
@@ -208,90 +179,52 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         val enabled = binding.switchReminder.isChecked
-        val hour = reminderHour
-        val minute = reminderMinute
+        val hour = reminderTime.hour
+        val minute = reminderTime.minute
         setLoading(true)
         lifecycleScope.launch {
-            val settingsResult = runCatching {
-                val settings = settingsRepository.getSettings(currentSession.userId).copy(
-                    reminderEnabled = enabled,
-                    reminderHour = hour,
-                    reminderMinute = minute
-                )
-                settingsRepository.save(currentSession.userId, settings)
-                if (enabled) {
-                    AlarmHelper.scheduleDailyReminder(this@ProfileActivity, hour, minute)
-                } else {
-                    AlarmHelper.cancelDailyReminder(this@ProfileActivity)
-                }
-                settings
-            }
-            settingsResult.onFailure { error ->
-                showMessage(error.userMessage("알림 설정을 저장하지 못했습니다."))
-            }
-            settingsResult.getOrNull()?.let { settings ->
-                cloudPreferencesRepository.savePreferences(currentSession.userId, settings)
-                    .onSuccess {
-                        showMessage("알림 설정을 기기와 Supabase에 저장했습니다.")
-                    }
-                    .onFailure { error ->
-                        showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
-                    }
-            }
-            setLoading(false)
-        }
-    }
-
-    /**
-     * Opens the calendar at the next selected reminder time. Existing Google Calendar
-     * events remain owned and edited by the calendar app; AIRPTCoach does not read them.
-     */
-    private fun openCalendarAtReminderTime() {
-        val reminderAt = nextReminderTimeMillis()
-        val uri = CalendarContract.CONTENT_URI.buildUpon()
-            .appendPath("time")
-            .appendPath(reminderAt.toString())
-            .build()
-        launchCalendar(Intent(Intent.ACTION_VIEW, uri))
-    }
-
-    /**
-     * Prefills a daily recurring event and lets the user choose the calendar, reminder,
-     * and final values before saving. INSERT intents do not require calendar permissions.
-     */
-    private fun createCalendarReminder() {
-        val beginAt = nextReminderTimeMillis()
-        val endAt = beginAt + CALENDAR_EVENT_DURATION_MS
-        val intent = Intent(Intent.ACTION_INSERT).apply {
-            data = CalendarContract.Events.CONTENT_URI
-            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginAt)
-            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endAt)
-            putExtra(CalendarContract.Events.TITLE, getString(R.string.calendar_event_title))
-            putExtra(CalendarContract.Events.DESCRIPTION, getString(R.string.calendar_event_description))
-            putExtra(CalendarContract.Events.RRULE, "FREQ=DAILY")
-            putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_FREE)
-        }
-        launchCalendar(intent)
-    }
-
-    private fun nextReminderTimeMillis(): Long = Calendar.getInstance().run {
-        set(Calendar.HOUR_OF_DAY, reminderHour.coerceIn(0, 23))
-        set(Calendar.MINUTE, reminderMinute.coerceIn(0, 59))
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_MONTH, 1)
-        timeInMillis
-    }
-
-    private fun launchCalendar(baseIntent: Intent) {
-        try {
-            startActivity(Intent(baseIntent).setPackage(GOOGLE_CALENDAR_PACKAGE))
-        } catch (_: ActivityNotFoundException) {
             try {
-                startActivity(baseIntent)
-            } catch (_: ActivityNotFoundException) {
-                showMessage(getString(R.string.calendar_app_not_found))
+                val settingsResult = suspendResult {
+                    val settings = settingsRepository.getSettings(currentSession.userId).copy(
+                        reminderEnabled = enabled,
+                        reminderHour = hour,
+                        reminderMinute = minute
+                    )
+                    settingsRepository.save(currentSession.userId, settings)
+                    if (enabled) {
+                        AlarmHelper.scheduleDailyReminder(this@ProfileActivity, hour, minute)
+                    } else {
+                        AlarmHelper.cancelDailyReminder(this@ProfileActivity)
+                    }
+                    settings
+                }
+                settingsResult.onFailure { error ->
+                    showMessage(error.userMessage("알림 설정을 저장하지 못했습니다."))
+                }
+                settingsResult.getOrNull()?.let { settings ->
+                    cloudPreferencesRepository.savePreferences(currentSession.userId, settings)
+                        .onSuccess {
+                            showMessage("알림 설정을 기기와 Supabase에 저장했습니다.")
+                        }
+                        .onFailure { error ->
+                            showMessage(error.userMessage("기기에는 저장했지만 Supabase 동기화에 실패했습니다."))
+                        }
+                }
+            } finally {
+                setLoading(false)
             }
+        }
+    }
+
+    private fun openCalendarAtReminderTime() {
+        if (!calendarNavigator.openAt(reminderTime)) {
+            showMessage(getString(R.string.calendar_app_not_found))
+        }
+    }
+
+    private fun createCalendarReminder() {
+        if (!calendarNavigator.openReminderEditor(reminderTime)) {
+            showMessage(getString(R.string.calendar_app_not_found))
         }
     }
 
@@ -309,14 +242,17 @@ class ProfileActivity : AppCompatActivity() {
             else -> {
                 setLoading(true)
                 lifecycleScope.launch {
-                    authRepository.updateEmail(newEmail)
-                        .onSuccess {
-                            showMessage("인증 메일을 보냈습니다. 메일의 변경 링크를 확인해 주세요.")
-                        }
-                        .onFailure { error ->
-                            showMessage(error.userMessage("이메일 변경을 요청하지 못했습니다."))
-                        }
-                    setLoading(false)
+                    try {
+                        authRepository.updateEmail(newEmail)
+                            .onSuccess {
+                                showMessage("인증 메일을 보냈습니다. 메일의 변경 링크를 확인해 주세요.")
+                            }
+                            .onFailure { error ->
+                                showMessage(error.userMessage("이메일 변경을 요청하지 못했습니다."))
+                            }
+                    } finally {
+                        setLoading(false)
+                    }
                 }
             }
         }
@@ -326,37 +262,6 @@ class ProfileActivity : AppCompatActivity() {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
-
-    private fun requiredNumber(
-        rawValue: String?,
-        minimum: Float,
-        maximum: Float,
-        onInvalid: () -> Unit
-    ): Float? {
-        val value = rawValue.toNormalizedFloatOrNull()
-        if (value == null || value !in minimum..maximum) onInvalid()
-        return value?.takeIf { it in minimum..maximum }
-    }
-
-    private fun optionalNumber(
-        rawValue: String?,
-        minimum: Float,
-        maximum: Float,
-        onInvalid: () -> Unit
-    ): Float? {
-        if (rawValue.isNullOrBlank()) return null
-        val value = rawValue.toNormalizedFloatOrNull()
-        if (value == null || value !in minimum..maximum) onInvalid()
-        return value?.takeIf { it in minimum..maximum }
-    }
-
-    private fun clearBodyErrors() {
-        binding.tilNickname.error = null
-        binding.tilHeight.error = null
-        binding.tilWeight.error = null
-        binding.tilMuscleMass.error = null
-        binding.tilBodyFat.error = null
-    }
 
     private fun setLoading(loading: Boolean) {
         binding.progressProfile.visibility = if (loading) View.VISIBLE else View.GONE
@@ -387,19 +292,5 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showMessage(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-    }
-
-    private fun String?.toNormalizedFloatOrNull(): Float? =
-        this?.trim()?.replace(',', '.')?.toFloatOrNull()
-
-    private fun Float?.toInputText(): String = when {
-        this == null -> ""
-        this % 1f == 0f -> toInt().toString()
-        else -> toString()
-    }
-
-    private companion object {
-        const val GOOGLE_CALENDAR_PACKAGE = "com.google.android.calendar"
-        const val CALENDAR_EVENT_DURATION_MS = 60L * 60L * 1000L
     }
 }

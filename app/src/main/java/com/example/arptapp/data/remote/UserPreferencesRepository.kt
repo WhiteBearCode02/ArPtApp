@@ -1,6 +1,8 @@
 package com.example.arptapp.data.remote
 
 import com.example.arptapp.data.preferences.UserSettings
+import com.example.arptapp.core.coroutines.suspendResult
+import com.example.arptapp.data.repository.ReminderPreferencesSource
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -12,10 +14,11 @@ data class CloudReminderPreferences(
     val minute: Int
 )
 
-class UserPreferencesRepository {
+/** 알림 설정의 원격 어댑터. 기기 알람 예약과 캘린더 실행은 UI/기기 계층에서 수행합니다. */
+class UserPreferencesRepository : ReminderPreferencesSource {
     private val client get() = SupabaseClientProvider.client
 
-    suspend fun getPreferences(userId: String): Result<CloudReminderPreferences?> = runCatching {
+    override suspend fun getPreferences(userId: String): Result<CloudReminderPreferences?> = suspendResult {
         client.from("user_preferences")
             .select {
                 filter { eq("user_id", userId) }
@@ -25,7 +28,7 @@ class UserPreferencesRepository {
             ?.toDomain()
     }
 
-    suspend fun savePreferences(userId: String, settings: UserSettings): Result<Unit> = runCatching {
+    override suspend fun savePreferences(userId: String, settings: UserSettings): Result<Unit> = suspendResult {
         client.from("user_preferences").upsert(
             PreferenceWriteRow(
                 userId = userId,
@@ -63,6 +66,7 @@ class UserPreferencesRepository {
     )
 }
 
+/** 서버 값의 시간 범위를 보정한 뒤 알림 필드만 대체합니다. 신체정보는 변경하지 않습니다. */
 fun UserSettings.withCloudReminderPreferences(
     preferences: CloudReminderPreferences
 ): UserSettings = copy(

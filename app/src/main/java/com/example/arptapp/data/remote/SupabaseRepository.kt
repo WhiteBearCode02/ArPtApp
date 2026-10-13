@@ -3,11 +3,17 @@ package com.example.arptapp.data.remote
 import com.example.arptapp.model.RepRecord
 import com.example.arptapp.model.RepAnalysis
 import com.example.arptapp.model.SessionReport
+import com.example.arptapp.core.coroutines.suspendResult
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import java.util.UUID
 
+/**
+ * 운동 결과 업로드 어댑터. 현재 계정의 세션 행을 먼저 만들고 회차 행에 그 ID를 연결합니다.
+ * 두 insert는 서버 트랜잭션이 아니므로 후속 실패 시 부분 저장이 남을 수 있습니다.
+ * 자동 재시도를 추가하면 중복 세션이 생길 수 있어 여기에서는 한 번만 시도합니다.
+ */
 class SupabaseRepository {
     suspend fun uploadSession(
         report: SessionReport,
@@ -23,7 +29,7 @@ class SupabaseRepository {
             ?: return Result.failure(IllegalStateException("인증된 사용자가 없습니다."))
         val sessionId = UUID.randomUUID().toString()
 
-        return runCatching {
+        return suspendResult {
             supabase.from("exercise_sessions").insert(
                 SessionRow(
                     id = sessionId,

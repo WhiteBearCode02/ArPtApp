@@ -1,10 +1,13 @@
 package com.example.arptapp.data.remote
 
 import com.example.arptapp.data.preferences.UserSettings
+import com.example.arptapp.core.coroutines.suspendResult
+import com.example.arptapp.data.repository.BodyProfileSource
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/** 프로필 조회용 모델. 비밀번호·토큰은 이 모델이나 user_profiles에 포함하지 않습니다. */
 data class CloudBodyProfile(
     val nickname: String,
     val heightCm: Float?,
@@ -13,10 +16,14 @@ data class CloudBodyProfile(
     val bodyFatPercentage: Float?
 )
 
-class UserProfileRepository {
+/**
+ * user_profiles PostgREST 어댑터. userId 필터와 서버 RLS를 함께 사용합니다.
+ * 신체 이력 생성은 기존 DB trigger의 책임이며 여기에서 별도 insert/재시도를 하지 않습니다.
+ */
+class UserProfileRepository : BodyProfileSource {
     private val client get() = SupabaseClientProvider.client
 
-    suspend fun getProfile(userId: String): Result<CloudBodyProfile?> = runCatching {
+    override suspend fun getProfile(userId: String): Result<CloudBodyProfile?> = suspendResult {
         client.from("user_profiles")
             .select {
                 filter { eq("user_id", userId) }
@@ -26,7 +33,7 @@ class UserProfileRepository {
             ?.toDomain()
     }
 
-    suspend fun saveBodyProfile(userId: String, settings: UserSettings): Result<Unit> = runCatching {
+    override suspend fun saveBodyProfile(userId: String, settings: UserSettings): Result<Unit> = suspendResult {
         client.from("user_profiles").upsert(
             ProfileWriteRow(
                 userId = userId,
@@ -71,6 +78,7 @@ class UserProfileRepository {
     )
 }
 
+/** 빈 이름/미입력 수치 때문에 기존 기기의 신체정보를 지우지 않는 병합 정책입니다. */
 fun UserSettings.withCloudBodyProfile(profile: CloudBodyProfile): UserSettings = copy(
     nickname = profile.nickname.ifBlank { nickname },
     heightCm = profile.heightCm ?: heightCm,
