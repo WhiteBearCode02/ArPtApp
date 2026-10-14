@@ -19,7 +19,8 @@ class RepAnalysisEngineTest {
         assertEquals(600L, rep.phaseDurations.descentMs)
         assertEquals(200L, rep.phaseDurations.bottomMs)
         assertEquals(600L, rep.phaseDurations.ascentMs)
-        assertEquals(FormErrorType.KNEE_ASYMMETRY, rep.errorEvents.single().type)
+        assertEquals(listOf(MovementPhase.DESCENT, MovementPhase.ASCENT), rep.errorEvents.map { it.phase })
+        assertTrue(rep.errorEvents.all { it.type == FormErrorType.KNEE_ASYMMETRY && it.occurrenceFrames == 3 })
         assertEquals(20.0, rep.asymmetryMetrics.kneeAngleDifferenceDeg!!, 0.01)
         assertNull(rep.jointMetrics.leftHipMinAngle)
         assertNull(rep.jointMetrics.torsoLeanMaxDeg)
@@ -72,14 +73,17 @@ class RepAnalysisEngineTest {
     }
     @Test fun eventsNeedQualityAndPriorityUsesSeverityBeforeFrequency() {
         val engine = RepAnalysisEngine()
-        listOf(170.0, 140.0, 100.0, 80.0, 81.0, 100.0, 140.0, 170.0).forEachIndexed { i, a ->
+        listOf(170.0, 150.0, 130.0, 110.0, 100.0, 80.0, 81.0, 100.0, 140.0, 170.0).forEachIndexed { i, a ->
             engine.observe(RepFrameFeatures(i * 200L, "SQUAT", CameraView.FRONT, a,
                 leftKnee = a, rightKnee = a - 20, kneeValgusObserved = i in 2..4))
         }
         val rep = engine.complete(1, 70f)!!
-        assertEquals(2, rep.errorEvents.size)
-        assertEquals(LocalRepFeedback.forIssue(FormErrorType.KNEE_VALGUS), rep.localPriorityFeedback)
-        assertEquals(MovementPhase.DESCENT, rep.errorEvents.first().phase)
+        assertEquals(3, rep.errorEvents.size)
+        val valgus = rep.errorEvents.single { it.type == FormErrorType.KNEE_VALGUS }
+        assertEquals(3, valgus.occurrenceFrames)
+        assertEquals(2, valgus.severity)
+        assertEquals(LocalRepFeedback.forEvent(valgus), rep.localPriorityFeedback)
+        assertEquals(MovementPhase.DESCENT, valgus.phase)
         val hidden = RepAnalysisEngine()
         listOf(170.0, 120.0, 80.0, 90.0, 140.0, 170.0).forEachIndexed { i, a -> hidden.observe(
             RepFrameFeatures(i * 200L, "SQUAT", CameraView.FRONT, a, leftKnee = a, kneeValgusObserved = true)) }

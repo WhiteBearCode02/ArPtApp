@@ -353,7 +353,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             captureReferenceFrame(mainPersonLandmarks)
             updateCurrentExerciseType(fallbackExerciseClassifier.detectExercise(mainPersonLandmarks))
             if (isExercising) {
-                processLandmarks(mainPersonLandmarks, frame.imageWidth.toDouble() / frame.imageHeight)
+                processLandmarks(mainPersonLandmarks, frame.imageWidth.toDouble() / frame.imageHeight, frame.timestampMs)
             }
             updateOverlay(mainPersonLandmarks, frame)
         } else {
@@ -397,8 +397,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
      * 측정 가능 여부 → 코칭 → 회차 카운팅 → 회차 기록의 순서를 유지한다.
      * 측정 불가능한 프레임은 회차를 중단하며, DTW 입력은 최대 300프레임으로 제한한다.
      */
-    private fun processLandmarks(landmarks: List<NormalizedLandmark>, aspectRatio: Double) {
-        val measurement = poseAngleExtractor.measurePose(currentExerciseType.name, landmarks.toPoseData(), cameraView, aspectRatio)
+    private fun processLandmarks(landmarks: List<NormalizedLandmark>, aspectRatio: Double, frameTimestampMs: Long) {
+        val poseData = landmarks.toPoseData()
+        val measurement = poseAngleExtractor.measurePose(currentExerciseType.name, poseData, cameraView, aspectRatio)
         val assessment = if (currentExerciseType == ExerciseType.SQUAT && measurement.isEvaluable) {
             FormErrorAnalyzer.assessSquat(landmarks, cameraView)
         } else null
@@ -427,10 +428,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         val exerciseType = currentExerciseType.name
         val currentAngle = measurement.valueDeg ?: return
-        val timestamp = SystemClock.uptimeMillis()
+        // Submission timeline, not delayed UI callback time. Only relative times leave the engine.
+        val timestamp = frameTimestampMs
         repAnalysisEngine.observe(com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
-            landmarks.toPoseData().landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
-            FormErrorAnalyzer.ERROR_KNEE_VALGUS in errors))
+            poseData.landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
+            kneeObservation = assessment?.kneeValgus))
         if (exerciseCounter.processAngle(exerciseType, currentAngle, timestamp)) {
             repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
@@ -453,8 +455,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 mainViewModel.getRepAnalyses(exerciseType).lastOrNull()?.score)
             structured?.let {
                 mainViewModel.addStructuredRep(it)
+                if (BuildConfig.DEBUG) Log.d("RepAnalysis", com.example.arptapp.domain.report.RepDiagnosticFormatter.format(it))
                 repPriorityFeedback = it.localPriorityFeedback
-                repFeedbackUntilMs = timestamp + 2500
+                repFeedbackUntilMs = SystemClock.uptimeMillis() + 2500
                 binding.tvPoseFeedback.text = it.localPriorityFeedback
             }
             feedbackManager.announceRep(repetitionCount, structured?.localPriorityFeedback)

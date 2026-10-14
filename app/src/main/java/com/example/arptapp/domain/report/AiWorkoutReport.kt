@@ -17,7 +17,7 @@ object AiReportValidator {
         if (rep.score != null) add("score")
         if (rep.totalDurationMs != null) add("totalDurationMs")
         rep.strengths.forEach { add("strength:$it") }
-        rep.errorEvents.forEach { add("issue:${it.type.name}") }
+        rep.errorEvents.forEach { add("issue:${it.type.name}"); add(DirectionalClaimValidator.key(it)) }
         val j = rep.jointMetrics
         listOf("leftKneeMinAngle" to j.leftKneeMinAngle, "rightKneeMinAngle" to j.rightKneeMinAngle,
             "leftHipMinAngle" to j.leftHipMinAngle, "rightHipMinAngle" to j.rightHipMinAngle,
@@ -43,6 +43,8 @@ object AiReportValidator {
             else Regex("스쿼트|squat", RegexOption.IGNORE_CASE)
         require(texts.none { wrongExercise.containsMatchIn(it) })
         val reps = input.repAnalyses.associateBy { it.repNumber }
+        DirectionalClaimValidator.validate(listOf(report.summary, report.priority, report.nextWorkoutGoal) +
+            report.strengths + report.improvements, input.repAnalyses)
         MeasuredClaimValidator.validate(listOf(report.summary, report.priority, report.nextWorkoutGoal) +
             report.strengths + report.improvements, input.repAnalyses,
             totals = listOf(input.totalReps.toDouble(), input.omittedReps.toDouble()) +
@@ -51,6 +53,8 @@ object AiReportValidator {
         report.repFeedback.forEach { feedback ->
             require(feedback.evidenceKeys.size in 1..12 && feedback.evidenceKeys.distinct().size == feedback.evidenceKeys.size)
             require(evidenceKeys(reps.getValue(feedback.repNumber)).containsAll(feedback.evidenceKeys))
+            DirectionalClaimValidator.validate(listOf(feedback.summary, feedback.positive, feedback.improvement),
+                listOf(reps.getValue(feedback.repNumber)), feedback.evidenceKeys.toSet())
             MeasuredClaimValidator.validate(listOf(feedback.summary, feedback.positive, feedback.improvement),
                 listOf(reps.getValue(feedback.repNumber)), feedback.evidenceKeys.toSet())
         }

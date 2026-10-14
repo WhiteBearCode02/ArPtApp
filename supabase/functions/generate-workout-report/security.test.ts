@@ -37,3 +37,12 @@ test("quota SQL is auth-scoped, atomic and private (static check, not DB executi
   assert.ok(!/grant\s+all/i.test(sql))
   assert.ok(!/p_user_id/.test(sql))
 })
+test("rep diagnostics are DEBUG-only and transient ratios have no wire serializer", () => {
+  const dashboard = readFileSync("app/src/main/java/com/example/arptapp/DashboardActivity.kt", "utf8")
+  assert.ok(dashboard.includes('if (BuildConfig.DEBUG) Log.d("RepAnalysis"'))
+  assert.ok(dashboard.includes("frame.imageWidth.toDouble() / frame.imageHeight, frame.timestampMs"))
+  const formatter = readFileSync("app/src/main/java/com/example/arptapp/domain/report/RepDiagnosticFormatter.kt", "utf8")
+  for (const name of ["userId", "email", "accessToken", "apiKey", "landmarks"]) assert.ok(!formatter.includes(name))
+  const serialized = readFileSync("app/src/main/java/com/example/arptapp/domain/report/StructuredAnalysis.kt", "utf8").split("data class RepFrameFeatures")[0]
+  assert.ok(!serialized.includes("KneeValgusRatio")); assert.ok(!serialized.includes("visibleSide"))
+})

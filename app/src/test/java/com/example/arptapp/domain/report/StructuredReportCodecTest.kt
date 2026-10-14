@@ -26,4 +26,12 @@ class StructuredReportCodecTest {
         assertEquals(analyses, RepAnalysisCodec.decode(raw))
         assertFalse(raw.contains("email")); assertFalse(raw.contains("landmarks")); assertFalse(raw.contains("userId"))
     }
+    @Test fun olderEnvelopeWithoutPhaseModelVersionStillOpens() {
+        val rep = RepScenarioFixtures.press().copy(phaseModelVersion = 1)
+        val original = WorkoutAnalysisAggregator.aggregate("SHOULDER_PRESS", listOf(rep))
+        val raw = StructuredReportCodec.encode(listOf(RepAnalysis(1, 82f, "기존 관찰")), original)
+            .replace(",\"phaseModelVersion\":1", "")
+        assertEquals(original, StructuredReportCodec.decode(raw))
+        assertEquals(1, StructuredReportCodec.decode(raw)!!.repAnalyses.single().phaseModelVersion)
+    }
 }

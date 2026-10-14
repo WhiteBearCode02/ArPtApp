@@ -16,7 +16,11 @@ class RepAnalysisEngine {
         if (frame.representativeAngle?.let { it.isFinite() && it in 0.0..180.0 } != true) { reset(); return }
         val last = frames.lastOrNull()
         if (last != null && (frame.exerciseType != last.exerciseType || frame.view != last.view ||
-                frame.timestampMs <= last.timestampMs || frame.timestampMs - last.timestampMs > 1000)) reset()
+                frame.timestampMs <= last.timestampMs || frame.timestampMs - last.timestampMs > 1000)) {
+            val lostPrefix = frame.exerciseType == last.exerciseType && frame.view == last.view
+            reset()
+            partial = lostPrefix
+        }
         frames.addLast(frame)
         while (frames.size > 300 || frames.last().timestampMs - frames.first().timestampMs > 20_000) {
             frames.removeFirst(); partial = true
@@ -33,24 +37,12 @@ class RepAnalysisEngine {
         val firstMotion = (1 until all.size).firstOrNull {
             abs(all[it].representativeAngle!! - all[0].representativeAngle!!) >= 3.0
         } ?: return null
-        val samples = all.drop((firstMotion - 1).coerceAtLeast(0))
+        // Keep a 3-frame preparation pre-roll so a press starting at bottom can be observed,
+        // without importing an arbitrary long stationary period into its duration.
+        val samples = all.drop((firstMotion - EngineeringFormPolicy.MIN_EVENT_FRAMES).coerceAtLeast(0))
         val start = samples.first().timestampMs
-        val min = samples.minOf { it.representativeAngle!! }
-        val bottomIndices = samples.indices.filter { samples[it].representativeAngle!! <= min + 5.0 }
-        val bottomStart = bottomIndices.first()
-        val bottomEnd = bottomIndices.last()
-        val durations = PhaseDurations(
-            descentMs = if (!wasPartial && bottomStart > 0 && samples.first().representativeAngle!! - min >= 10)
-                samples[bottomStart].timestampMs - start else null,
-            bottomMs = if (bottomEnd > bottomStart) samples[bottomEnd].timestampMs - samples[bottomStart].timestampMs else null,
-            ascentMs = if (bottomEnd < samples.lastIndex && samples.last().representativeAngle!! - min >= 10)
-                samples.last().timestampMs - samples[bottomEnd].timestampMs else null
-        )
-        fun phase(index: Int): MovementPhase = when {
-            index < bottomStart -> MovementPhase.DESCENT
-            index <= bottomEnd -> MovementPhase.BOTTOM
-            else -> MovementPhase.ASCENT
-        }
+        val segmentation = RepPhaseSegmenter.segment(samples, wasPartial)
+        val durations = segmentation.durations
         fun valid(v: Double?) = v?.takeIf { it.isFinite() && it in 0.0..180.0 }
         fun minimum(get: (RepFrameFeatures) -> Double?) = samples.mapNotNull { valid(get(it)) }.minOrNull()
         fun maximum(get: (RepFrameFeatures) -> Double?) = samples.mapNotNull { valid(get(it)) }.maxOrNull()
@@ -59,14 +51,22 @@ class RepAnalysisEngine {
         val squat = samples.first().exerciseType == "SQUAT"
         val front = samples.first().view == CameraView.FRONT
         val side = samples.first().view == CameraView.SIDE
+        val selectedSide = if (!side) null else {
+            val leftCount = samples.count { valid(if (squat) it.leftKnee else it.leftElbow) != null }
+            val rightCount = samples.count { valid(if (squat) it.rightKnee else it.rightElbow) != null }
+            if (leftCount >= rightCount) BodySide.LEFT else BodySide.RIGHT
+        }
+        val left = front || (side && selectedSide == BodySide.LEFT)
+        val right = front || (side && selectedSide == BodySide.RIGHT)
+        fun lean(f: RepFrameFeatures) = f.torsoLean.takeIf { f.visibleSide == null || f.visibleSide == selectedSide }
         val joints = JointMetrics(
-            leftKneeMinAngle = if (squat) minimum { it.leftKnee } else null,
-            rightKneeMinAngle = if (squat) minimum { it.rightKnee } else null,
-            leftHipMinAngle = if (squat && side) minimum { it.leftHip } else null,
-            rightHipMinAngle = if (squat && side) minimum { it.rightHip } else null,
-            leftElbowMaxAngle = if (!squat) maximum { it.leftElbow } else null,
-            rightElbowMaxAngle = if (!squat) maximum { it.rightElbow } else null,
-            torsoLeanMaxDeg = if (squat && side) maximum { it.torsoLean } else null
+            leftKneeMinAngle = if (squat && left) minimum { it.leftKnee } else null,
+            rightKneeMinAngle = if (squat && right) minimum { it.rightKnee } else null,
+            leftHipMinAngle = if (squat && side && left) minimum { it.leftHip } else null,
+            rightHipMinAngle = if (squat && side && right) minimum { it.rightHip } else null,
+            leftElbowMaxAngle = if (!squat && left) maximum { it.leftElbow } else null,
+            rightElbowMaxAngle = if (!squat && right) maximum { it.rightElbow } else null,
+            torsoLeanMaxDeg = if (squat && side) maximum(::lean) else null
         )
         val asymmetry = AsymmetryMetrics(
             kneeAngleDifferenceDeg = if (squat && front) difference({ it.leftKnee }, { it.rightKnee }) else null,
@@ -74,28 +74,34 @@ class RepAnalysisEngine {
             elbowAngleDifferenceDeg = if (!squat && front) difference({ it.leftElbow }, { it.rightElbow }) else null
         )
         val events = mutableListOf<FormErrorEvent>()
-        fun event(type: FormErrorType, severity: Int, predicate: (RepFrameFeatures) -> Boolean) {
-            val indices = samples.indices.filter { predicate(samples[it]) }
-            // Suppress one/two frame jitter. Bounded summary, not an event for every frame.
-            if (indices.size >= 3) events += FormErrorEvent(type, phase(indices.first()), severity = severity,
-                timestampMs = samples[indices.first()].timestampMs - start, occurrenceFrames = indices.size)
+        fun event(type: FormErrorType, bodySide: BodySide? = null, severity: (RepFrameFeatures) -> Int) {
+            events += FormEventAggregator.collect(samples, segmentation.phases, type, bodySide, severity)
         }
         if (squat && front) {
-            event(FormErrorType.KNEE_VALGUS, 2) { it.kneeValgusObserved && valid(it.leftKnee) != null && valid(it.rightKnee) != null }
-            event(FormErrorType.KNEE_ASYMMETRY, 1) { f ->
-                valid(f.leftKnee)?.let { l -> valid(f.rightKnee)?.let { abs(l - it) > 15 } } == true
+            event(FormErrorType.KNEE_VALGUS, BodySide.LEFT) {
+                if (it.leftKneeValgusObserved && valid(it.leftKnee) != null) EngineeringFormPolicy.valgusSeverity(it.leftKneeValgusRatio) else 0
+            }
+            event(FormErrorType.KNEE_VALGUS, BodySide.RIGHT) {
+                if (it.rightKneeValgusObserved && valid(it.rightKnee) != null) EngineeringFormPolicy.valgusSeverity(it.rightKneeValgusRatio) else 0
+            }
+            // Old scalar callers have no side evidence; never guess LEFT/RIGHT from one boolean.
+            if (samples.none { it.leftKneeValgusObserved || it.rightKneeValgusObserved }) event(FormErrorType.KNEE_VALGUS) {
+                if (it.kneeValgusObserved && valid(it.leftKnee) != null && valid(it.rightKnee) != null) 2 else 0
+            }
+            event(FormErrorType.KNEE_ASYMMETRY) { f ->
+                valid(f.leftKnee)?.let { l -> valid(f.rightKnee)?.let { EngineeringFormPolicy.asymmetrySeverity(abs(l - it)) } } ?: 0
             }
         }
-        if (squat && side) event(FormErrorType.FORWARD_LEAN, 1) { (valid(it.torsoLean) ?: 0.0) > 20 }
-        if (!squat && front) event(FormErrorType.ELBOW_ASYMMETRY, 1) { f ->
-            valid(f.leftElbow)?.let { l -> valid(f.rightElbow)?.let { abs(l - it) > 15 } } == true
+        if (squat && side) event(FormErrorType.FORWARD_LEAN) { EngineeringFormPolicy.leanSeverity(valid(lean(it)) ?: 0.0) }
+        if (!squat && front) event(FormErrorType.ELBOW_ASYMMETRY) { f ->
+            valid(f.leftElbow)?.let { l -> valid(f.rightElbow)?.let { EngineeringFormPolicy.asymmetrySeverity(abs(l - it)) } } ?: 0
         }
         // Depth / extension and HIP_ASYMMETRY are intentionally NOT_EVALUATED: the current
         // counter accepts only complete reps, and no validated individualized target exists.
         val strengths = buildList {
-            if (asymmetry.kneeAngleDifferenceDeg?.let { it <= 15 } == true &&
+            if (asymmetry.kneeAngleDifferenceDeg?.let { it <= EngineeringFormPolicy.ASYMMETRY_DEG } == true &&
                 samples.count { valid(it.leftKnee) != null && valid(it.rightKnee) != null } >= 3) add("KNEE_SYMMETRY_OBSERVED")
-            if (asymmetry.elbowAngleDifferenceDeg?.let { it <= 15 } == true &&
+            if (asymmetry.elbowAngleDifferenceDeg?.let { it <= EngineeringFormPolicy.ASYMMETRY_DEG } == true &&
                 samples.count { valid(it.leftElbow) != null && valid(it.rightElbow) != null } >= 3) add("ELBOW_SYMMETRY_OBSERVED")
             if (durations.descentMs != null && durations.ascentMs != null) add("BOTH_PHASES_CAPTURED")
         }
@@ -103,12 +109,13 @@ class RepAnalysisEngine {
             .thenByDescending { it.occurrenceFrames }.thenBy { it.type.ordinal }).firstOrNull()
         return StructuredRepAnalysis(repNumber, samples.first().exerciseType, samples.first().view.name,
             if (wasPartial) null else samples.last().timestampMs - start, durations, joints, asymmetry,
-            events, strengths, events.map { it.type.name }, LocalRepFeedback.forIssue(priority?.type),
-            score?.takeIf { it.isFinite() && it in 0f..100f }, samples.size, wasPartial)
+            events.sortedBy { it.timestampMs }, strengths, events.map { it.type.name }.distinct(), LocalRepFeedback.forEvent(priority),
+            score?.takeIf { it.isFinite() && it in 0f..100f }, samples.size, wasPartial, phaseModelVersion = 2)
     }
 }
 
 object LocalRepFeedback {
+    fun forEvent(event: FormErrorEvent?): String = event?.let(LocalEventPresentation::feedback) ?: forIssue(null)
     fun forIssue(type: FormErrorType?): String = when (type) {
         FormErrorType.KNEE_VALGUS -> "다음 회차에서는 무릎 방향을 발 방향에 맞춰 보세요."
         FormErrorType.KNEE_ASYMMETRY -> "다음 회차에서는 양쪽 무릎의 움직임을 함께 확인해 보세요."

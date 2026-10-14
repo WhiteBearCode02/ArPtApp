@@ -13,6 +13,8 @@
 | 운동 정책 | `domain/analyzer`, `domain/counter`, `domain/classifier` | 각도, 반복 구간, 초기 오류 규칙, 임시 종목 추정 |
 | 리포트 계산 | `domain/report/RepReportAnalyzer.analyze/report` | 회차 점수·설명·세션 피드백; Android 없이 실행 |
 | 구조화 회차 분석 | `RepFrameFeatureExtractor`, `RepAnalysisEngine`, `WorkoutAnalysisAggregator` | 품질별 scalar 측정·bounded 회차 집계; 기존 카운터와 별도 |
+| phase/event 정책 | `RepPhaseSegmenter`, `FormEventAggregator`, `EngineeringFormPolicy` | 운동별 방향·3프레임 연속·좌우/phase별 집계·초기 우선도 |
+| 표시/진단 API | `LocalEventPresentation`, `RepDiagnosticFormatter` | 한국어 side/phase 문구, DEBUG 전용 허용된 scalar 진단 |
 | 선택형 AI 설명 | `AiCoachingRepository`, `AiReportValidator`, `AiReportViewModel` | 기본 비활성, 수동 요청·근거 참조 검증·로컬 fallback |
 | 서버 코칭 포트 | `supabase/functions/generate-workout-report` | 인증·입력 제한·durable quota RPC·provider abstraction; 실제 제공자 없음 |
 | 운동 상태 | `viewmodel/MainViewModel` | 세션 기록 수집과 화면 상태; 계산은 분석 API에 위임 |
@@ -56,6 +58,9 @@
 ### 운동 기록과 점수
 
 새 회차 분석·AI 설명의 지원 범위와 비활성 정책은 [LLM_INTEGRATION.md](LLM_INTEGRATION.md)에 정의합니다.
+단계/좌우별 판단은 local engine에서만 합니다. ratio 0.08, 각도 차이 15°, 기울기 20°와 severity 1~3 band는 ENGINEERING_INITIAL이며 임상적 위험도가 아닙니다.
+SQUAT 하강→하단→상승과 SHOULDER_PRESS 하단→상승→관찰된 복귀 전략을 분리합니다. 기존 press 카운터는 상단에서 확정하므로 복귀를 추측하지 않습니다.
+`phaseModelVersion`만 additive하게 추가하고 이전 record/envelope는 그대로 읽습니다. 실기기 통과 기준은 [DEVICE_VALIDATION.md](DEVICE_VALIDATION.md)에 정의합니다.
 MediaPipe 측정과 로컬 판단을 LLM 설명과 혼합하지 않습니다. LLM은 선택 기능이며 운동 화면에서 호출하지 않습니다.
 
 - 각도는 도, 시간은 초 또는 이름에 표시된 `Ms`, 열량은 kcal, 자세 점수는 0~100입니다.

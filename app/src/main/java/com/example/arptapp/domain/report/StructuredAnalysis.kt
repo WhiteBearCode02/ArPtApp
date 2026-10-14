@@ -22,7 +22,9 @@ import kotlinx.serialization.Serializable
 )
 @Serializable data class FormErrorEvent(
     val type: FormErrorType, val phase: MovementPhase? = null, val side: BodySide? = null,
-    val severity: Int = 1, val timestampMs: Long? = null, val occurrenceFrames: Int = 1
+    val severity: Int = 1, val timestampMs: Long? = null,
+    /** Sum of frames in accepted >=3-frame runs of this type/side/phase only. */
+    val occurrenceFrames: Int = 1
 )
 
 /** No coordinates, identity or images. null means NOT_EVALUATED, never normal/zero. */
@@ -32,7 +34,9 @@ import kotlinx.serialization.Serializable
     val jointMetrics: JointMetrics, val asymmetryMetrics: AsymmetryMetrics,
     val errorEvents: List<FormErrorEvent>, val strengths: List<String>,
     val improvementCandidates: List<String>, val localPriorityFeedback: String,
-    val score: Float? = null, val observedFrames: Int = 0, val partialCapture: Boolean = false
+    val score: Float? = null, val observedFrames: Int = 0, val partialCapture: Boolean = false,
+    /** 1 = legacy min-based segmentation, 2 = exercise-specific observed phases. */
+    val phaseModelVersion: Int = 1
 )
 @Serializable data class StructuredWorkoutAnalysis(
     val schemaVersion: Int = 1, val exerciseType: String, val totalReps: Int,
@@ -47,5 +51,9 @@ data class RepFrameFeatures(
     val leftKnee: Double? = null, val rightKnee: Double? = null,
     val leftHip: Double? = null, val rightHip: Double? = null,
     val leftElbow: Double? = null, val rightElbow: Double? = null,
-    val torsoLean: Double? = null, val kneeValgusObserved: Boolean = false
+    val torsoLean: Double? = null, val kneeValgusObserved: Boolean = false,
+    val leftKneeValgusObserved: Boolean = false, val rightKneeValgusObserved: Boolean = false,
+    // Transient scalars: ratios and visible-side selector never enter serialized LLM input.
+    val leftKneeValgusRatio: Double? = null, val rightKneeValgusRatio: Double? = null,
+    val visibleSide: BodySide? = null
 )
