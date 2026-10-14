@@ -1,35 +1,28 @@
 package com.example.arptapp.data
 
 import com.example.arptapp.model.RepAnalysis
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.*
 
-/** Reads both current per-rep reports and older score-only arrays. */
+/** Current envelope/object arrays and legacy score arrays. Pure JVM API, no Android JSON stub. */
 object RepAnalysisCodec {
-    fun encode(analyses: List<RepAnalysis>): String = JSONArray().apply {
-        analyses.forEach { analysis ->
-            put(JSONObject().apply {
-                put("rep", analysis.repNumber)
-                put("score", analysis.score)
-                put("detail", analysis.detail)
-            })
-        }
+    fun encode(analyses: List<RepAnalysis>): String = buildJsonArray {
+        analyses.forEach { analysis -> add(buildJsonObject {
+            put("rep", analysis.repNumber); put("score", analysis.score); put("detail", analysis.detail)
+        }) }
     }.toString()
 
     fun decode(raw: String): List<RepAnalysis> = runCatching {
-        val array = JSONArray(raw)
-        (0 until array.length()).mapNotNull { index ->
-            val entry = array.optJSONObject(index)
-            val score = if (entry == null) {
-                array.optDouble(index, Double.NaN)
-            } else {
-                entry.optDouble("score", Double.NaN)
-            }
-            if (!score.isFinite() || score !in 0.0..100.0) return@mapNotNull null
+        require(raw.length <= 512_000)
+        val root = Json.parseToJsonElement(raw)
+        val array = if (root is JsonObject) root.getValue("analyses").jsonArray else root.jsonArray
+        array.mapIndexedNotNull { index, element ->
+            val entry = element as? JsonObject
+            val score = ((entry?.get("score") ?: element) as? JsonPrimitive)?.doubleOrNull
+                ?.takeIf { it.isFinite() && it in 0.0..100.0 } ?: return@mapIndexedNotNull null
             RepAnalysis(
-                repNumber = entry?.optInt("rep", index + 1)?.takeIf { it > 0 } ?: index + 1,
+                repNumber = (entry?.get("rep") as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 } ?: index + 1,
                 score = score.toFloat(),
-                detail = entry?.optString("detail")?.takeIf { it.isNotBlank() }
+                detail = (entry?.get("detail") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
                     ?: "이전 기록에는 이 회차의 세부 관절 분석이 저장되지 않았습니다."
             )
         }

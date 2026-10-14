@@ -1,0 +1,4 @@
+project_id = "airptcoach"
+
+[functions.generate-workout-report]
+verify_jwt = true

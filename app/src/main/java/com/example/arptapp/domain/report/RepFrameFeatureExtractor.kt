@@ -1,0 +1,37 @@
+package com.example.arptapp.domain.report
+
+import com.example.arptapp.data.model.Landmark
+import com.example.arptapp.domain.analyzer.CameraView
+import com.example.arptapp.domain.analyzer.JointAngleMeasurement
+import kotlin.math.abs
+import kotlin.math.atan2
+
+/** Camera boundary: immediately discards coordinates; never stores or uploads landmarks. */
+object RepFrameFeatureExtractor {
+    fun extract(points: List<Landmark>, exercise: String, view: CameraView, aspect: Double,
+                timestampMs: Long, representative: Double?, kneeValgus: Boolean = false): RepFrameFeatures {
+        fun angle(vararg indices: Int) = JointAngleMeasurement.measure(points, indices.toList(),
+            "rep_joint", view = view, imageAspectRatio = aspect).valueDeg
+        // In side view keep only the side whose required joints have higher usable visibility.
+        val required = if (exercise == "SQUAT") listOf(11, 23, 25, 27) else listOf(11, 13, 15)
+        fun visibility(offset: Int) = required.minOf { points.getOrNull(it + offset)?.visibility ?: 0f }
+        val leftVisible = view == CameraView.FRONT || (view == CameraView.SIDE && visibility(0) >= visibility(1))
+        val rightVisible = view == CameraView.FRONT || (view == CameraView.SIDE && !leftVisible)
+        val torsoOffset = if (leftVisible) 0 else 1
+        val shoulder = points.getOrNull(11 + torsoOffset)
+        val hip = points.getOrNull(23 + torsoOffset)
+        val lean = if (view == CameraView.SIDE && shoulder != null && hip != null &&
+            aspect.isFinite() && aspect > 0 && listOf(shoulder, hip).all {
+                it.visibility.isFinite() && it.visibility >= 0.65f && it.x.isFinite() && it.y.isFinite()
+            } && (shoulder.x != hip.x || shoulder.y != hip.y))
+            Math.toDegrees(atan2(abs(shoulder.x - hip.x) * aspect, abs(shoulder.y - hip.y).toDouble())) else null
+        return RepFrameFeatures(timestampMs, exercise, view, representative,
+            leftKnee = if (leftVisible) angle(23, 25, 27) else null,
+            rightKnee = if (rightVisible) angle(24, 26, 28) else null,
+            leftHip = if (leftVisible && view == CameraView.SIDE) angle(11, 23, 25) else null,
+            rightHip = if (rightVisible && view == CameraView.SIDE) angle(12, 24, 26) else null,
+            leftElbow = if (leftVisible) angle(11, 13, 15) else null,
+            rightElbow = if (rightVisible) angle(12, 14, 16) else null,
+            torsoLean = lean, kneeValgusObserved = view == CameraView.FRONT && kneeValgus)
+    }
+}

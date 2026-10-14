@@ -63,12 +63,15 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
     private val exerciseCounter = ExerciseCounter()
+    private val repAnalysisEngine = com.example.arptapp.domain.report.RepAnalysisEngine()
     private val fallbackExerciseClassifier = ExerciseClassifier()
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
     private var lastAccelerationX: Float? = null
     private var currentMaxSwayX = 0f
+    private var repFeedbackUntilMs = 0L
+    private var repPriorityFeedback = ""
 
     private val currentRepAngles = mutableListOf<FloatArray>()
     private val currentRepErrorTags = mutableSetOf<String>()
@@ -237,6 +240,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private fun startExercise() {
         isExercising = true
         mainViewModel.resetSession()
+        repAnalysisEngine.reset()
+        repFeedbackUntilMs = 0L
         startTime = System.currentTimeMillis()
         repetitionCount = 0
         currentRepAngles.clear()
@@ -305,8 +310,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             exerciseType = currentExerciseType.displayName,
             totalCount = report.totalReps,
             durationSeconds = elapsedTime,
-            analysesJson = com.example.arptapp.data.RepAnalysisCodec.encode(
-                mainViewModel.getRepAnalyses(report.exerciseType)
+            analysesJson = com.example.arptapp.data.StructuredReportCodec.encode(
+                mainViewModel.getRepAnalyses(report.exerciseType), mainViewModel.structuredReport(report.exerciseType)
             ),
             averageScore = report.averageScore.toFloat(),
             feedbackMessage = report.feedbackMessage
@@ -382,6 +387,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     /** 관절 유실/촬영 방향 변경 시 미완성 회차를 폐기해 서로 다른 동작을 합산하지 않는다. */
     private fun invalidatePendingAnalysis() {
+        repAnalysisEngine.reset()
         exerciseCounter.invalidatePendingRep()
         currentRepAngles.clear()
         currentRepErrorTags.clear()
@@ -401,7 +407,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             if (assessment != null && !assessment.evaluable) it.copy(message = assessment.reason ?: "코칭 측정 대기") else it
         }
         binding.overlayView.setFeedback(feedback)
-        binding.tvPoseFeedback.text = feedback.message
+        binding.tvPoseFeedback.text = if (measurement.isEvaluable && SystemClock.uptimeMillis() < repFeedbackUntilMs)
+            repPriorityFeedback else feedback.message
         if (!measurement.isEvaluable) {
             invalidatePendingAnalysis()
             return
@@ -420,11 +427,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         val exerciseType = currentExerciseType.name
         val currentAngle = measurement.valueDeg ?: return
-
-        if (exerciseCounter.processAngle(exerciseType, currentAngle, SystemClock.uptimeMillis())) {
+        val timestamp = SystemClock.uptimeMillis()
+        repAnalysisEngine.observe(com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
+            landmarks.toPoseData().landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
+            FormErrorAnalyzer.ERROR_KNEE_VALGUS in errors))
+        if (exerciseCounter.processAngle(exerciseType, currentAngle, timestamp)) {
             repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
-            feedbackManager.announceRep(repetitionCount)
 
             val poseScore = if (currentExerciseType == ExerciseType.SQUAT || personalSequence.isNotEmpty()) scoreCurrentRep() else {
                 currentRepAngles.clear()
@@ -440,6 +449,15 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 concentricDurationMs = exerciseCounter.getLastConcentricDurationMs(),
                 poseScore = poseScore
             )
+            val structured = repAnalysisEngine.complete(repetitionCount,
+                mainViewModel.getRepAnalyses(exerciseType).lastOrNull()?.score)
+            structured?.let {
+                mainViewModel.addStructuredRep(it)
+                repPriorityFeedback = it.localPriorityFeedback
+                repFeedbackUntilMs = timestamp + 2500
+                binding.tvPoseFeedback.text = it.localPriorityFeedback
+            }
+            feedbackManager.announceRep(repetitionCount, structured?.localPriorityFeedback)
             currentMaxSwayX = 0f
             currentRepErrorTags.clear()
 
@@ -507,6 +525,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
         personalSequence = referenceRepository.load(userId, nextExerciseType.name, cameraView)?.sequence().orEmpty()
         repetitionCount = 0
+        repAnalysisEngine.reset()
         currentRepAngles.clear()
         currentRepErrorTags.clear()
         binding.tvCount.text = "0"

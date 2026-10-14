@@ -1,5 +1,6 @@
 *.iml
 .gradle
+.kotlin/
 /.gradle-user-home/
 local.properties
 **/keystore.properties
@@ -11,9 +12,28 @@ local.properties
 *.pfx
 *.key
 *.pem
+*.pk8
+*.p8
 **/.env
 **/.env.*
 !**/.env.example
+# Server/provider secrets and credential exports (public source/templates stay tracked).
+*.secret
+*.secrets
+credentials*.json
+credentials.*
+credentials
+credentials-*
+credentials_*
+*.credentials
+service-account*.json
+service_account*.json
+api-key*
+api-keys.*
+private-key*
+llm-secrets.*
+supabase-secrets.*
+service-role-key*
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml

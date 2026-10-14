@@ -18,11 +18,11 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
-    fun announceRep(repNumber: Int) {
+    fun announceRep(repNumber: Int, priorityFeedback: String? = null) {
         vibrate()
         if (isTtsReady) {
             textToSpeech.speak(
-                "${repNumber}회 완료!",
+                "${repNumber}회 완료. ${priorityFeedback.orEmpty()}",
                 TextToSpeech.QUEUE_FLUSH,
                 null,
                 "rep-$repNumber"

@@ -18,6 +18,7 @@ import com.example.arptapp.domain.report.RepReportAnalyzer
 class MainViewModel : ViewModel() {
     private val reportAnalyzer = RepReportAnalyzer()
     private val records = mutableListOf<RepRecord>()
+    private val structuredReps = mutableListOf<com.example.arptapp.domain.report.StructuredRepAnalysis>()
     private val _exerciseType = MutableStateFlow("IDLE")
     val exerciseType: StateFlow<String> = _exerciseType.asStateFlow()
 
@@ -29,6 +30,7 @@ class MainViewModel : ViewModel() {
 
     fun resetSession() {
         records.clear()
+        structuredReps.clear()
         _exerciseType.value = "IDLE"
     }
 
@@ -55,6 +57,22 @@ class MainViewModel : ViewModel() {
     }
 
     fun getRepRecords(): List<RepRecord> = records.toList()
+
+    fun addStructuredRep(rep: com.example.arptapp.domain.report.StructuredRepAnalysis) {
+        if (records.any { it.repNumber == rep.repNumber } && structuredReps.none { it.repNumber == rep.repNumber }) {
+            structuredReps += rep
+        }
+    }
+
+    fun structuredReport(exercise: String): com.example.arptapp.domain.report.StructuredWorkoutAnalysis {
+        val analyses = getRepAnalyses(exercise)
+        return com.example.arptapp.domain.report.WorkoutAnalysisAggregator
+            .aggregate(exercise, structuredReps.toList(), records.size).copy(
+                averageScore = analyses.takeIf { it.isNotEmpty() }?.map { it.score.toDouble() }?.average()?.toFloat(),
+                bestRepNumber = analyses.maxByOrNull { it.score }?.repNumber,
+                weakestRepNumber = analyses.minByOrNull { it.score }?.repNumber
+            )
+    }
 
     fun getRepAnalyses(exerciseType: String): List<RepAnalysis> =
         reportAnalyzer.analyze(records, exerciseType)

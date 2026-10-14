@@ -1,6 +1,6 @@
 # 모듈 구조와 유지보수 가이드
 
-현재 프로젝트는 **하나의 Gradle `:app` 모듈** 안에서 책임별 패키지와 공개 API를 분리합니다. 파일을 나누는 것뿐 아니라 화면·정책·저장·SDK의 변경 이유를 분리하는 것이 목적입니다. 새 서버 API나 유료 서비스를 추가하지 않았습니다.
+현재 프로젝트는 **하나의 Gradle `:app` 모듈** 안에서 책임별 패키지와 공개 API를 분리합니다. 파일을 나누는 것뿐 아니라 화면·정책·저장·SDK의 변경 이유를 분리하는 것이 목적입니다. 기존 Supabase API에 더해 선택형 AI 코칭의 비활성 서버 소스를 준비했으며, 유료 서비스·실제 LLM 제공자는 추가하지 않았습니다.
 
 ## 책임과 진입 API
 
@@ -12,6 +12,9 @@
 | 대상 선택 | `MainPersonSelector` | 가장 큰 관절 영역 선택; 개인 신원 인증은 아님 |
 | 운동 정책 | `domain/analyzer`, `domain/counter`, `domain/classifier` | 각도, 반복 구간, 초기 오류 규칙, 임시 종목 추정 |
 | 리포트 계산 | `domain/report/RepReportAnalyzer.analyze/report` | 회차 점수·설명·세션 피드백; Android 없이 실행 |
+| 구조화 회차 분석 | `RepFrameFeatureExtractor`, `RepAnalysisEngine`, `WorkoutAnalysisAggregator` | 품질별 scalar 측정·bounded 회차 집계; 기존 카운터와 별도 |
+| 선택형 AI 설명 | `AiCoachingRepository`, `AiReportValidator`, `AiReportViewModel` | 기본 비활성, 수동 요청·근거 참조 검증·로컬 fallback |
+| 서버 코칭 포트 | `supabase/functions/generate-workout-report` | 인증·입력 제한·durable quota RPC·provider abstraction; 실제 제공자 없음 |
 | 운동 상태 | `viewmodel/MainViewModel` | 세션 기록 수집과 화면 상태; 계산은 분석 API에 위임 |
 | 보고서 계약 | `presentation/report/WorkoutReportData`, `ReportNavigation` | 단위 정규화, Room 변환, 화면 간 전달, 구버전 JSON 호환 |
 | 결과 저장 | `WorkoutResultViewModel`, `WorkoutResultSaveGate` | 저장 상태, 재시도, 화면 회전 중 중복 저장 억제 |
@@ -51,6 +54,9 @@
 - 실제 Supabase 프로젝트의 테이블·RLS·메일 설정은 로컬 JVM 테스트만으로 검증할 수 없습니다.
 
 ### 운동 기록과 점수
+
+새 회차 분석·AI 설명의 지원 범위와 비활성 정책은 [LLM_INTEGRATION.md](LLM_INTEGRATION.md)에 정의합니다.
+MediaPipe 측정과 로컬 판단을 LLM 설명과 혼합하지 않습니다. LLM은 선택 기능이며 운동 화면에서 호출하지 않습니다.
 
 - 각도는 도, 시간은 초 또는 이름에 표시된 `Ms`, 열량은 kcal, 자세 점수는 0~100입니다.
 - `swayX`는 휴대폰 가속도이지 사람의 관절 안정성이 아닙니다. 자세 점수 감점에 쓰지 않습니다.
