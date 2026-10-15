@@ -18,6 +18,8 @@ import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import com.example.arptapp.domain.detection.YoloShadowSnapshot
+import com.example.arptapp.ui.camera.yolo.DebugYoloShadowFactory
 import java.util.concurrent.Executors
 
 /** MediaPipe 입력과 동일한, 회전 정규화 후의 이미지 크기를 담은 일시적 결과. */
@@ -44,7 +46,8 @@ class PoseCameraController(
     private val previewView: PreviewView,
     private val onResult: (PoseFrameResult) -> Unit,
     private val onError: (CameraPipelineStage, Throwable) -> Unit,
-    private val onLensChanged: (isFrontFacing: Boolean, canSwitch: Boolean) -> Unit = { _, _ -> }
+    private val onLensChanged: (isFrontFacing: Boolean, canSwitch: Boolean) -> Unit = { _, _ -> },
+    private val onYoloShadowSnapshot: (YoloShadowSnapshot) -> Unit = {}
 ) : AutoCloseable {
     companion object {
         private const val TAG = "PoseCameraController"
@@ -71,12 +74,20 @@ class PoseCameraController(
     private var preview: Preview? = null
     @Volatile private var closed = false
     @Volatile private var lensFacing = CameraSelector.LENS_FACING_BACK
+    private val yoloShadow = DebugYoloShadowFactory.create(appContext) { snapshot ->
+        val generation = frameTracker.currentGeneration()
+        mainExecutor.execute {
+            if (!closed && (snapshot.result.timings == null || frameTracker.isCurrent(generation))) onYoloShadowSnapshot(snapshot)
+        }
+    }
 
     val isFrontFacing: Boolean
         get() = lensFacing == CameraSelector.LENS_FACING_FRONT
 
     /** 기존 lite 모델과 LIVE_STREAM 설정을 유지한다. YOLO 분류 결과에 종속되지 않는다. */
     fun initialize() {
+        // Separate worker/timeout: YOLO absence/init failure never interrupts the MediaPipe pipeline.
+        yoloShadow?.start()
         synchronized(inferenceLock) {
             if (closed || poseLandmarker != null) return
             try {
@@ -149,6 +160,7 @@ class PoseCameraController(
         val selectedFacing = if (selected == CameraLens.BACK) CameraSelector.LENS_FACING_BACK else CameraSelector.LENS_FACING_FRONT
         val selector = CameraSelector.Builder().requireLensFacing(selectedFacing).build()
         frameTracker.advance()
+        yoloShadow?.invalidate()
         val generation = frameTracker.currentGeneration()
         val front = selected == CameraLens.FRONT
         val nextPreview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
@@ -185,6 +197,8 @@ class PoseCameraController(
                 if (!frameTracker.register(timestamp, generation, front)) return
                 // detectAsync는 비동기 추론이다. 제출 직후 입력 bitmap을 recycle하면 안 된다.
                 landmarker.detectAsync(image, timestamp)
+                // NOT_VERIFIED/UNAVAILABLE returns before copying any bitmap or calling inference.
+                yoloShadow?.trySubmit(normalizedBitmap, timestamp)
             }
         } catch (error: Exception) {
             dispatchError(CameraPipelineStage.FRAME_PROCESSING, error)
@@ -214,6 +228,7 @@ class PoseCameraController(
     override fun close() {
         if (closed) return
         closed = true
+        yoloShadow?.close()
         frameTracker.advance()
         imageAnalyzer?.clearAnalyzer()
         preview?.let { cameraProvider?.unbind(it) }

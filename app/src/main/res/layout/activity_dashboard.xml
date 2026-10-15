@@ -234,6 +234,19 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
+        <TextView
+            android:id="@+id/tvYoloDiagnostics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:textColor="@color/aurora_ice"
+            android:visibility="gone"
+            android:importantForAccessibility="no"
+            android:maxLines="6"
+            app:layout_constraintTop_toBottomOf="@id/tvPerformance"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <FrameLayout
             android:id="@+id/layoutCameraActions"
             android:layout_width="match_parent"

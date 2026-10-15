@@ -53,8 +53,8 @@ group-disjoint 분할을 실제 사람의 완전한 subject-disjoint 또는 외�
 - 출력: FLOAT32 `[1, 6, 8400]`.
 - export 완료 이력과 로컬 FlatBuffer 구조 검사 완료를 **Android integration 완료**와 구분합니다.
 - RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부는 shape만으로 확정하지 않습니다.
-- 실제 export pipeline 및 Interpreter/inference verification은 필요하며 앱 카메라에는 아직 연결하지 않았습니다.
-- 모델은 Git 제외 상태를 유지합니다. `assets`에 남아 있으면 향후 빌드에서 기본적으로 APK에 포함되므로, 승인 전 새 APK 생성/배포·모델 포함 작업을 하지 않습니다.
+- 실제 export pipeline 및 Interpreter/inference verification은 필요합니다. 2026-10-16에는 Android Shadow 기반 구조·tensor 검사·실패 격리를 준비했으나, 원본 export/test 계약 미확인으로 실제 prediction은 비활성입니다.
+- 모델은 Git 제외 상태를 유지합니다. 현재 Gradle은 debug/release 모두 loose weight assets를 제외합니다. 모델 없는 debug APK 검증과 모델 포함/공개 재배포 승인은 구분합니다.
 - 실제 파일 크기·해시·공개 조건은 [MODEL_CARD.md](../MODEL_CARD.md)에 기록합니다.
 
 ## 6. Dataset B — 자세/pose/biomechanics
@@ -78,4 +78,4 @@ AI-Hub **크로스핏 동작 데이터**는 Dataset B입니다. 검토 대상 �
 
 ## 8. 다음 단계와 공개 gate
 
-문서 정리는 Android 구현 승인이나 모델 재배포 허가가 아닙니다. Dataset A 원본별 권리/attribution과 trained-weight redistribution, export 설정/추론 검증, 자산 고지 및 전체 프로젝트 LICENSE 검토를 마친 뒤 사용자 승인 범위에서 Android 통합을 진행합니다. 앱 코드·모델 자산은 이번 작업에서 변경하지 않습니다.
+문서 정리는 모델 재배포 허가가 아닙니다. Dataset A 원본별 권리/attribution과 trained-weight redistribution, export 설정/추론 검증, 자산 고지 및 전체 프로젝트 LICENSE 검토가 남아 있습니다. 사용자 후속 승인 범위의 DEBUG Shadow 기반 구조는 [YOLO_DEVICE_VALIDATION.md](YOLO_DEVICE_VALIDATION.md)에 별도 기록합니다. 실제 preprocessing/postprocessing·NMS·prediction·primary 전환은 하지 않았고 모델 자산은 유지했습니다.

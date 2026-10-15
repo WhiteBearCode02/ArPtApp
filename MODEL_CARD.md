@@ -20,7 +20,7 @@
 | 출력 | FLOAT32 `[1, 6, 8400]`, tensor index 658 |
 | FlatBuffer 검사 | TFL3 schema version 3, subgraph 1개, operator 414개; 이전 실제 파일 검사 이력, 이번 존재/해시 재확인 |
 | Git 상태 | 파일 존재, 미추적·ignore 유지. 강제 stage/commit/push하지 않음 |
-| Android 상태 | 🚧 통합 전 / pending license review. 현재 앱은 MediaPipe landmark fallback 사용 |
+| Android 상태 | 🚧 DEBUG Shadow 기반 구조 준비. EXP02 export contract 미확인으로 실제 prediction 비활성. 기존 landmark primary 유지 |
 
 Tensor 정보는 [공식 FlatBuffer schema](https://github.com/tensorflow/tensorflow/blob/v2.14.0/tensorflow/lite/schema/schema.fbs)에 따른 파일 검사 결과입니다. Interpreter 실행·전처리/후처리·카메라 integration 검증은 아직 하지 않았습니다. **shape만으로 RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부를 확정하지 않습니다.** 실제 export pipeline과 inference verification이 필요합니다.
 
@@ -57,6 +57,6 @@ EXP02는 같은 Dataset A의 group-aware split으로 train/val/test 간 group le
 
 Ultralytics [공식 안내](https://www.ultralytics.com/license)에 따라 직접 학습한 모델도 AGPL-3.0 영향 대상으로 관리합니다. Dataset A 제공자 표기는 CC BY-NC-SA 4.0이며, **Trained-weight redistribution implications may require additional review.** weight가 Adapted Material/ShareAlike 대상인지 법적 결론을 내리지 않습니다.
 
-모델의 Git 공개·새 APK 포함/배포는 보류합니다. `.gitignore`는 APK에서 모델을 제외하거나 재배포 허가를 주지 않습니다. 현재 파일이 `assets`에 남아 있어 향후 기본 빌드는 이를 포함할 수 있지만, 이번에는 앱/Gradle/자산을 변경하거나 APK를 빌드하지 않습니다.
+모델의 Git 공개·새 APK 포함/배포는 보류합니다. `.gitignore` 자체는 APK에서 모델을 제외하거나 재배포 허가를 주지 않습니다. 2026-10-15 보강된 Gradle 정책은 debug/release 모두 loose weight assets를 제외하며 이번 작업에서도 유지했습니다. 2026-10-16에는 모델 없는 빌드가 가능한 DEBUG Shadow 경계·tensor 검증·실패 격리만 준비했습니다. 모델 파일은 복사·삭제·이동하지 않았으며 실제 prediction은 비활성입니다. [개발 검증 상태](docs/YOLO_DEVICE_VALIDATION.md)
 
 공개 전 Dataset A 원본별 권리·attribution·weight 재배포 조건, export pipeline, 모델 metadata의 민감정보, 기존 자산의 고지와 프로젝트 LICENSE를 검토하고 사용자 승인을 받아야 합니다.

@@ -20,7 +20,8 @@ test("actual lens is published only after binding and both layouts contain its U
 test("physical lens never selects body view in the analysis path", () => {
   const analysis = dashboard.slice(dashboard.indexOf("private fun processLandmarks("), dashboard.indexOf("private fun List<NormalizedLandmark>.toPoseData"))
   assert.doesNotMatch(analysis, /isFrontFacing|LENS_FACING/)
-  assert.match(dashboard, /detectExercise\(mainPersonLandmarks, cameraView,/)
+  assert.match(dashboard, /LandmarkDetectionFrame\(mainPersonLandmarks, cameraView,/)
+  assert.match(source("java/com/example/arptapp/ui/camera/LandmarkExerciseDetector.kt"), /classifier.detectExercise\(frame.landmarks, frame.view, frame.aspectRatio\)/)
 })
 
 test("counting and structural analysis use only the locked session type", () => {

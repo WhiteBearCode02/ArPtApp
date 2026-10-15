@@ -38,6 +38,9 @@ import com.example.arptapp.ui.camera.CameraPipelineStage
 import com.example.arptapp.ui.camera.MainPersonSelector
 import com.example.arptapp.ui.camera.PoseCameraController
 import com.example.arptapp.ui.camera.PoseFrameResult
+import com.example.arptapp.ui.camera.LandmarkDetectionFrame
+import com.example.arptapp.ui.camera.LandmarkExerciseDetector
+import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
@@ -65,6 +68,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val exerciseCounter = ExerciseCounter()
     private val repAnalysisEngine = com.example.arptapp.domain.report.RepAnalysisEngine()
     private val fallbackExerciseClassifier = ExerciseClassifier()
+    private val primaryExerciseDetector = LandmarkExerciseDetector(fallbackExerciseClassifier)
+    private var yoloShadowSnapshot = YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.INITIALIZING, DetectionSource.YOLO))
+    private var posePeopleCount = 0
+    private var shadowThermalStatus = -1
+    private var lastShadowLogAt = 0L
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
@@ -108,6 +116,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         super.onCreate(savedInstanceState)
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.tvYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
+        renderYoloShadowDiagnostic()
 
         tts = TextToSpeech(this, this)
         feedbackManager = FeedbackManager(this)
@@ -122,6 +132,12 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             previewView = binding.viewFinder,
             onResult = ::onPoseFrame,
             onError = ::onCameraPipelineError,
+            onYoloShadowSnapshot = { snapshot ->
+                if (BuildConfig.DEBUG) {
+                    yoloShadowSnapshot = snapshot
+                    renderYoloShadowDiagnostic()
+                }
+            },
             onLensChanged = { front, canSwitch ->
                 cameraCanSwitch = canSwitch
                 val text = getString(if (front) R.string.camera_lens_front else R.string.camera_lens_back)
@@ -372,6 +388,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             val thermal = if (android.os.Build.VERSION.SDK_INT >= 29) {
                 (getSystemService(POWER_SERVICE) as android.os.PowerManager).currentThermalStatus
             } else -1
+            shadowThermalStatus = thermal
             binding.tvPerformance.text = String.format(
                 Locale.KOREA,
                 "처리 %.1f FPS · %.0f ms · 발열 단계 %s",
@@ -383,8 +400,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
         if (mainPersonLandmarks != null) {
             captureReferenceFrame(mainPersonLandmarks)
-            updateCurrentExerciseType(fallbackExerciseClassifier.detectExercise(mainPersonLandmarks, cameraView,
-                frame.imageWidth.toDouble() / frame.imageHeight))
+            // ONLY the existing landmark classifier can feed the workout lock. YOLO is observational.
+            updateCurrentExerciseType(primaryExerciseDetector.detect(LandmarkDetectionFrame(mainPersonLandmarks, cameraView,
+                frame.imageWidth.toDouble() / frame.imageHeight)).exerciseType)
             if (isExercising) {
                 processLandmarks(mainPersonLandmarks, frame.imageWidth.toDouble() / frame.imageHeight, frame.timestampMs)
             }
@@ -399,6 +417,21 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             binding.tvPoseFeedback.text = "측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요"
             updateCurrentExerciseType(ExerciseType.UNKNOWN)
             binding.overlayView.clearResults()
+        }
+        posePeopleCount = frame.people.size
+        renderYoloShadowDiagnostic()
+    }
+
+    /** Debug-only comparison has no API into MainViewModel, counter, scoring or upload. */
+    private fun renderYoloShadowDiagnostic() {
+        if (!BuildConfig.DEBUG) return
+        val text = DetectorComparisonFormatter.format(DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
+            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus))
+        binding.tvYoloDiagnostics.text = text
+        val now = SystemClock.uptimeMillis()
+        if (now - lastShadowLogAt >= 1000L) {
+            lastShadowLogAt = now
+            Log.d("YoloShadow", text)
         }
     }
 

@@ -2,6 +2,8 @@
 
 기준일: 2026-10-15. **코드 보강 완료와 공개 서비스 승인/법적 권리 확보는 다릅니다.**
 
+2026-10-16 후속 작업: [YOLO Shadow 구조 검증](docs/YOLO_DEVICE_VALIDATION.md). 실제 prediction은 export contract 미확인으로 비활성이며, debug/release 모델 패키징 차단과 공개 보류 정책은 유지합니다. 아래 표/명령의 `security-hardening-verification` APK는 이전 보안 작업 결과이고 새 Shadow 작업 APK는 `build/yolo-shadow-verification/outputs/apk/debug/app-debug.apk`로 별도 생성합니다. 공개 배포 승인본이 아닙니다.
+
 ## 이번 변경
 
 - [x] Android 백업/데이터 추출 방어, strict password recovery, 신규 신체 Auth metadata 금지.
