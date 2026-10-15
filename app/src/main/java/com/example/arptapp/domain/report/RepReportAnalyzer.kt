@@ -9,10 +9,18 @@ import com.example.arptapp.model.SessionReport
  *
  * Android/ViewModel/DB에 의존하지 않으며 전달된 기록을 변경하지 않습니다.
  * 각도는 도 단위, poseScore는 0~100입니다. 90°/160° 및 오류별 감점은 기존 초기 휴리스틱을
- * 그대로 유지하며 의학적 진단/검증된 운동 품질로 표현하면 안 됩니다.
+ * 구버전 기록용 fallback에만 유지합니다. 신규 live 기록은 StructuredRepAnalysis.localScore를
+ * 우선하며 DTW를 총점으로 쓰지 않습니다. 어느 점수도 의학적 진단/검증된 운동 품질이 아닙니다.
  */
 class RepReportAnalyzer {
-    fun analyze(records: List<RepRecord>, exerciseType: String): List<RepAnalysis> = records.mapIndexed { index, record ->
+    fun analyze(records: List<RepRecord>, exerciseType: String,
+                structured: List<StructuredRepAnalysis> = emptyList()): List<RepAnalysis> =
+        if (exerciseType.uppercase() !in listOf("SQUAT", "SHOULDER_PRESS")) emptyList() else records.mapIndexedNotNull { index, record ->
+        val measured = structured.firstOrNull { it.repNumber == record.repNumber && it.exerciseType == exerciseType.uppercase() }
+        if (measured?.localScore != null) {
+            // New records never fall back to old DTW/angle formulas when local measurements are unavailable.
+            return@mapIndexedNotNull measured.score?.let { RepAnalysis(record.repNumber, it, RepScoreDescription.format(measured)) }
+        }
         RepAnalysis(
             repNumber = record.repNumber.takeIf { it > 0 } ?: index + 1,
             score = scoreRep(record, exerciseType.uppercase()).toFloat(),
@@ -20,18 +28,20 @@ class RepReportAnalyzer {
         )
     }
 
-    fun report(records: List<RepRecord>, exerciseType: String): SessionReport {
+    fun report(records: List<RepRecord>, exerciseType: String, structured: List<StructuredRepAnalysis> = emptyList()): SessionReport {
         val normalizedType = exerciseType.uppercase()
         if (records.isEmpty()) {
             return SessionReport(normalizedType, 0, 0, "유효한 운동 데이터가 부족합니다.")
         }
 
-        val averageScore = analyze(records, normalizedType).map { it.score }.average().toInt()
+        val scored = analyze(records, normalizedType, structured)
+        val averageScore = scored.takeIf { it.isNotEmpty() }?.map { it.score }?.average()?.toInt() ?: 0
         return SessionReport(
             exerciseType = normalizedType,
             totalReps = records.size,
             averageScore = averageScore,
-            feedbackMessage = buildFeedback(records, averageScore)
+            feedbackMessage = buildFeedback(records, averageScore) + if (scored.size < records.size)
+                "\n${records.size - scored.size}회는 측정 근거가 부족하여 평균 점수에서 제외했습니다." else ""
         )
     }
 

@@ -8,7 +8,8 @@ import kotlin.math.pow
  * Dynamic Time Warping 알고리즘을 사용한 포즈 유사도 계산기
  * 
  * DTW는 두 시계열 데이터 간의 유사도를 측정하는 알고리즘으로,
- * 사용자의 운동 자세와 표준 자세를 비교하여 정확도를 계산합니다.
+ * 저장된 각도 시퀀스와의 referenceSimilarity 보조 비교만 제공합니다.
+ * 촬영 방향/속도/프레임 수에 민감하므로 신규 회차의 local score 계산에는 사용하지 않습니다.
  */
 class DTWCalculator {
     

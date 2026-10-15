@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="camera_lens_connecting">카메라 연결 중</string>
+    <string name="camera_lens_back">후면 카메라</string>
+    <string name="camera_lens_front">전면 카메라</string>
+    <string name="camera_lens_failed">카메라 연결 실패</string>
+    <string name="exercise_type_unconfirmed">유효한 운동 종류를 확정하지 못했습니다. 촬영 방향과 관절 가시성을 확인해 주세요.</string>
+    <string name="exercise_analysis_insufficient">운동 분석에 필요한 데이터가 부족합니다. 점수 없는 세션은 저장하지 않았습니다.</string>
+</resources>

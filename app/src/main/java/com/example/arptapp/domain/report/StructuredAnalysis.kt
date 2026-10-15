@@ -28,6 +28,7 @@ import kotlinx.serialization.Serializable
 )
 
 /** No coordinates, identity or images. null means NOT_EVALUATED, never normal/zero. */
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable data class StructuredRepAnalysis(
     val repNumber: Int, val exerciseType: String, val cameraView: String,
     val totalDurationMs: Long?, val phaseDurations: PhaseDurations,
@@ -36,7 +37,12 @@ import kotlinx.serialization.Serializable
     val improvementCandidates: List<String>, val localPriorityFeedback: String,
     val score: Float? = null, val observedFrames: Int = 0, val partialCapture: Boolean = false,
     /** 1 = legacy min-based segmentation, 2 = exercise-specific observed phases. */
-    val phaseModelVersion: Int = 1
+    val phaseModelVersion: Int = 1,
+    /** Additive local metadata in existing scoresJson. Defaults omitted on the unchanged LLM wire. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val localScore: RepScoreBreakdown? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val referenceSimilarity: Float? = null
 )
 @Serializable data class StructuredWorkoutAnalysis(
     val schemaVersion: Int = 1, val exerciseType: String, val totalReps: Int,

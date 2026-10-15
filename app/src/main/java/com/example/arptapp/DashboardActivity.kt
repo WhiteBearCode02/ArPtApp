@@ -82,7 +82,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var repetitionCount = 0
     private var startTime: Long = 0
     private var isExercising = false
-    private var currentExerciseType = ExerciseType.UNKNOWN
+    private var detectedExerciseType = ExerciseType.UNKNOWN
+    private val sessionExerciseType get() = mainViewModel.sessionExerciseType
+    private var cameraCanSwitch = false
+    private var lensSwitchRequested = false
     private var cameraView = com.example.arptapp.domain.analyzer.CameraView.UNKNOWN
     private val referenceRepository by lazy { com.example.arptapp.data.preferences.PersonalMotionReferenceRepository(this) }
     private val calibrationFrames = mutableListOf<List<Float>>()
@@ -118,8 +121,18 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             lifecycleOwner = this,
             previewView = binding.viewFinder,
             onResult = ::onPoseFrame,
-            onError = ::onCameraPipelineError
+            onError = ::onCameraPipelineError,
+            onLensChanged = { front, canSwitch ->
+                cameraCanSwitch = canSwitch
+                val text = getString(if (front) R.string.camera_lens_front else R.string.camera_lens_back)
+                binding.tvCameraLens.text = text
+                binding.btnSwitchCamera.contentDescription = "$text · 카메라 전환"
+                binding.btnSwitchCamera.isEnabled = canSwitch
+                if (lensSwitchRequested) Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+                lensSwitchRequested = false
+            }
         )
+        binding.btnSwitchCamera.isEnabled = false
         cameraController.initialize()
         checkCameraPermission()
         setupButtons()
@@ -149,6 +162,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 else -> "촬영 방향 선택"
             }
             invalidatePendingAnalysis()
+            fallbackExerciseClassifier.reset()
+            detectedExerciseType = ExerciseType.UNKNOWN
+            updateDetectedExerciseUi(ExerciseType.UNKNOWN)
         }
         // 닫기 버튼
         binding.btnClose.setOnClickListener {
@@ -177,12 +193,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             Toast.makeText(this, "운동 또는 기준 기록을 마친 뒤 카메라를 전환해 주세요", Toast.LENGTH_SHORT).show()
             return
         }
+        if (!cameraCanSwitch) return
+        lensSwitchRequested = true
         cameraController.switchCamera()
-        Toast.makeText(
-            this,
-            if (cameraController.isFrontFacing) "전면 카메라" else "후면 카메라",
-            Toast.LENGTH_SHORT
-        ).show()
+        invalidatePendingAnalysis()
+        fallbackExerciseClassifier.reset()
     }
 
     private fun togglePersonalReference() {
@@ -238,6 +253,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     private fun startExercise() {
+        if (cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN) {
+            Toast.makeText(this, "촬영 방향을 먼저 선택해 주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
         isExercising = true
         mainViewModel.resetSession()
         repAnalysisEngine.reset()
@@ -251,7 +270,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         exerciseCounter.resetSession()
         fallbackExerciseClassifier.reset()
-        currentExerciseType = ExerciseType.UNKNOWN
+        detectedExerciseType = ExerciseType.UNKNOWN
         personalSequence = emptyList()
         binding.btnCameraView.isEnabled = false
         binding.btnPersonalReference.isEnabled = false
@@ -266,8 +285,21 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     private fun endExercise() {
+        if (!isExercising) return
         isExercising = false
-        val report = mainViewModel.generateFinalReport(currentExerciseType.name)
+        val report = mainViewModel.generateLockedSessionReport()
+        if (report == null) {
+            binding.btnStartExercise.visibility = View.VISIBLE
+            binding.btnEndExercise.visibility = View.GONE
+            binding.btnCameraView.isEnabled = true
+            binding.btnPersonalReference.isEnabled = true
+            binding.tvDashboardTitle.text = getString(R.string.exercise_ready)
+            AlertDialog.Builder(this).setTitle("분석 데이터 확인")
+                .setMessage(getString(if (sessionExerciseType == ExerciseType.UNKNOWN)
+                    R.string.exercise_type_unconfirmed else R.string.exercise_analysis_insufficient))
+                .setPositiveButton("확인", null).show()
+            return
+        }
         val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
         val records = mainViewModel.getRepRecords()
         val analyses = mainViewModel.getRepAnalyses(report.exerciseType)
@@ -307,7 +339,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         // 결과/기록/상세 화면이 같은 키·단위·구버전 읽기 계약을 사용한다.
         val data = WorkoutReportData.create(
-            exerciseType = currentExerciseType.displayName,
+            exerciseType = sessionExerciseType.displayName,
             totalCount = report.totalReps,
             durationSeconds = elapsedTime,
             analysesJson = com.example.arptapp.data.StructuredReportCodec.encode(
@@ -351,7 +383,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
         if (mainPersonLandmarks != null) {
             captureReferenceFrame(mainPersonLandmarks)
-            updateCurrentExerciseType(fallbackExerciseClassifier.detectExercise(mainPersonLandmarks))
+            updateCurrentExerciseType(fallbackExerciseClassifier.detectExercise(mainPersonLandmarks, cameraView,
+                frame.imageWidth.toDouble() / frame.imageHeight))
             if (isExercising) {
                 processLandmarks(mainPersonLandmarks, frame.imageWidth.toDouble() / frame.imageHeight, frame.timestampMs)
             }
@@ -362,6 +395,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 binding.tvPoseFeedback.text = "관절을 다시 찾는 중 · 기준 동작을 처음부터 반복해 주세요"
             }
             invalidatePendingAnalysis()
+            fallbackExerciseClassifier.reset()
             binding.tvPoseFeedback.text = "측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요"
             updateCurrentExerciseType(ExerciseType.UNKNOWN)
             binding.overlayView.clearResults()
@@ -375,8 +409,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         when (stage) {
             CameraPipelineStage.MODEL_INITIALIZATION ->
                 binding.tvDetectedExercise.text = "자세 인식 모델을 불러오지 못했습니다"
-            CameraPipelineStage.CAMERA_BINDING ->
+            CameraPipelineStage.CAMERA_BINDING -> {
+                lensSwitchRequested = false
+                binding.tvCameraLens.text = getString(R.string.camera_lens_failed)
                 Toast.makeText(this, "카메라 연결 실패", Toast.LENGTH_SHORT).show()
+            }
             CameraPipelineStage.POSE_INFERENCE -> {
                 binding.tvDetectedExercise.text = "자세 인식을 다시 시도하는 중"
                 binding.overlayView.clearResults()
@@ -398,10 +435,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
      * 측정 불가능한 프레임은 회차를 중단하며, DTW 입력은 최대 300프레임으로 제한한다.
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>, aspectRatio: Double, frameTimestampMs: Long) {
+        if (sessionExerciseType !in com.example.arptapp.domain.session.SessionExerciseLock.supported) return
         val poseData = landmarks.toPoseData()
-        val measurement = poseAngleExtractor.measurePose(currentExerciseType.name, poseData, cameraView, aspectRatio)
-        val assessment = if (currentExerciseType == ExerciseType.SQUAT && measurement.isEvaluable) {
-            FormErrorAnalyzer.assessSquat(landmarks, cameraView)
+        val measurement = poseAngleExtractor.measurePose(sessionExerciseType.name, poseData, cameraView, aspectRatio)
+        val assessment = if (sessionExerciseType == ExerciseType.SQUAT && measurement.isEvaluable) {
+            FormErrorAnalyzer.assessSquat(landmarks, cameraView, aspectRatio)
         } else null
         val errors = assessment?.errors.orEmpty()
         val feedback = com.example.arptapp.domain.analyzer.CoachingFeedbackFactory.create(measurement, errors).let {
@@ -416,7 +454,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         }
         // 긴 정지 구간에도 DTW 메모리/계산량이 무한히 증가하지 않도록 최근 프레임만 보관한다.
         if (currentRepAngles.size >= 300) currentRepAngles.removeAt(0)
-        when (currentExerciseType) {
+        when (sessionExerciseType) {
             ExerciseType.SQUAT -> {
                 PoseAngleExtractor.extractSquatAngles(landmarks)?.let(currentRepAngles::add)
                 currentRepErrorTags += errors
@@ -426,7 +464,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             else -> Unit
         }
 
-        val exerciseType = currentExerciseType.name
+        val exerciseType = sessionExerciseType.name
         val currentAngle = measurement.valueDeg ?: return
         // Submission timeline, not delayed UI callback time. Only relative times leave the engine.
         val timestamp = frameTimestampMs
@@ -437,25 +475,26 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             repetitionCount = exerciseCounter.getRepCount()
             binding.tvCount.text = repetitionCount.toString()
 
-            val poseScore = if (currentExerciseType == ExerciseType.SQUAT || personalSequence.isNotEmpty()) scoreCurrentRep() else {
+            val referenceSimilarity = if (sessionExerciseType == ExerciseType.SQUAT || personalSequence.isNotEmpty()) calculateReferenceSimilarity() else {
                 currentRepAngles.clear()
                 null
             }
 
-            mainViewModel.addRepRecord(
+            // Structural metrics must exist BEFORE calculating the displayed local score.
+            val measured = repAnalysisEngine.complete(repetitionCount)
+            val record = com.example.arptapp.model.RepRecord(
                 repNumber = repetitionCount,
-                angle = exerciseCounter.getCurrentMaxAngle(),
-                sway = currentMaxSwayX,
+                maxAngle = exerciseCounter.getCurrentMaxAngle(),
+                swayX = currentMaxSwayX,
                 errorTags = currentRepErrorTags.toList(),
                 eccentricDurationMs = exerciseCounter.getLastEccentricDurationMs(),
                 concentricDurationMs = exerciseCounter.getLastConcentricDurationMs(),
-                poseScore = poseScore
+                poseScore = referenceSimilarity
             )
-            val structured = repAnalysisEngine.complete(repetitionCount,
-                mainViewModel.getRepAnalyses(exerciseType).lastOrNull()?.score)
+            val structured = mainViewModel.addCompletedRep(record, measured, cameraView.name, referenceSimilarity)
             structured?.let {
-                mainViewModel.addStructuredRep(it)
-                if (BuildConfig.DEBUG) Log.d("RepAnalysis", com.example.arptapp.domain.report.RepDiagnosticFormatter.format(it))
+                if (BuildConfig.DEBUG) Log.d("RepAnalysis", com.example.arptapp.domain.report.RepDiagnosticFormatter.format(
+                    it, sessionExerciseType.name, detectedExerciseType.name, currentAngle))
                 repPriorityFeedback = it.localPriorityFeedback
                 repFeedbackUntilMs = SystemClock.uptimeMillis() + 2500
                 binding.tvPoseFeedback.text = it.localPriorityFeedback
@@ -480,8 +519,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         angles = emptyMap()
     )
 
-    private fun scoreCurrentRep(): Float? {
-        val reference = personalSequence.ifEmpty { if (currentExerciseType == ExerciseType.SQUAT) standardSquatSequence else emptyList() }
+    private fun calculateReferenceSimilarity(): Float? {
+        // The bundled standard is not view-matched; only use it for FRONT, never as SIDE ground truth.
+        val reference = personalSequence.ifEmpty { if (sessionExerciseType == ExerciseType.SQUAT &&
+            cameraView == com.example.arptapp.domain.analyzer.CameraView.FRONT) standardSquatSequence else emptyList() }
         if (reference.isEmpty() || currentRepAngles.isEmpty()) {
             currentRepAngles.clear()
             return null
@@ -490,7 +531,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val score = dtwCalculator.calculateAverageScore(
             userSequence = currentRepAngles,
             standardSequence = reference,
-            weights = dtwCalculator.getExerciseWeights(currentExerciseType.name)
+            weights = dtwCalculator.getExerciseWeights(sessionExerciseType.name)
         )
         currentRepAngles.clear()
         return score.takeIf { it.isFinite() && it in 0f..100f }
@@ -512,30 +553,14 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     private fun updateCurrentExerciseType(nextExerciseType: ExerciseType) {
-        // 하나의 리포트에 종목이 섞이지 않도록 운동 중 최초 확정 종목을 고정한다.
-        if (isExercising && currentExerciseType != ExerciseType.UNKNOWN) {
-            updateDetectedExerciseUi(currentExerciseType)
-            return
-        }
+        detectedExerciseType = nextExerciseType
         updateDetectedExerciseUi(nextExerciseType)
-        if (nextExerciseType == ExerciseType.LUNGE) {
-            binding.tvDetectedExercise.text = "런지 감지 · 현재 횟수 분석은 스쿼트·숄더프레스를 지원합니다"
-            return
-        }
-        if (nextExerciseType == ExerciseType.UNKNOWN || nextExerciseType == currentExerciseType) return
-
-        currentExerciseType = nextExerciseType
+        if (!isExercising || !mainViewModel.observeDetectedExercise(nextExerciseType)) return
         val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
-        personalSequence = referenceRepository.load(userId, nextExerciseType.name, cameraView)?.sequence().orEmpty()
-        repetitionCount = 0
-        repAnalysisEngine.reset()
-        currentRepAngles.clear()
-        currentRepErrorTags.clear()
-        binding.tvCount.text = "0"
-        binding.tvCountUnit.text = nextExerciseType.displayName
-        if (isExercising) {
-            binding.tvDashboardTitle.text = "${nextExerciseType.displayName} 운동 중"
-        }
+        personalSequence = referenceRepository.load(userId, sessionExerciseType.name, cameraView)?.sequence().orEmpty()
+        binding.tvCountUnit.text = sessionExerciseType.displayName
+        binding.tvDashboardTitle.text = "${sessionExerciseType.displayName} 운동 중"
+        updateDetectedExerciseUi(nextExerciseType)
     }
 
     private fun updateDetectedExerciseUi(exerciseType: ExerciseType) {
@@ -544,7 +569,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         } else {
             exerciseType.displayName
         }
-        binding.tvDetectedExercise.text = "인식 중: $displayName"
+        binding.tvDetectedExercise.text = if (isExercising && sessionExerciseType != ExerciseType.UNKNOWN)
+            "세션: ${sessionExerciseType.displayName} · 감지: $displayName" else "인식 중: $displayName"
     }
 
     private fun checkCameraPermission() {

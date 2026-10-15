@@ -9,6 +9,7 @@
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingHorizontal="12dp">
                 <TextView android:id="@+id/tvDashboardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/exercise_ready" android:textSize="18sp" android:textColor="@color/white" />
                 <TextView android:id="@+id/tvDetectedExercise" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/exercise_detecting" android:textSize="13sp" android:textColor="@color/aurora_ice" />
+                <TextView android:id="@+id/tvCameraLens" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/camera_lens_connecting" android:textSize="10sp" android:textColor="@color/aurora_ice" />
             </LinearLayout>
             <ImageButton android:id="@+id/btnSwitchCamera" android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp" android:background="@drawable/bg_camera_icon_button" android:src="@drawable/ic_camera_flip" android:contentDescription="@string/camera_switch" app:tint="@color/white" />
         </LinearLayout>

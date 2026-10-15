@@ -96,6 +96,14 @@
                 android:text="@string/exercise_ready"
                 android:textColor="@color/white"
                 android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/tvCameraLens"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/camera_lens_connecting"
+                android:textColor="@color/aurora_ice"
+                android:textSize="10sp" />
         </LinearLayout>
 
         <ImageButton

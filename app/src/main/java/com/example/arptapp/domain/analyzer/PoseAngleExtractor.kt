@@ -11,6 +11,15 @@ object PoseAngleExtractor {
     private const val MIN_VISIBILITY = 0.65f
     private const val MIN_VECTOR_MAGNITUDE = 0.0001f
 
+    /** Anatomical side chosen only by usable pose joints; physical camera lens is irrelevant. */
+    fun visibleSideOffset(points: List<com.example.arptapp.data.model.Landmark>, exerciseType: String): Int {
+        val required = if (exerciseType.uppercase() == "SQUAT") listOf(11, 23, 25, 27) else listOf(11, 13, 15)
+        fun visibility(offset: Int) = required.minOf { id -> points.getOrNull(id + offset)
+            ?.takeIf { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
+            ?.visibility?.takeIf { it.isFinite() && it in 0f..1f } ?: 0f }
+        return if (visibility(0) >= visibility(1)) 0 else 1
+    }
+
     fun analyzePose(exerciseType: String, poseData: PoseData): Double {
         return measurePose(exerciseType, poseData).valueDeg ?: 0.0
     }
@@ -28,6 +37,9 @@ object PoseAngleExtractor {
             JointAngleMeasurement.measure(poseData.landmarks, indices,
                 "${exerciseType.lowercase()}_${if (index == 0) "left" else "right"}_interior",
                 view = view, imageAspectRatio = imageAspectRatio)
+        }
+        if (view == CameraView.SIDE && measurements.size == 2) {
+            return measurements[visibleSideOffset(poseData.landmarks, exerciseType)]
         }
         return measurements.filter { it.isEvaluable }.maxByOrNull { it.minVisibility }
             ?: measurements.firstOrNull()

@@ -135,8 +135,8 @@ class ReportActivity : AppCompatActivity() {
     }
     
     private fun setupChart(analyses: List<RepAnalysis>) {
-        val entries = analyses.mapIndexed { index, analysis ->
-            BarEntry((index + 1).toFloat(), analysis.score)
+        val entries = analyses.map { analysis ->
+            BarEntry(analysis.repNumber.toFloat(), analysis.score)
         }
         
         val dataSet = BarDataSet(entries, "횟수별 자세 점수").apply {
@@ -167,7 +167,7 @@ class ReportActivity : AppCompatActivity() {
                 textColor = Color.WHITE
                 valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String =
-                        if (value.toInt().toFloat() == value && value in 1f..analyses.size.toFloat()) {
+                        if (value.toInt().toFloat() == value && analyses.any { it.repNumber == value.toInt() }) {
                             "${value.toInt()}회"
                         } else ""
                 }
@@ -201,11 +201,13 @@ class ReportActivity : AppCompatActivity() {
 
     private fun setupRepDetails(analyses: List<RepAnalysis>, structured: List<StructuredRepAnalysis>) {
         binding.repAnalysisContainer.removeAllViews()
-        analyses.forEach { analysis ->
+        val numbers = (analyses.map { it.repNumber } + structured.map { it.repNumber }).distinct().sorted()
+        numbers.forEach { number ->
+            val analysis = analyses.firstOrNull { it.repNumber == number }
             val item = TextView(this).apply {
-                val measured = structured.firstOrNull { it.repNumber == analysis.repNumber }
-                text = "${analysis.repNumber}회 · ${analysis.score.toInt()}점\n" +
-                    (measured?.let(StructuredReportPresentation::detail) ?: analysis.detail)
+                val measured = structured.firstOrNull { it.repNumber == number }
+                text = "$number 회 · ${analysis?.score?.toInt()?.let { "${it}점" } ?: "측정 불가"}\n" +
+                    (measured?.let(StructuredReportPresentation::detail) ?: analysis?.detail.orEmpty())
                 setTextColor(Color.WHITE)
                 textSize = 14f
                 setPadding(18.dp, 14.dp, 18.dp, 14.dp)

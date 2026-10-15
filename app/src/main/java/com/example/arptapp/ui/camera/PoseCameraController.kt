@@ -43,7 +43,8 @@ class PoseCameraController(
     private val lifecycleOwner: LifecycleOwner,
     private val previewView: PreviewView,
     private val onResult: (PoseFrameResult) -> Unit,
-    private val onError: (CameraPipelineStage, Throwable) -> Unit
+    private val onError: (CameraPipelineStage, Throwable) -> Unit,
+    private val onLensChanged: (isFrontFacing: Boolean, canSwitch: Boolean) -> Unit = { _, _ -> }
 ) : AutoCloseable {
     companion object {
         private const val TAG = "PoseCameraController"
@@ -69,7 +70,7 @@ class PoseCameraController(
     private var imageAnalyzer: ImageAnalysis? = null
     private var preview: Preview? = null
     @Volatile private var closed = false
-    @Volatile private var lensFacing = CameraSelector.LENS_FACING_FRONT
+    @Volatile private var lensFacing = CameraSelector.LENS_FACING_BACK
 
     val isFrontFacing: Boolean
         get() = lensFacing == CameraSelector.LENS_FACING_FRONT
@@ -126,17 +127,30 @@ class PoseCameraController(
     /** 운동/개인 기준 기록 중 전환 금지는 세션을 아는 Activity에서 판단한다. */
     fun switchCamera() {
         if (closed) return
-        frameTracker.advance()
-        lensFacing = if (isFrontFacing) CameraSelector.LENS_FACING_BACK else CameraSelector.LENS_FACING_FRONT
-        bindUseCases()
+        bindUseCases(if (isFrontFacing) CameraSelector.LENS_FACING_BACK else CameraSelector.LENS_FACING_FRONT)
     }
 
-    private fun bindUseCases() {
+    private fun bindUseCases(requestedFacing: Int = lensFacing) {
         val provider = cameraProvider ?: return
         if (closed) return
-        val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+        val hasBack: Boolean
+        val hasFront: Boolean
+        val selected: CameraLens
+        try {
+            hasBack = provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)
+            hasFront = provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
+            selected = CameraLensPolicy.select(
+                if (requestedFacing == CameraSelector.LENS_FACING_BACK) CameraLens.BACK else CameraLens.FRONT,
+                hasBack, hasFront) ?: error("사용 가능한 카메라가 없습니다.")
+        } catch (error: Exception) {
+            dispatchError(CameraPipelineStage.CAMERA_BINDING, error)
+            return
+        }
+        val selectedFacing = if (selected == CameraLens.BACK) CameraSelector.LENS_FACING_BACK else CameraSelector.LENS_FACING_FRONT
+        val selector = CameraSelector.Builder().requireLensFacing(selectedFacing).build()
+        frameTracker.advance()
         val generation = frameTracker.currentGeneration()
-        val front = isFrontFacing
+        val front = selected == CameraLens.FRONT
         val nextPreview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
         val nextAnalyzer = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -149,6 +163,9 @@ class PoseCameraController(
             preview = nextPreview
             imageAnalyzer = nextAnalyzer
             provider.bindToLifecycle(lifecycleOwner, selector, nextPreview, nextAnalyzer)
+            // Publish actual bound lens, not requested lens, so front-only fallback matches the UI/mirror.
+            lensFacing = selectedFacing
+            onLensChanged(front, hasBack && hasFront)
         } catch (error: Exception) {
             nextAnalyzer.clearAnalyzer()
             dispatchError(CameraPipelineStage.CAMERA_BINDING, error)

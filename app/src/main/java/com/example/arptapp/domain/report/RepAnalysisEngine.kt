@@ -27,7 +27,7 @@ class RepAnalysisEngine {
         }
     }
 
-    fun complete(repNumber: Int, score: Float?): StructuredRepAnalysis? {
+    fun complete(repNumber: Int, score: Float? = null): StructuredRepAnalysis? {
         val all = frames.toList()
         val wasPartial = partial
         reset()
@@ -143,5 +143,6 @@ object WorkoutAnalysisAggregator {
                 .sortedByDescending { it.value.size }.map { it.key }, repAnalyses = reps)
     }
     fun forNetwork(input: StructuredWorkoutAnalysis) = input.copy(
-        repAnalyses = input.repAnalyses.takeLast(50), omittedReps = (input.totalReps - input.repAnalyses.takeLast(50).size).coerceAtLeast(0))
+        repAnalyses = input.repAnalyses.takeLast(50).map { it.copy(localScore = null, referenceSimilarity = null) },
+        omittedReps = (input.totalReps - input.repAnalyses.takeLast(50).size).coerceAtLeast(0))
 }

@@ -20,9 +20,21 @@ object FormErrorAnalyzer {
     private const val VALGUS_RATIO_THRESHOLD = 0.08f
     private const val FORWARD_LEAN_DEGREES = 20.0
 
-    fun assessSquat(landmarks: List<NormalizedLandmark>, view: CameraView): Assessment {
+    fun assessSquat(landmarks: List<NormalizedLandmark>, view: CameraView, imageAspectRatio: Double = 1.0): Assessment {
         if (view == CameraView.UNKNOWN) return Assessment(false, emptyList(), "촬영 방향을 선택하면 자세 코칭을 확인할 수 있습니다")
         val knees = observeKneeValgus(landmarks, view)
+        if (view == CameraView.SIDE) {
+            val points = landmarks.map { Landmark(it.x(), it.y(), it.z(), it.visibility().orElse(0f)) }
+            val offset = PoseAngleExtractor.visibleSideOffset(points, "SQUAT")
+            val requiredSide = listOf(11, 23, 25, 27).map { it + offset }
+            if (!imageAspectRatio.isFinite() || imageAspectRatio <= 0 || requiredSide.any { id -> points.getOrNull(id)?.let {
+                    it.visibility.isFinite() && it.visibility >= MIN_VISIBILITY && it.x.isFinite() && it.y.isFinite() && it.z.isFinite()
+                } != true }) return Assessment(false, emptyList(), "코칭 측정 대기 · 보이는 쪽 관절이 가려져 있습니다")
+            val shoulder = points[11 + offset]; val hip = points[23 + offset]
+            if (shoulder.x == hip.x && shoulder.y == hip.y) return Assessment(false, emptyList(), "몸통을 측정할 수 없습니다")
+            val lean = Math.toDegrees(atan2(abs(shoulder.x - hip.x) * imageAspectRatio, abs(shoulder.y - hip.y).toDouble()))
+            return Assessment(true, if (lean > FORWARD_LEAN_DEGREES) listOf(ERROR_FORWARD_LEAN) else emptyList())
+        }
         val required = if (view == CameraView.FRONT) intArrayOf(23, 24, 25, 26, 27, 28) else intArrayOf(11, 12, 23, 24)
         if (required.any { it >= landmarks.size || !landmarks[it].visibility().orElse(0f).isFinite() || landmarks[it].visibility().orElse(0f) < MIN_VISIBILITY ||
                 !landmarks[it].x().isFinite() || !landmarks[it].y().isFinite() }) {

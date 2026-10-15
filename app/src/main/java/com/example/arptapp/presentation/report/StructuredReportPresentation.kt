@@ -7,6 +7,7 @@ import java.util.Locale
 object StructuredReportPresentation {
     fun detail(rep: StructuredRepAnalysis): String = buildString {
         append("로컬 측정 · ${when (rep.cameraView) { "FRONT" -> "정면"; "SIDE" -> "측면"; else -> "방향 미설정" }}\n")
+        if (rep.localScore != null) append(RepScoreDescription.format(rep)).append('\n')
         if (rep.partialCapture) append("관찰 구간 일부만 기록되었습니다.\n")
         if (rep.phaseModelVersion >= 2 && rep.phaseDurations == PhaseDurations())
             append("동작 단계를 확정할 근거가 부족하여 단계별 오류를 추측하지 않았습니다.\n")

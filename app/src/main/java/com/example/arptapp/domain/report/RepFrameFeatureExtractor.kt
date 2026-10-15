@@ -15,11 +15,8 @@ object RepFrameFeatureExtractor {
         fun angle(vararg indices: Int) = JointAngleMeasurement.measure(points, indices.toList(),
             "rep_joint", view = view, imageAspectRatio = aspect).valueDeg
         // In side view keep only the side whose required joints have higher usable visibility.
-        val required = if (exercise == "SQUAT") listOf(11, 23, 25, 27) else listOf(11, 13, 15)
-        fun visibility(offset: Int) = required.minOf {
-            points.getOrNull(it + offset)?.visibility?.takeIf { v -> v.isFinite() } ?: 0f
-        }
-        val leftVisible = view == CameraView.FRONT || (view == CameraView.SIDE && visibility(0) >= visibility(1))
+        val leftVisible = view == CameraView.FRONT || (view == CameraView.SIDE &&
+            com.example.arptapp.domain.analyzer.PoseAngleExtractor.visibleSideOffset(points, exercise) == 0)
         val rightVisible = view == CameraView.FRONT || (view == CameraView.SIDE && !leftVisible)
         val torsoOffset = if (leftVisible) 0 else 1
         val shoulder = points.getOrNull(11 + torsoOffset)
