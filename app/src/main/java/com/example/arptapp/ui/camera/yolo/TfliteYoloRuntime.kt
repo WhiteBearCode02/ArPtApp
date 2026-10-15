@@ -13,12 +13,23 @@ import java.nio.channels.FileChannel
 
 /** Reuses the existing TF Lite dependency; no delegate/SDK/download/network service is added. */
 internal class TfliteYoloRuntime(private val model: ByteBuffer) : YoloTensorRuntime {
-    private val interpreter = Interpreter(model, Interpreter.Options().setNumThreads(2))
+    private val interpreter = try {
+        YoloModelIdentity.validate(model)
+        Interpreter(model, Interpreter.Options().setNumThreads(2))
+    } catch (error: Exception) {
+        if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
+        throw error
+    }
     override fun metadata() = YoloTensorMetadata(
         (0 until interpreter.inputTensorCount).map { index -> interpreter.getInputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } },
         (0 until interpreter.outputTensorCount).map { index -> interpreter.getOutputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } }
     )
-    override fun run(input: ByteBuffer, output: ByteBuffer) { interpreter.run(input, output) }
+    override fun run(input: ByteBuffer, output: ByteBuffer) {
+        try { interpreter.run(input, output) } catch (error: Exception) {
+            if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
+            throw error
+        }
+    }
     override fun close() { interpreter.close() }
 }
 
@@ -28,12 +39,12 @@ internal object DebugYoloModelSource {
         check(BuildConfig.DEBUG)
         val privateModel = File(context.noBackupFilesDir, "yolo/${YoloModelPolicy.FILE_NAME}")
         if (privateModel.isFile) {
-            require(privateModel.length() in 1..YoloModelPolicy.MAX_MODEL_BYTES)
+            if (privateModel.length() != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
             return FileInputStream(privateModel).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
         }
         try {
             return context.assets.openFd(YoloModelPolicy.FILE_NAME).use { asset ->
-                require(asset.declaredLength in 1..YoloModelPolicy.MAX_MODEL_BYTES)
+                if (asset.declaredLength != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
                 FileInputStream(asset.fileDescriptor).use {
                     it.channel.map(FileChannel.MapMode.READ_ONLY, asset.startOffset, asset.declaredLength)
                 }
@@ -46,8 +57,9 @@ object DebugYoloShadowFactory {
     fun create(context: Context, onSnapshot: (YoloShadowSnapshot) -> Unit): YoloShadowRunner<Bitmap>? {
         if (!BuildConfig.DEBUG) return null
         val app = context.applicationContext
-        // TODO(EXP02_EXPORT_CONTRACT): replace the three ports ONLY with verified original-pipeline evidence.
-        val contract = UnverifiedYoloContract.components<Bitmap>()
+        // Source-backed implementations are wired, but their code-level NOT_VERIFIED gate still
+        // prevents frame copies and Interpreter.run. Model presence must NEVER promote the contract.
+        val contract = Exp02YoloContract.components(Exp02BitmapPreprocessor())
         return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract),
             YoloExerciseStabilizer(contract.stabilization),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },

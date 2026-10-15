@@ -74,12 +74,16 @@ class PoseCameraController(
     private var preview: Preview? = null
     @Volatile private var closed = false
     @Volatile private var lensFacing = CameraSelector.LENS_FACING_BACK
-    private val yoloShadow = DebugYoloShadowFactory.create(appContext) { snapshot ->
-        val generation = frameTracker.currentGeneration()
+    private val yoloShadow = DebugYoloShadowFactory.create(appContext, ::dispatchYoloShadowSnapshot)
+
+    private fun dispatchYoloShadowSnapshot(snapshot: YoloShadowSnapshot) {
         mainExecutor.execute {
-            if (!closed && (snapshot.result.timings == null || frameTracker.isCurrent(generation))) onYoloShadowSnapshot(snapshot)
+            if (!closed && yoloShadow?.isCurrent(snapshot) == true) onYoloShadowSnapshot(snapshot)
         }
     }
+
+    /** Clears observational evidence only; never changes the landmark detector or workout lock. */
+    fun invalidateShadowEvidence() { yoloShadow?.invalidate() }
 
     val isFrontFacing: Boolean
         get() = lensFacing == CameraSelector.LENS_FACING_FRONT
@@ -198,6 +202,8 @@ class PoseCameraController(
                 // detectAsync는 비동기 추론이다. 제출 직후 입력 bitmap을 recycle하면 안 된다.
                 landmarker.detectAsync(image, timestamp)
                 // NOT_VERIFIED/UNAVAILABLE returns before copying any bitmap or calling inference.
+                // Admission makes one short owned copy; all resize/color/layout work and native
+                // inference remain on the shadow worker. Never recycle/share MediaPipe's input.
                 yoloShadow?.trySubmit(normalizedBitmap, timestamp)
             }
         } catch (error: Exception) {

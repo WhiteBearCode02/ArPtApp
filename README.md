@@ -28,7 +28,7 @@
 
 본 프로젝트는 졸업작품·졸업논문·취업 포트폴리오를 위한 비상업적 공개 연구 프로젝트입니다. 사용자 학습 **Ultralytics YOLO26n** 모델의 운동 탐지 연동을 준비하며, Ultralytics 관련 부분은 AGPL-3.0 조건의 영향을 받는 것으로 관리합니다. [공식 라이선스 안내](https://www.ultralytics.com/license)
 
-프로젝트 전체를 AGPL-3.0으로 운영하는 방향이지만, 현재 정식 LICENSE는 미적용입니다. 사용자 승인으로 Google Play services 위치 SDK를 Android 기본 LocationManager로 교체했습니다. YOLO EXP01/EXP02는 Dataset A(RickyRiccio의 similar_dataset) 기반이며, AI-Hub 크로스핏 데이터는 Dataset B 자세 분석용입니다. YOLO의 DEBUG Shadow Mode 기반 구조만 준비했으며, export contract 미확인으로 실제 prediction은 비활성입니다. 학습 weight 재배포 조건 확인 전 모델 공개·APK 포함은 보류합니다. 상용화 또는 폐쇄형 배포 시 추가 검토가 필요하며, 공개 프로젝트라는 이유만으로 법적 안전이나 재배포 권리를 보증하지 않습니다.
+프로젝트 전체를 AGPL-3.0으로 운영하는 방향이지만, 현재 정식 LICENSE는 미적용입니다. 사용자 승인으로 Google Play services 위치 SDK를 Android 기본 LocationManager로 교체했습니다. YOLO EXP01/EXP02는 Dataset A(RickyRiccio의 similar_dataset) 기반이며, AI-Hub 크로스핏 데이터는 Dataset B 자세 분석용입니다. EXP02 canonical export notebook과 Ultralytics 8.4.176 exact source를 대조해 전처리·decoder·NMS 후보 구현을 추가했지만, 전체 contract는 `NOT_VERIFIED`로 유지하며 실제 Shadow prediction은 비활성입니다. 학습 weight 재배포 조건 확인 전 모델 공개·APK 포함은 보류합니다. 상용화 또는 폐쇄형 배포 시 추가 검토가 필요하며, 공개 프로젝트라는 이유만으로 법적 안전이나 재배포 권리를 보증하지 않습니다.
 
 [검토 결과·다음 승인 사항](docs/LICENSE_REVIEW.md) · [모델 카드](MODEL_CARD.md) · [데이터 출처/라이선스](DATASET_LICENSES.md) · [주요 외부 구성요소 고지](THIRD_PARTY_NOTICES.md) · [EXP01/EXP02 실험 이력](docs/ML_EXPERIMENTS.md)
 
@@ -65,7 +65,7 @@
 | Workout Statistics | 최근 7일·30일 운동 통계 및 날짜별 반복 기록 | ✅ |
 | Personal Reference | 계정·종목·촬영 방향별 온디바이스 개인 동작 기준 저장·비교·삭제 | 🧪 |
 | Diagnostics | 처리 FPS·응답 지연·발열 단계 표시와 추론 제출 빈도 제한 | ✅ |
-| YOLO Exercise Detection | DEBUG Shadow 구조·tensor 검사·실패 격리 준비. export contract 미확인으로 prediction 비활성 | 🚧 |
+| YOLO Exercise Detection | exact-source 기반 전처리·decoder·NMS 후보 및 synthetic golden fixture 준비. 전체 contract `NOT_VERIFIED`, prediction 비활성 | 🚧 |
 | Dataset Pipeline | repetition 단위 pose sequence·metadata·annotation 생성 | 🧪 |
 
 > `✅ 구현 및 기본 검증 완료` · `🧪 구현됨, 실제 환경 검증 추가 필요` · `🚧 개발 예정/통합 전`
@@ -74,12 +74,14 @@
 
 ## 🧠 AI 처리 아키텍처
 
-현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **Android Shadow Mode 기반 구조는 준비되었으나 EXP02 export contract 미확인으로 실제 prediction은 비활성**입니다. [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md)
+현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **Android Shadow Mode 기반 구조와 EXP02 전처리·decoder·후처리 후보는 준비되었으나 전체 contract `NOT_VERIFIED`로 실제 prediction은 비활성**입니다. [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md) · [exact-source inference contract](docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)
 
-- **YOLO26n (Shadow 준비)**: 모델 존재·입출력 tensor 검사·진단 경계만 준비했습니다. 전처리/decoder/NMS는 미확인 인터페이스이며 실제 탐지는 실행하지 않습니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다.
+- **YOLO26n (Shadow 후보 구현)**: canonical [EXP02 notebook](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), exact Ultralytics 8.4.176 source와 모델 metadata를 대조했습니다. RGB BCHW 전처리·letterbox transform·normalized xywh decoder·class-aware NMS와 synthetic Python golden fixture를 추가했습니다. OpenCV uint8 resize와 최대 1-byte 차이가 관찰되어 `Exp02YoloContract` code gate는 `NOT_VERIFIED`입니다. 실제 모델 golden·Android native·실기기 검증 없이 실제 탐지나 Primary 전환을 활성화하지 않습니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다.
 - **MediaPipe Pose (현재)**: 분석 대상의 33개 관절 좌표를 추적합니다. YOLO 통합 후에도 유지합니다.
 - **Landmark Fallback Classifier (현재 Primary)**: 기존 classifier를 adapter로 감싸되 분류 정책은 유지합니다. 실제 세션 종목은 이 결과만으로 고정하며 YOLO는 영향을 주지 않습니다.
 - **Analyzer / Overlay / Feedback**: 운동별 관절·횟수·오류 후보 분석과 스켈레톤·교정 안내를 담당합니다.
+
+2026-10-16 local 검증: **JVM 351개 / Node 63개 통과**, debug APK build 및 loose-weight 제외 검사 통과. Python↔Kotlin synthetic golden은 명시된 허용오차 내 통과했으나 실제 모델/Android native/실기기 inference 성공을 뜻하지 않습니다. [명령·검증 결과·최신 APK](docs/YOLO_DEVICE_VALIDATION.md#현재-계약-구현-단계-실행-결과-2026-10-16)
 
 ```mermaid
 flowchart LR
@@ -106,9 +108,9 @@ flowchart LR
 |---|---|
 | `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
 | `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
-| `airptcoach_yolo26n_exp02_fp32.tflite` | 로컬 존재/Git·APK 제외, FLOAT32 입력 `[1,3,640,640]`·출력 `[1,6,8400]`, Shadow 기반 구조 준비·prediction 비활성 |
+| `airptcoach_yolo26n_exp02_fp32.tflite` | 로컬 존재/Git·APK 제외, FLOAT32 입력 `[1,3,640,640]`·출력 `[1,6,8400]`, source 기반 후보 구현·전체 contract `NOT_VERIFIED`·prediction 비활성 |
 
-shape만으로 RGB/BGR·normalization·bbox format·xywh/xyxy·class score·NMS 포함 여부를 정하지 않습니다. 원본 Colab/Python export·test 계약과 실제 inference verification이 필요합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
+RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 구현 동등성과 실제 inference 검증은 별개입니다. Synthetic fixture와 Kotlin 대조, 실제 모델 비교, Android native compatibility·실기기 측정이 필요하며 검증 결과는 [개발 검증 문서](docs/YOLO_DEVICE_VALIDATION.md)에 기록합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
 
 ## 🧩 주요 분석 구성요소
 
@@ -390,9 +392,12 @@ python -m unittest discover -s ai_module/tests -v
 - [x] 사용자 제공 Dataset A 기반 YOLO26n EXP01/EXP02 학습·test 평가 이력 문서화
 - [x] EXP02 LiteRT FP32 export 및 실제 tensor 구조 검사 이력 기록
 - [x] DEBUG Shadow 기반 구조·tensor 검증·실패 격리·안정화·진단 준비 (실제 prediction 비활성)
+- [x] EXP02 canonical notebook·Ultralytics 8.4.176 exact source·artifact metadata 기반 21개 contract 항목 문서화
+- [x] RGB/letterbox transform·decoder·NMS 후보 구현 및 synthetic Python golden fixture 준비 (활성화·동등성 검증 완료와 구분)
 - [ ] 모델 재배포/자산 고지·라이선스 검토 및 사용자 승인
-- [ ] 검증된 YOLO Exercise Detection Interpreter·전처리·후처리 구현
-- [ ] 원본 export/test 계약 검증 및 실제 Android prediction 연결
+- [ ] OpenCV resize 편차 검토·실제 모델 golden 및 Android native Interpreter compatibility 검증
+- [ ] 전체 export contract 검증 완료 후 DEBUG Shadow actual prediction 활성화
+- [ ] FRONT/45°/SIDE 실기기 비교·confidence/stabilizer tuning 후 별도 YOLO Primary 승격 결정
 - [x] 연속 유효 프레임 근거 기반 temporal smoothing 및 세션 종목 고정
 
 ### Phase 3 · 자세 품질 데이터셋

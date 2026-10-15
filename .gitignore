@@ -63,6 +63,8 @@ replay_pid*
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+# Keep the large historical notebook local; only the reviewed concise export reference is public.
+/docs/ml/AIRPTCoach_AIHub_AutoPipeline.ipynb
 wandb/
 # Local training outputs/checkpoints are not application source.
 /runs/

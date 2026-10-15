@@ -13,10 +13,12 @@ object DetectorComparisonFormatter {
     fun format(data: DetectorComparison): String = buildString {
         val result = data.yolo.result
         append("YOLO SHADOW ${YoloModelPolicy.MODEL_ID} · ${result.status}\n")
-        append("exportContract=NOT_VERIFIED · prediction 비활성\n")
+        append("exportContract=${result.contractVerification} · ")
+        append(if (result.contractVerification == ExportContractVerification.VERIFIED && result.status == DetectorStatus.READY)
+            "prediction 준비됨\n" else "prediction 비활성\n")
         append("raw=${result.exerciseType} ")
         append(result.selected?.confidence?.takeIf { it.isFinite() && it in 0f..1f }?.let {
-            String.format(Locale.ROOT, "%.2f", it)
+            String.format(Locale.ROOT, "%.3f", it)
         } ?: "미측정")
         append(" · stable=${data.yolo.stableExercise}\n")
         append("fallback=${data.fallbackDetected} · session=${data.sessionExerciseType} · view=${data.cameraView}\n")

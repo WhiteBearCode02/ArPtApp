@@ -22,6 +22,8 @@ class YoloExerciseDetector<F>(
             output = ByteBuffer.allocateDirect(YoloModelPolicy.outputShape.fold(4) { a, n -> a * n }).order(ByteOrder.nativeOrder())
             result = state(DetectorStatus.READY)
         } catch (_: MissingYoloModel) { return fail(DetectorStatus.MODEL_MISSING) }
+        catch (_: YoloModelIdentityMismatch) { return fail(DetectorStatus.MODEL_IDENTITY_MISMATCH) }
+        catch (_: UnsupportedYoloRuntime) { return fail(DetectorStatus.UNSUPPORTED_RUNTIME) }
         catch (_: Exception) { return fail(DetectorStatus.INITIALIZATION_FAILED) }
         catch (_: LinkageError) { return fail(DetectorStatus.INITIALIZATION_FAILED) }
         return result
@@ -33,7 +35,8 @@ class YoloExerciseDetector<F>(
         return try {
             val prepared = contract.preprocessor.preprocess(frame)
             val inputBytes = YoloModelPolicy.inputShape.fold(4) { a, n -> a * n }
-            if (!prepared.tensor.isDirect || prepared.tensor.remaining() != inputBytes) return fail(DetectorStatus.INFERENCE_FAILED)
+            if (!prepared.tensor.isDirect || prepared.tensor.remaining() != inputBytes || prepared.tensor.order() != ByteOrder.nativeOrder())
+                return fail(DetectorStatus.INFERENCE_FAILED)
             val preprocessed = clockMs()
             val buffer = output ?: return fail(DetectorStatus.INFERENCE_FAILED)
             buffer.clear()
@@ -49,13 +52,16 @@ class YoloExerciseDetector<F>(
             result = ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
                 MainExerciseDetectionSelector.select(detections), detections.size,
                 DetectionTimings((preprocessed-start).coerceAtLeast(0), (inferred-preprocessed).coerceAtLeast(0),
-                    (end-inferred).coerceAtLeast(0), (end-start).coerceAtLeast(0)))
+                    (end-inferred).coerceAtLeast(0), (end-start).coerceAtLeast(0)), contract.verification)
             result
         } catch (_: ExportContractNotVerified) { fail(DetectorStatus.CONTRACT_NOT_VERIFIED) }
+        catch (_: InvalidYoloOutput) { fail(DetectorStatus.INVALID_OUTPUT) }
+        catch (_: UnsupportedYoloRuntime) { fail(DetectorStatus.UNSUPPORTED_RUNTIME) }
         catch (_: Exception) { fail(DetectorStatus.INFERENCE_FAILED) }
         catch (_: LinkageError) { fail(DetectorStatus.INFERENCE_FAILED) }
     }
-    private fun state(status: DetectorStatus) = ExerciseDetectionResult(status, DetectionSource.YOLO)
+    private fun state(status: DetectorStatus) = ExerciseDetectionResult(status, DetectionSource.YOLO,
+        contractVerification = contract.verification)
     private fun fail(status: DetectorStatus): ExerciseDetectionResult {
         // Called only on the owner worker, never concurrently with Interpreter.run.
         runCatching { runtime?.close() }; runtime = null; output = null

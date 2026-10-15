@@ -16,7 +16,7 @@ const changed = new Set([
 const credential = /\bsb_secret_[A-Za-z0-9_-]{12,}|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}|\bAIza[0-9A-Za-z_-]{30,}|\bAKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/
 let checked = 0
 for (const path of changed) {
-  if (!path || !existsSync(path) || !/\.(?:kt|kts|ts|mjs|md|xml|sql|toml|example|ps1)$/.test(path)) continue
+  if (!path || !existsSync(path) || !/\.(?:kt|kts|ts|mjs|md|xml|sql|toml|example|ps1|py|json|ipynb)$/.test(path)) continue
   const source = readFileSync(path, "utf8")
   if (credential.test(source)) throw new Error(`Potential secret detected in ${path}; value suppressed.`)
   checked++

@@ -16,11 +16,11 @@ class YoloContractTest {
         override fun run(input: ByteBuffer, output: ByteBuffer) { calls++; if (shouldThrow) error("synthetic failure") }
         override fun close() { closes++ }
     }
-    private val transform = object : YoloFrameTransform {}
+    private val transform = Exp02FrameTransform.create(640, 640)
     private fun fakeContract(detections: List<ExerciseDetection> = listOf(ExerciseDetection(ExerciseType.SQUAT, .9f, DetectionSource.YOLO))) =
         YoloContractComponents<Int>(ExportContractVerification.VERIFIED,
             YoloPreprocessor { YoloPreparedInput(ByteBuffer.allocateDirect(4 * 3 * 640 * 640).order(ByteOrder.nativeOrder()), transform) },
-            YoloOutputDecoder { _, _ -> detections }, YoloPostProcessor { it }, YoloStabilizationPolicy(.7f))
+            YoloOutputDecoder { _, _ -> YoloDecodedOutput(emptyList(), transform) }, YoloPostProcessor { detections }, YoloStabilizationPolicy(.7f))
     @Test fun expectedTensorMetadataMatches() { assertTrue(metadata.matchesExpected()) }
     @Test fun nchwAndNhwcAreNotInterchangeable() {
         assertFalse(metadata.copy(inputs = listOf(TensorSpec(listOf(1, 640, 640, 3), "FLOAT32"))).matchesExpected())
@@ -77,7 +77,7 @@ class YoloContractTest {
     @Test fun eachUnverifiedConversionPortFailsClosed() {
         val ports = UnverifiedYoloContract.components<Int>()
         listOf<() -> Unit>({ ports.preprocessor.preprocess(0) },
-            { ports.decoder.decode(ByteBuffer.allocate(1), transform) }, { ports.postProcessor.process(emptyList()) }).forEach { action ->
+            { ports.decoder.decode(ByteBuffer.allocate(1), transform) }, { ports.postProcessor.process(YoloDecodedOutput(emptyList(), transform)) }).forEach { action ->
             try { action(); fail("Unverified conversion executed") } catch (_: ExportContractNotVerified) { /* expected */ }
         }
     }
@@ -118,5 +118,66 @@ class YoloContractTest {
     }
     @Test fun classMappingHasExactlyTheTwoConfirmedLabels() {
         assertEquals(mapOf(0 to ExerciseType.SQUAT, 1 to ExerciseType.SHOULDER_PRESS), YoloModelPolicy.classMapping)
+    }
+    @Test fun candidateContractDoesNotPromoteItselfAfterComponentsExist() {
+        val runtime = Runtime(metadata)
+        val contract = Exp02YoloContract.components<Int>(YoloPreprocessor { error("unverified preprocess must not run") })
+        assertEquals(ExportContractVerification.NOT_VERIFIED, contract.verification)
+        val result = YoloExerciseDetector({ runtime }, contract).detect(0)
+        assertEquals(DetectorStatus.CONTRACT_NOT_VERIFIED, result.status)
+        assertEquals(0, runtime.calls)
+    }
+    @Test fun wrongModelIdentityIsDifferentFromMissingModelOrPreprocessing() {
+        val result = YoloExerciseDetector<Int>({ throw YoloModelIdentityMismatch() }).initialize()
+        assertEquals(DetectorStatus.MODEL_IDENTITY_MISMATCH, result.status)
+    }
+    @Test fun unsupportedNativeOperationsAreIsolatedAndClassified() {
+        val detector = YoloExerciseDetector<Int>({ throw UnsupportedYoloRuntime() })
+        assertEquals(DetectorStatus.UNSUPPORTED_RUNTIME, detector.initialize().status)
+        assertEquals(ExerciseType.UNKNOWN, detector.detect(0).exerciseType)
+        assertTrue(YoloRuntimeCompatibility.isUnsupported(IllegalArgumentException("Didn't find op for builtin opcode synthetic")))
+        assertTrue(YoloRuntimeCompatibility.isUnsupported(RuntimeException("initialization", IllegalStateException("unsupported op"))))
+        assertFalse(YoloRuntimeCompatibility.isUnsupported(IllegalArgumentException("invalid image dimensions")))
+    }
+    @Test fun unsupportedRuntimeDuringRunIsDifferentFromDecoderFailure() {
+        val runtime = object : YoloTensorRuntime {
+            override fun metadata() = this@YoloContractTest.metadata
+            override fun run(input: ByteBuffer, output: ByteBuffer) { throw UnsupportedYoloRuntime() }
+            override fun close() = Unit
+        }
+        assertEquals(DetectorStatus.UNSUPPORTED_RUNTIME, YoloExerciseDetector({ runtime }, fakeContract()).detect(0).status)
+    }
+    @Test fun invalidDecoderOutputFailsClosedWithSpecificStatus() {
+        val runtime = Runtime(metadata)
+        val contract = fakeContract().copy(decoder = YoloOutputDecoder { _, _ -> throw InvalidYoloOutput() })
+        assertEquals(DetectorStatus.INVALID_OUTPUT, YoloExerciseDetector({ runtime }, contract).detect(0).status)
+        assertEquals(1, runtime.calls); assertEquals(1, runtime.closes)
+    }
+    @Test fun wrongNativeInputByteOrderCannotReachRuntime() {
+        val runtime = Runtime(metadata)
+        val otherOrder = if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) ByteOrder.BIG_ENDIAN else ByteOrder.LITTLE_ENDIAN
+        val contract = fakeContract().copy(preprocessor = YoloPreprocessor {
+            YoloPreparedInput(ByteBuffer.allocateDirect(4 * 3 * 640 * 640).order(otherOrder), transform)
+        })
+        assertEquals(DetectorStatus.INFERENCE_FAILED, YoloExerciseDetector({ runtime }, contract).detect(0).status)
+        assertEquals(0, runtime.calls)
+    }
+    @Test fun modelIdentityRejectsWrongLengthAndHashWithoutChangingBufferPosition() {
+        listOf(ByteBuffer.allocate(1), ByteBuffer.allocate(YoloModelPolicy.CANONICAL_MODEL_BYTES.toInt())).forEach { buffer ->
+            try { YoloModelIdentity.validate(buffer); fail("Wrong model accepted") }
+            catch (_: YoloModelIdentityMismatch) { assertEquals(0, buffer.position()) }
+        }
+    }
+    @Test fun finiteCoordinatesWithOverflowingAreaAreNotValidDetections() {
+        assertFalse(DetectionBox(-3.2e20f, -3.2e20f, 3.2e20f, 3.2e20f).isValid)
+        val raw = ByteBuffer.allocateDirect(4 * 6 * 8400).order(ByteOrder.nativeOrder())
+        listOf(.5f, .5f, 1e18f, 1e18f, .9f, .1f).forEachIndexed { channel, value -> raw.putFloat(channel * 8400 * 4, value) }
+        try { Exp02OutputDecoder().decode(raw, transform); fail("Overflowing box accepted") }
+        catch (_: InvalidYoloOutput) { /* All coordinates are finite, but their area is not. */ }
+    }
+    @Test fun finiteIndividualAreasDoNotOverflowTheirIouUnionIntoZeroOverlap() {
+        val box = DetectionBox(0f, 0f, 1.4e19f, 1.4e19f)
+        assertTrue(box.isValid)
+        assertEquals(1f, Exp02PostProcessor.iou(box, box), 0f)
     }
 }

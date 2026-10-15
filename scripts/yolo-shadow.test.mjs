@@ -8,13 +8,16 @@ const dashboard = read(root + "DashboardActivity.kt")
 const camera = read(root + "ui/camera/PoseCameraController.kt")
 const factory = read(root + "ui/camera/yolo/TfliteYoloRuntime.kt")
 
-test("production factory is DEBUG-only and injects only unverified conversion ports", () => {
+test("production factory is DEBUG-only and source-backed ports remain code-gated NOT_VERIFIED", () => {
   assert.match(factory, /if \(!BuildConfig.DEBUG\) return null/)
-  assert.match(factory, /UnverifiedYoloContract.components<Bitmap>\(\)/)
+  assert.match(factory, /Exp02YoloContract.components\(Exp02BitmapPreprocessor\(\)\)/)
   assert.doesNotMatch(factory, /ExportContractVerification.VERIFIED|Yolo26Classifier\(/)
+  const contract = read(root + "domain/detection/Exp02YoloContract.kt")
+  assert.match(contract, /get\(\) = ExportContractVerification.NOT_VERIFIED/)
+  assert.doesNotMatch(contract, /getenv|getProperty|BuildConfig|SharedPreferences|ExportContractVerification.VERIFIED/)
 })
 
-test("contract gate precedes any future runtime call, with no inferred conversion or NMS", () => {
+test("contract gate precedes runtime call and unknown exports retain three fail-closed ports", () => {
   const contract = read(root + "domain/detection/YoloExportContract.kt")
   assert.match(contract, /minimumConfidence = null/)
   assert.match(contract, /TODO\(EXP02_EXPORT_CONTRACT\)/)
@@ -55,11 +58,21 @@ test("unavailable shadow paths cannot copy source frames and use a dedicated lif
 test("YOLO modules add no network, credentials, persistence of observations or model staging", () => {
   const files = ["domain/detection/ExerciseDetector.kt", "domain/detection/YoloExportContract.kt",
     "domain/detection/YoloExerciseDetector.kt", "domain/detection/YoloExerciseStabilizer.kt",
-    "domain/detection/YoloShadowRunner.kt", "domain/detection/DetectorComparison.kt", "ui/camera/yolo/TfliteYoloRuntime.kt"]
+    "domain/detection/YoloShadowRunner.kt", "domain/detection/DetectorComparison.kt", "ui/camera/yolo/TfliteYoloRuntime.kt",
+    "domain/detection/Exp02Preprocessor.kt", "domain/detection/Exp02PostProcessor.kt", "domain/detection/Exp02YoloContract.kt",
+    "domain/detection/YoloModelIdentity.kt", "ui/camera/yolo/Exp02BitmapPreprocessor.kt"]
   for (const file of files) {
     assert.doesNotMatch(read(root + file), /https?:\/\/|HttpClient|OkHttp|Retrofit|SUPABASE|LLM_API_KEY|accessToken|FileOutputStream|writeBytes|copyTo\(/)
   }
   assert.match(factory, /context.noBackupFilesDir/)
   assert.match(read("app/build.gradle.kts"), /ignoreAssetsPattern = "[^"\n]*\*\.tflite/)
   assert.match(read(".gitignore"), /\/app\/src\/main\/assets\/airptcoach_yolo26n_exp02_fp32.tflite/)
+})
+
+test("canonical model bytes are validated before native initialization", () => {
+  assert.ok(factory.indexOf("YoloModelIdentity.validate(model)") < factory.indexOf("Interpreter(model,"))
+  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /CANONICAL_SHA256/)
+  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /CANONICAL_MODEL_BYTES/)
+  assert.match(dashboard, /cameraController.invalidateShadowEvidence\(\)/)
+  assert.match(camera, /yoloShadow\?\.isCurrent\(snapshot\)/)
 })

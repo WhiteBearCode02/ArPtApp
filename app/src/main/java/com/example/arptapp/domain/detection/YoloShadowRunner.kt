@@ -29,7 +29,12 @@ class ShadowFrameGate(private val intervalMs: Long = YoloShadowPolicy.MIN_FRAME_
     @Synchronized fun disable() { disabled = true }
 }
 
-data class YoloShadowSnapshot(val result: ExerciseDetectionResult, val stableExercise: ExerciseType = ExerciseType.UNKNOWN)
+data class YoloShadowSnapshot(
+    val result: ExerciseDetectionResult,
+    val stableExercise: ExerciseType = ExerciseType.UNKNOWN,
+    /** Originating admission epoch, not the lens generation at completion/UI dispatch. */
+    val generation: Long = 0
+)
 
 /**
  * Isolated native owner. Watchdog never closes an interpreter concurrently with a native invocation.
@@ -78,7 +83,7 @@ class YoloShadowRunner<F>(
         val deadline = try { timer.schedule({
             if (completed.compareAndSet(false, true) && !closed.get()) disable(DetectorStatus.TIMED_OUT)
         }, timeoutMs, TimeUnit.MILLISECONDS) } catch (_: Exception) {
-            frame?.let(releaseFrame); gate.release(); return
+            frame?.let(releaseFrame); if (frame != null) gate.release(); return
         }
         try {
             worker.execute {
@@ -94,7 +99,8 @@ class YoloShadowRunner<F>(
                             if ((frame == null || generation == epoch.get()) && !closed.get() && !failed.get()) {
                                 val stable = if (result.status == DetectorStatus.READY && frame != null)
                                     stabilizer.observe(result.selected, timestampMs) else ExerciseType.UNKNOWN
-                                latest = YoloShadowSnapshot(result, stable)
+                                // Initialization is lens-independent; frame results retain their admission epoch.
+                                latest = YoloShadowSnapshot(result, stable, if (frame == null) epoch.get() else generation)
                                 if (result.status !in listOf(DetectorStatus.READY, DetectorStatus.INITIALIZING)) gate.disable()
                                 onSnapshot(latest)
                             }
@@ -103,23 +109,39 @@ class YoloShadowRunner<F>(
                 } finally {
                     deadline.cancel(false)
                     frame?.let(releaseFrame)
-                    gate.release()
+                    // Initialization never acquired the frame gate. Releasing it here could admit a
+                    // second frame if the READY callback already submitted the first frame.
+                    if (frame != null) gate.release()
                     if (closed.get() || failed.get()) runCatching { detector.close() }
                 }
             }
         } catch (_: Exception) {
-            completed.set(true); deadline.cancel(false); frame?.let(releaseFrame); gate.release()
+            completed.set(true); deadline.cancel(false); frame?.let(releaseFrame); if (frame != null) gate.release()
         }
     }
 
-    /** Lens generation changes discard obsolete evidence/results, without touching the workout session. */
-    fun invalidate() = synchronized(evidenceLock) { epoch.incrementAndGet(); stabilizer.reset() }
+    /** UI dispatch checks the originating epoch; availability/errors do not belong to any camera lens. */
+    fun isCurrent(snapshot: YoloShadowSnapshot): Boolean = !closed.get() &&
+        (snapshot.result.status != DetectorStatus.READY || snapshot.generation == epoch.get())
+
+    /** Lens/view/session changes discard obsolete evidence, without touching the workout session. */
+    fun invalidate() = synchronized(evidenceLock) {
+        val nextGeneration = epoch.incrementAndGet()
+        stabilizer.reset()
+        if (!closed.get() && latest.result.status == DetectorStatus.READY) {
+            latest = YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
+                contractVerification = latest.result.contractVerification),
+                generation = nextGeneration)
+            onSnapshot(latest)
+        }
+    }
     private fun disable(status: DetectorStatus) {
         failed.set(true); gate.disable()
         synchronized(evidenceLock) {
             stabilizer.reset()
             if (!closed.get()) {
-                latest = YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO))
+                latest = YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO,
+                    contractVerification = latest.result.contractVerification), generation = epoch.get())
                 onSnapshot(latest)
             }
         }

@@ -2,8 +2,10 @@ package com.example.arptapp.domain.detection
 
 import com.example.arptapp.domain.classifier.ExerciseType
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.*
 import org.junit.Test
@@ -60,6 +62,25 @@ class YoloShadowRunnerTest {
             assertEquals(1, copies.get()); assertEquals(1, detects.get())
         } finally { finish.countDown(); runner.close() }
     }
+    @Test fun initializationFinallyCannotReleaseAnAlreadyAdmittedFrameGate() {
+        val queue = LinkedBlockingQueue<YoloShadowSnapshot>()
+        val firstReady = AtomicBoolean()
+        val admitted = AtomicBoolean()
+        val entered = CountDownLatch(1); val finish = CountDownLatch(1)
+        val detector = Detector({ ready() }, { entered.countDown(); finish.await(5, TimeUnit.SECONDS); ready() })
+        lateinit var runner: YoloShadowRunner<Int>
+        runner = YoloShadowRunner(detector, YoloExerciseStabilizer(YoloStabilizationPolicy(.7f)),
+            { it }, {}, { snapshot ->
+                if (snapshot.result.status == DetectorStatus.READY && firstReady.compareAndSet(false, true))
+                    admitted.set(runner.trySubmit(1, 1000))
+                queue.offer(snapshot)
+            }, initializationTimeoutMs = 10_000, inferenceTimeoutMs = 10_000)
+        try {
+            runner.start(); queueResult(queue)
+            assertTrue(admitted.get()); assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertFalse("Initialization must not release another operation's gate", runner.trySubmit(2, 2000))
+        } finally { finish.countDown(); runner.close() }
+    }
     @Test fun timeoutDoesNotCloseNativeRuntimeConcurrentlyAndLateResultIsDiscarded() {
         val queue = LinkedBlockingQueue<YoloShadowSnapshot>()
         val finish = CountDownLatch(1); val entered = CountDownLatch(1); val released = CountDownLatch(1)
@@ -101,9 +122,57 @@ class YoloShadowRunnerTest {
             runner.start(); runner.invalidate(); initFinish.countDown()
             assertEquals(DetectorStatus.READY, queueResult(queue).result.status)
             assertTrue(runner.trySubmit(1, 1000)); assertTrue(entered.await(5, TimeUnit.SECONDS))
-            runner.invalidate(); frameFinish.countDown()
+            runner.invalidate()
+            assertEquals(ExerciseType.UNKNOWN, queueResult(queue).result.exerciseType)
+            frameFinish.countDown()
             assertTrue(released.await(5, TimeUnit.SECONDS)); assertNull(queue.poll(100, TimeUnit.MILLISECONDS))
         } finally { initFinish.countDown(); frameFinish.countDown(); runner.close() }
+    }
+    @Test fun invalidationClearsStableEvidenceAndRejectsAnAlreadyQueuedOldUiResult() {
+        val queue = LinkedBlockingQueue<YoloShadowSnapshot>()
+        val releases = LinkedBlockingQueue<Int>()
+        val worker = Executors.newSingleThreadExecutor()
+        val detector = Detector({ ready() }, { ready() })
+        val runner = YoloShadowRunner(detector, YoloExerciseStabilizer(YoloStabilizationPolicy(.7f)),
+            { it }, { releases.offer(it) }, queue::offer, worker = worker)
+        try {
+            runner.start(); queueResult(queue)
+            worker.submit {}.get(5, TimeUnit.SECONDS)
+            var old = YoloShadowSnapshot(ready())
+            repeat(4) { index ->
+                assertTrue(runner.trySubmit(index, 1000L + index * 250))
+                old = queueResult(queue)
+                assertNotNull(releases.poll(5, TimeUnit.SECONDS))
+                worker.submit {}.get(5, TimeUnit.SECONDS)
+            }
+            assertEquals(ExerciseType.SQUAT, old.stableExercise)
+            runner.invalidate()
+            val cleared = queueResult(queue)
+            assertEquals(DetectorStatus.READY, cleared.result.status)
+            assertEquals(ExerciseType.UNKNOWN, cleared.result.exerciseType)
+            assertEquals(ExerciseType.UNKNOWN, cleared.stableExercise)
+            assertNull(cleared.result.timings)
+            assertFalse(runner.isCurrent(old))
+            assertTrue(runner.isCurrent(cleared))
+            assertTrue(runner.trySubmit(5, 2000))
+            assertEquals(ExerciseType.UNKNOWN, queueResult(queue).stableExercise)
+        } finally { runner.close() }
+    }
+    @Test fun missingModelAvailabilityIsNotDroppedByLensInvalidation() {
+        val queue = LinkedBlockingQueue<YoloShadowSnapshot>()
+        val detector = Detector({ ExerciseDetectionResult(DetectorStatus.MODEL_MISSING, DetectionSource.YOLO) }, { ready() })
+        val runner = YoloShadowRunner(detector, YoloExerciseStabilizer(YoloStabilizationPolicy(.7f)),
+            { it }, {}, queue::offer)
+        try {
+            runner.start()
+            val unavailable = queueResult(queue)
+            runner.invalidate()
+            assertEquals(DetectorStatus.MODEL_MISSING, unavailable.result.status)
+            assertTrue(runner.isCurrent(unavailable))
+            assertFalse(runner.trySubmit(1, 1000))
+            assertNull(queue.poll(100, TimeUnit.MILLISECONDS))
+        } finally { runner.close() }
+        assertFalse(runner.isCurrent(YoloShadowSnapshot(ready())))
     }
     @Test fun closeIsNonBlockingAndDoesNotPublishLateResult() {
         val queue = LinkedBlockingQueue<YoloShadowSnapshot>()

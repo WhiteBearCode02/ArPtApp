@@ -2,7 +2,7 @@
 
 기준일: 2026-10-15. **코드 보강 완료와 공개 서비스 승인/법적 권리 확보는 다릅니다.**
 
-2026-10-16 후속 작업: [YOLO Shadow 구조 검증](docs/YOLO_DEVICE_VALIDATION.md). 실제 prediction은 export contract 미확인으로 비활성이며, debug/release 모델 패키징 차단과 공개 보류 정책은 유지합니다. 아래 표/명령의 `security-hardening-verification` APK는 이전 보안 작업 결과이고 새 Shadow 작업 APK는 `build/yolo-shadow-verification/outputs/apk/debug/app-debug.apk`로 별도 생성합니다. 공개 배포 승인본이 아닙니다.
+2026-10-16 후속 작업: [YOLO 계약 구현·검증](docs/YOLO_DEVICE_VALIDATION.md). Exact 8.4.176 source 기반 전처리·decoder·NMS 후보와 합성 Golden 대조를 추가했습니다(JVM 351개/Node 63개 통과). OpenCV 보간 차이의 실제 모델 영향과 Android native 호환성은 미검증이므로 전체 NOT_VERIFIED/실제 prediction 비활성, Landmark Primary를 유지합니다. debug/release 모델 패키징 차단과 공개 보류 정책도 유지합니다. 아래 표/명령의 `security-hardening-verification`과 이전 `yolo-shadow-verification` APK는 과거 결과이며, 최신 개발 검증 APK는 `build/yolo-contract-verification/outputs/apk/debug/app-debug.apk`입니다. 공개 배포 승인본이 아닙니다.
 
 ## 이번 변경
 

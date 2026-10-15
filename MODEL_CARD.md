@@ -20,9 +20,21 @@
 | 출력 | FLOAT32 `[1, 6, 8400]`, tensor index 658 |
 | FlatBuffer 검사 | TFL3 schema version 3, subgraph 1개, operator 414개; 이전 실제 파일 검사 이력, 이번 존재/해시 재확인 |
 | Git 상태 | 파일 존재, 미추적·ignore 유지. 강제 stage/commit/push하지 않음 |
-| Android 상태 | 🚧 DEBUG Shadow 기반 구조 준비. EXP02 export contract 미확인으로 실제 prediction 비활성. 기존 landmark primary 유지 |
+| Android 상태 | 🚧 exact-source 기반 전처리·decoder·NMS 후보 구현. 전체 contract `NOT_VERIFIED`, 실제 Shadow prediction 비활성. 기존 landmark primary 유지 |
 
-Tensor 정보는 [공식 FlatBuffer schema](https://github.com/tensorflow/tensorflow/blob/v2.14.0/tensorflow/lite/schema/schema.fbs)에 따른 파일 검사 결과입니다. Interpreter 실행·전처리/후처리·카메라 integration 검증은 아직 하지 않았습니다. **shape만으로 RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부를 확정하지 않습니다.** 실제 export pipeline과 inference verification이 필요합니다.
+Tensor 정보는 [공식 FlatBuffer schema](https://github.com/tensorflow/tensorflow/blob/v2.14.0/tensorflow/lite/schema/schema.fbs)에 따른 파일 검사 결과이며 Android Interpreter 실행 증거가 아닙니다. **shape만으로 RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부를 확정하지 않습니다.** 이번에는 아래의 notebook·exact source·artifact metadata를 추가 대조했습니다. 실제 모델 golden·Android native inference·카메라 integration 검증은 아직 별개로 남아 있습니다.
+
+## EXP02 inference contract 진행 상태
+
+- Canonical reference: [AIRPTCoach_EXP02_Export_Verify.ipynb](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), 13개 cell 전체 확인. 이번 작업에서 export/copy/validation을 실행하지 않았습니다.
+- Exact source: **Ultralytics 8.4.176** PyPI wheel을 별도로 확인했습니다. 앱 dependency를 올리거나 다른 버전 source로 대체하지 않았습니다.
+- 모델 내 whitelist metadata: version `8.4.176`, task/head `detect/Detect`, batch `1`, imgsz `[640,640]`, names `SQUAT/SHOULDER_PRESS`, `end2end=false`, `quantize=null`.
+- Source-backed 계약: logical RGB · float BCHW `/255` · centered letterbox/114 padding · normalized center xywh · 이미 sigmoid된 class score · external class-aware NMS. 21개 항목의 함수/line/hash는 [inference contract 문서](docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)에 기록했습니다.
+- 구현 준비: `Exp02RgbPreprocessor`·`Exp02FrameTransform`·`Exp02OutputDecoder`·`Exp02PostProcessor`와 synthetic Python golden fixture. Decoder는 모델 pixel 후보를 만들며 NMS 후 별도 X/Y gain으로 역변환·clip합니다.
+- Measured local validation: JVM 351개(합성 contract/Golden 39개 포함), Node 63개와 debug APK build/패키징 검사가 통과했습니다. Python reference 재생성도 통과했습니다. 이는 모델 inference/실기기 accuracy 측정이 아닙니다. [실행 기록](docs/YOLO_DEVICE_VALIDATION.md#현재-계약-구현-단계-실행-결과-2026-10-16)
+- **전체 검증은 `NOT_VERIFIED`**: 독립 Kotlin bilinear와 OpenCV uint8 resize의 최대 1-byte 차이는 단순 float 오차가 아닙니다. 실제 모델 비교와 Android native/device 검증 없이 `Exp02YoloContract`를 승격하지 않습니다. Fixture 생성은 Kotlin 테스트 통과나 실제 prediction 성공과 동의어가 아닙니다.
+
+실시간 앱 비교 기준은 **고정 입력 LiteRT predict 경로**입니다. 과거 `val`은 resize rounding·multi-label·confidence 기본값이 다릅니다. Reference predict confidence 0.25/val 0.001과 별개로 Shadow raw 0.10/stable 0.60은 `APP_ENGINEERING_INITIAL` 잠정값입니다. Threshold를 실기기 최적값으로 주장하지 않습니다.
 
 ## Dataset A / Dataset B
 
@@ -57,6 +69,6 @@ EXP02는 같은 Dataset A의 group-aware split으로 train/val/test 간 group le
 
 Ultralytics [공식 안내](https://www.ultralytics.com/license)에 따라 직접 학습한 모델도 AGPL-3.0 영향 대상으로 관리합니다. Dataset A 제공자 표기는 CC BY-NC-SA 4.0이며, **Trained-weight redistribution implications may require additional review.** weight가 Adapted Material/ShareAlike 대상인지 법적 결론을 내리지 않습니다.
 
-모델의 Git 공개·새 APK 포함/배포는 보류합니다. `.gitignore` 자체는 APK에서 모델을 제외하거나 재배포 허가를 주지 않습니다. 2026-10-15 보강된 Gradle 정책은 debug/release 모두 loose weight assets를 제외하며 이번 작업에서도 유지했습니다. 2026-10-16에는 모델 없는 빌드가 가능한 DEBUG Shadow 경계·tensor 검증·실패 격리만 준비했습니다. 모델 파일은 복사·삭제·이동하지 않았으며 실제 prediction은 비활성입니다. [개발 검증 상태](docs/YOLO_DEVICE_VALIDATION.md)
+모델의 Git 공개·새 APK 포함/배포는 보류합니다. `.gitignore` 자체는 APK에서 모델을 제외하거나 재배포 허가를 주지 않습니다. 2026-10-15 보강된 Gradle 정책은 debug/release 모두 loose weight assets를 제외하며 이번 작업에서도 유지했습니다. 2026-10-16에는 DEBUG Shadow 경계와 exact-source 기반 전처리·decoder·NMS 후보를 준비했습니다. 모델 파일은 복사·삭제·이동·재-export하지 않았으며 전체 contract `NOT_VERIFIED`로 실제 prediction은 비활성입니다. [개발 검증 상태](docs/YOLO_DEVICE_VALIDATION.md)
 
 공개 전 Dataset A 원본별 권리·attribution·weight 재배포 조건, export pipeline, 모델 metadata의 민감정보, 기존 자산의 고지와 프로젝트 LICENSE를 검토하고 사용자 승인을 받아야 합니다.

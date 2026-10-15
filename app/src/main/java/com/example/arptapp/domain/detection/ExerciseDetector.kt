@@ -4,13 +4,14 @@ import com.example.arptapp.domain.classifier.ExerciseType
 
 enum class DetectionSource { YOLO, LANDMARK_FALLBACK }
 enum class DetectorStatus {
-    INITIALIZING, READY, CONTRACT_NOT_VERIFIED, MODEL_MISSING, TENSOR_MISMATCH,
+    INITIALIZING, READY, CONTRACT_NOT_VERIFIED, MODEL_MISSING, MODEL_IDENTITY_MISMATCH, TENSOR_MISMATCH, UNSUPPORTED_RUNTIME,
     INITIALIZATION_FAILED, INFERENCE_FAILED, INVALID_OUTPUT, TIMED_OUT, CLOSED
 }
 
 /** Canonical source-frame pixel box, NOT a claim about EXP02 raw output channel semantics. */
 data class DetectionBox(val left: Float, val top: Float, val right: Float, val bottom: Float) {
-    val isValid: Boolean get() = listOf(left, top, right, bottom).all { it.isFinite() } && right > left && bottom > top
+    val isValid: Boolean get() = left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite() && right > left && bottom > top &&
+        ((right - left) * (bottom - top)).isFinite()
     val area: Float get() = if (isValid) (right - left) * (bottom - top) else 0f
 }
 data class DetectionTimings(val preprocessMs: Long, val inferenceMs: Long, val postprocessMs: Long, val totalMs: Long)
@@ -21,7 +22,8 @@ data class ExerciseDetection(
 /** In-memory diagnostics only. No image, account, persisted box, or report/upload DTO. */
 data class ExerciseDetectionResult(
     val status: DetectorStatus, val source: DetectionSource, val selected: ExerciseDetection? = null,
-    val detectionCount: Int = 0, val timings: DetectionTimings? = null
+    val detectionCount: Int = 0, val timings: DetectionTimings? = null,
+    val contractVerification: ExportContractVerification = ExportContractVerification.NOT_VERIFIED
 ) {
     val exerciseType: ExerciseType get() = selected?.exerciseType ?: ExerciseType.UNKNOWN
 }

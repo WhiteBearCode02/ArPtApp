@@ -52,8 +52,13 @@ group-disjoint 분할을 실제 사람의 완전한 subject-disjoint 또는 외�
 - 입력: FLOAT32 `[1, 3, 640, 640]`.
 - 출력: FLOAT32 `[1, 6, 8400]`.
 - export 완료 이력과 로컬 FlatBuffer 구조 검사 완료를 **Android integration 완료**와 구분합니다.
-- RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부는 shape만으로 확정하지 않습니다.
-- 실제 export pipeline 및 Interpreter/inference verification은 필요합니다. 2026-10-16에는 Android Shadow 기반 구조·tensor 검사·실패 격리를 준비했으나, 원본 export/test 계약 미확인으로 실제 prediction은 비활성입니다.
+- RGB/BGR, normalization, bbox format, xywh/xyxy, class score 의미, NMS 포함 여부는 shape만으로 확정하지 않습니다. 이번에는 [canonical concise notebook](ml/AIRPTCoach_EXP02_Export_Verify.ipynb) 전체 13개 cell, Ultralytics **8.4.176 exact source**, 모델 내 metadata를 추가 확인했습니다.
+- Canonical notebook은 `format="litert", imgsz=640, batch=1, device="cpu"` export 및 `YOLO(FINAL_TFLITE).val(split="test", imgsz=640)` 이력을 기록합니다. Export/copy/validation flag는 false이며 이번 작업에서 재-export·재평가하지 않았습니다.
+- 모델 metadata는 `version=8.4.176`, `task=detect`, `head=Detect`, `end2end=false`, `quantize=null`입니다. Source를 대조해 logical RGB/BCHW `/255`, letterbox/114 padding, normalized center xywh, sigmoid class score, external class-aware NMS를 확인했습니다. [21개 source evidence와 Android mapping](ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)
+- 2026-10-16에는 Android Shadow 경계에 `Exp02RgbPreprocessor`·`Exp02FrameTransform`·`Exp02OutputDecoder`·`Exp02PostProcessor` 후보 구현과 synthetic Python golden fixture를 추가했습니다. Fixture 생성은 Kotlin 검증 통과·실제 모델 추론과 구분합니다.
+- 같은 날 Python fixture 재생성 및 허용오차 내 Kotlin synthetic golden 대조를 실행해 통과했습니다. 전체 JVM 351개/Node 63개 통과와 APK build는 [local 검증 기록](YOLO_DEVICE_VALIDATION.md#현재-계약-구현-단계-실행-결과-2026-10-16)을 참고하세요. 실제 모델 평가·실기기 측정을 새로 수행한 결과는 아닙니다.
+- **`Exp02YoloContract`의 verification은 `NOT_VERIFIED`로 유지하며 실제 prediction은 비활성입니다.** 독립 Kotlin bilinear와 OpenCV uint8 resize의 최대 1-byte 차이가 관찰되었고 실제 모델 golden·Android native/device 검증이 남았습니다. [현재 실행·검증 상태](YOLO_DEVICE_VALIDATION.md)
+- Android의 reference는 static LiteRT **predict** 경로입니다. Historical `val`의 ceil 기반 초기 resize·multi-label·confidence 0.001과 동일한 전처리/평가라고 주장하지 않습니다. Predict default 0.25와 별개로 앱 raw 0.10/stable 0.60은 `APP_ENGINEERING_INITIAL` tuning 전 초기값입니다.
 - 모델은 Git 제외 상태를 유지합니다. 현재 Gradle은 debug/release 모두 loose weight assets를 제외합니다. 모델 없는 debug APK 검증과 모델 포함/공개 재배포 승인은 구분합니다.
 - 실제 파일 크기·해시·공개 조건은 [MODEL_CARD.md](../MODEL_CARD.md)에 기록합니다.
 
@@ -78,4 +83,4 @@ AI-Hub **크로스핏 동작 데이터**는 Dataset B입니다. 검토 대상 �
 
 ## 8. 다음 단계와 공개 gate
 
-문서 정리는 모델 재배포 허가가 아닙니다. Dataset A 원본별 권리/attribution과 trained-weight redistribution, export 설정/추론 검증, 자산 고지 및 전체 프로젝트 LICENSE 검토가 남아 있습니다. 사용자 후속 승인 범위의 DEBUG Shadow 기반 구조는 [YOLO_DEVICE_VALIDATION.md](YOLO_DEVICE_VALIDATION.md)에 별도 기록합니다. 실제 preprocessing/postprocessing·NMS·prediction·primary 전환은 하지 않았고 모델 자산은 유지했습니다.
+문서 정리는 모델 재배포 허가가 아닙니다. Dataset A 원본별 권리/attribution과 trained-weight redistribution, export 동등성/추론 검증, 자산 고지 및 전체 프로젝트 LICENSE 검토가 남아 있습니다. Exact-source 기반 전처리·decoder·NMS의 **후보 구현 완료**와 **검증·활성화 완료**를 구분합니다. DEBUG Shadow의 현재 실행 상태는 [YOLO_DEVICE_VALIDATION.md](YOLO_DEVICE_VALIDATION.md)에 별도 기록합니다. 실제 prediction·Primary 전환은 하지 않았고 모델 자산은 유지했습니다. 이후 실제 모델 golden·native compatibility → FRONT/45°/SIDE 실기기 측정 → confidence/stabilizer tuning → 사용자 확인 후 별도 Primary 승격 결정 순서로 진행합니다.

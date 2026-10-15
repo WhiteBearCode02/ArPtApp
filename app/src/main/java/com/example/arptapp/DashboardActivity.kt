@@ -178,6 +178,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 else -> "촬영 방향 선택"
             }
             invalidatePendingAnalysis()
+            cameraController.invalidateShadowEvidence()
             fallbackExerciseClassifier.reset()
             detectedExerciseType = ExerciseType.UNKNOWN
             updateDetectedExerciseUi(ExerciseType.UNKNOWN)
@@ -275,6 +276,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         }
         isExercising = true
         mainViewModel.resetSession()
+        cameraController.invalidateShadowEvidence()
         repAnalysisEngine.reset()
         repFeedbackUntilMs = 0L
         startTime = System.currentTimeMillis()
