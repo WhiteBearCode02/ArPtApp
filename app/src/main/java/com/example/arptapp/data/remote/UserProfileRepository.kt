@@ -23,6 +23,25 @@ data class CloudBodyProfile(
 class UserProfileRepository : BodyProfileSource {
     private val client get() = SupabaseClientProvider.client
 
+    /** After email confirmation, save signup measurements under the authenticated account's RLS. */
+    suspend fun saveSignUpProfile(userId: String, profile: SignUpProfile): Result<Unit> = suspendResult {
+        check(AuthSessionStore.current?.userId == userId) { "로그인 계정이 일치하지 않습니다." }
+        client.from("user_profiles").upsert(SignUpProfileRow(userId, profile.name, profile.weightKg,
+            profile.skeletalMuscleMassKg, profile.bodyFatMassKg, profile.bodyFatPercentage)) {
+            onConflict = "user_id"
+        }
+        Unit
+    }
+
+    @Serializable private data class SignUpProfileRow(
+        @SerialName("user_id") val userId: String,
+        val nickname: String,
+        @SerialName("weight_kg") val weight: Double?,
+        @SerialName("skeletal_muscle_mass_kg") val muscle: Double?,
+        @SerialName("body_fat_mass_kg") val fatMass: Double?,
+        @SerialName("body_fat_percentage") val fatPercent: Double?
+    )
+
     override suspend fun getProfile(userId: String): Result<CloudBodyProfile?> = suspendResult {
         client.from("user_profiles")
             .select {

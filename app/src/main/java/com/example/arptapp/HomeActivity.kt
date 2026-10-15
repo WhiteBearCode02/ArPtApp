@@ -14,6 +14,8 @@ import com.example.arptapp.data.remote.SupabaseAuthRepository
 import com.example.arptapp.data.remote.UserProfileRepository
 import com.example.arptapp.data.remote.UserPreferencesRepository
 import com.example.arptapp.data.repository.UserSettingsSyncRepository
+import com.example.arptapp.data.repository.SignUpProfileSync
+import com.example.arptapp.data.preferences.PendingSignUpProfileRepository
 import com.example.arptapp.core.coroutines.suspendResult
 import com.example.arptapp.utils.AlarmHelper
 import com.example.arptapp.ui.gym.NearbyGymController
@@ -49,7 +51,11 @@ class HomeActivity : AppCompatActivity() {
             ?: intent.getStringExtra("USER_ID")
         currentUserId?.let { userId ->
             settingsSyncJob = lifecycleScope.launch {
-                suspendResult { settingsSync.synchronize(userId) }
+                suspendResult {
+                    SignUpProfileSync(PendingSignUpProfileRepository(this@HomeActivity),
+                        UserProfileRepository()::saveSignUpProfile).complete(userId)
+                    settingsSync.synchronize(userId)
+                }
                     .onSuccess {
                         if (com.example.arptapp.data.remote.AuthSessionStore.current?.userId == userId) {
                             AlarmHelper.syncDailyReminder(this@HomeActivity)

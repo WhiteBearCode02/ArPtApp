@@ -78,6 +78,9 @@ android {
 
     androidResources {
         noCompress += "tflite"
+        // Default deny in ALL variants, including shared debug APKs. Keep original files on disk.
+        // MediaPipe's reviewed .task bundle is retained; loose unreviewed weights are not.
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:*.tflite:*.pt:*.pth:*.onnx"
     }
 
     packaging{

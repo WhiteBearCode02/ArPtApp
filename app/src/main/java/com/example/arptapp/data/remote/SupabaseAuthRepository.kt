@@ -1,6 +1,9 @@
 package com.example.arptapp.data.remote
 
 import android.content.Intent
+import com.example.arptapp.BuildConfig
+import com.example.arptapp.core.auth.PasswordRecoveryGrant
+import com.example.arptapp.core.auth.PasswordRecoveryPolicy
 import com.example.arptapp.core.coroutines.suspendResult
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
@@ -14,7 +17,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
+@kotlinx.serialization.Serializable
 data class SignUpProfile(
     val name: String,
     val weightKg: Double?,
@@ -22,6 +28,8 @@ data class SignUpProfile(
     val bodyFatMassKg: Double?,
     val bodyFatPercentage: Double?
 )
+
+data class RegisteredAccount(val userId: String, val session: AppSession?)
 
 data class AppSession(
     val userId: String,
@@ -53,22 +61,25 @@ internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata
  */
 class SupabaseAuthRepository {
     private val client get() = SupabaseClientProvider.client
+    private val recoveryClient = lazy { SupabaseClientProvider.createRecoveryClient() }
+    private val recoveryGrant = PasswordRecoveryGrant()
+    private val recoveryMutex = Mutex()
+    private val issuer get() = "${BuildConfig.SUPABASE_URL.trimEnd('/')}/auth/v1"
 
     val session: StateFlow<AppSession?> = AuthSessionStore.session
 
-    suspend fun signUp(email: String, password: String, profile: SignUpProfile): Result<AppSession?> = suspendResult {
-        client.auth.signUpWith(Email, redirectUrl = REDIRECT_URI) {
+    suspend fun signUp(email: String, password: String, profile: SignUpProfile): Result<RegisteredAccount> = suspendResult {
+        val registered = client.auth.signUpWith(Email, redirectUrl = REDIRECT_URI) {
             this.email = email
             this.password = password
-            data = buildJsonObject {
-                put("name", profile.name)
-                profile.weightKg?.let { put("weight_kg", it) }
-                profile.skeletalMuscleMassKg?.let { put("skeletal_muscle_mass_kg", it) }
-                profile.bodyFatMassKg?.let { put("body_fat_mass_kg", it) }
-                profile.bodyFatPercentage?.let { put("body_fat_percentage", it) }
-            }
+            // Body information must never enter Auth metadata/JWTs. Authenticated profile sync owns it.
+            data = signUpAuthMetadata(profile)
         }
-        refreshSession()
+        val userId = registered?.id ?: client.auth.currentUserOrNull()?.id
+            ?: error("가입 계정을 확인할 수 없습니다.")
+        // A pre-existing session must never bind a new signup's body draft to the wrong account.
+        val session = if (client.auth.currentUserOrNull()?.id == userId) refreshSession() else null
+        RegisteredAccount(userId, session)
     }
 
     suspend fun signIn(email: String, password: String): Result<AppSession> = suspendResult {
@@ -92,25 +103,61 @@ class SupabaseAuthRepository {
     }
 
     suspend fun handlePasswordRecovery(intent: Intent): Result<Unit> = suspendResult {
-        val callbackUri = intent.data
-        require(
-            callbackUri?.scheme == REDIRECT_SCHEME &&
-                callbackUri.host == REDIRECT_HOST &&
-                callbackUri.path == PASSWORD_RESET_PATH
-        ) { "유효하지 않은 재설정 링크입니다." }
-        client.handleDeeplinks(intent)
-        check(client.auth.currentUserOrNull() != null) { "재설정 링크가 만료되었거나 유효하지 않습니다." }
+        recoveryMutex.withLock {
+            recoveryGrant.clear()
+            val credentials = PasswordRecoveryPolicy.parse(intent.dataString, issuer, System.currentTimeMillis() / 1000)
+            val auth = recoveryClient.value.auth
+            auth.awaitInitialization()
+            // Validate the EXACT incoming token with Auth before trusting its recovery AMR/claims.
+            // Existing currentUser != null is never evidence that a recovery link is valid.
+            val verified = auth.retrieveUser(credentials.accessToken)
+            check(verified.id == credentials.claims.userId) { "재설정 인증에 실패했습니다." }
+            // Also validate/rotate the refresh token; reject token pairs from different accounts/sessions.
+            val restored = auth.refreshSession(credentials.refreshToken)
+            val claims = PasswordRecoveryPolicy.claims(restored.accessToken, issuer, System.currentTimeMillis() / 1000)
+            check(restored.user?.id == verified.id && claims.userId == verified.id &&
+                claims.sessionId == credentials.claims.sessionId) { "재설정 인증에 실패했습니다." }
+            auth.importSession(restored, autoRefresh = false)
+            recoveryGrant.authorize(claims)
+        }
     }
 
-    suspend fun updateRecoveredPassword(newPassword: String): Result<Unit> = suspendResult {
-        check(client.auth.currentUserOrNull() != null) { "재설정 인증이 필요합니다." }
-        client.auth.updateUser {
-            password = newPassword
+    suspend fun updateRecoveredPassword(newPassword: String, expectedVersion: Long): Result<Unit> = suspendResult {
+        recoveryMutex.withLock {
+            val auth = recoveryClient.value.auth
+            val session = auth.currentSessionOrNull() ?: error("재설정 인증이 필요합니다.")
+            val claims = PasswordRecoveryPolicy.claims(session.accessToken, issuer, System.currentTimeMillis() / 1000)
+            recoveryGrant.requireAuthorized(session.user?.id, claims.sessionId, expectedVersion)
+            require(newPassword.length >= 8) { "비밀번호는 8자 이상 입력해 주세요." }
+            auth.updateUser { password = newPassword }
+            recoveryGrant.clear() // one successful update per verified recovery capability
+            // Revoke this recovered account's sessions, not an unrelated ordinary login's sessions.
+            try { suspendResult { auth.signOut() } } finally { auth.clearSession() }
         }
         Unit
     }
 
+    /** Abandoning recovery must not leave its newly imported session logged in. No server-wide logout. */
+    suspend fun discardPasswordRecovery() = recoveryMutex.withLock {
+        recoveryGrant.clear()
+        if (recoveryClient.isInitialized()) recoveryClient.value.auth.clearSession()
+    }
+
+    fun hasPasswordRecoveryAuthorization(): Boolean = runCatching {
+        if (!recoveryClient.isInitialized()) return false
+        val current = recoveryClient.value.auth.currentSessionOrNull() ?: return false
+        recoveryGrant.requireAuthorized(current.user?.id, PasswordRecoveryPolicy.sessionIdForCleanup(current.accessToken))
+        true
+    }.getOrDefault(false)
+
+    fun passwordRecoveryAuthorizationVersion(): Long? =
+        if (hasPasswordRecoveryAuthorization()) recoveryGrant.version() else null
+
     suspend fun handleAuthCallback(intent: Intent): Result<AppSession?> = suspendResult {
+        val uri = intent.data
+        require(uri?.scheme == "arptapp" && uri.host == "auth" && uri.path == "/callback" &&
+            uri.port == -1 && uri.userInfo == null && !uri.fragment.isNullOrBlank() &&
+            !uri.fragment.orEmpty().split('&').contains("type=recovery")) { "유효하지 않은 인증 링크입니다." }
         client.handleDeeplinks(intent)
         refreshSession()
     }
@@ -170,6 +217,7 @@ class SupabaseAuthRepository {
     }
 
     suspend fun signOut() {
+        recoveryGrant.clear()
         client.auth.awaitInitialization()
         client.auth.signOut()
         AuthSessionStore.current = null
@@ -192,9 +240,11 @@ class SupabaseAuthRepository {
 
     private companion object {
         const val REDIRECT_URI = "arptapp://auth/callback"
-        const val PASSWORD_RESET_REDIRECT_URI = "arptapp://auth/reset-password"
-        const val REDIRECT_SCHEME = "arptapp"
-        const val REDIRECT_HOST = "auth"
-        const val PASSWORD_RESET_PATH = "/reset-password"
+        const val PASSWORD_RESET_REDIRECT_URI = PasswordRecoveryPolicy.REDIRECT_URI
     }
+}
+
+/** Deliberate allowlist; adding a SignUpProfile field cannot silently expand Auth/JWT data. */
+internal fun signUpAuthMetadata(profile: SignUpProfile): JsonObject = buildJsonObject {
+    put("name", profile.name)
 }

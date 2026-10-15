@@ -6,7 +6,9 @@ JVM/Node 테스트 통과를 카메라 정확도·실기기 성능 검증으로 
 
 ## 준비
 
-1. `build/location-manager-verification/outputs/apk/debug/app-debug.apk` 최신 파일을 설치합니다.
+1. 보안 보강 검증 APK인 `build/security-hardening-verification/outputs/apk/debug/app-debug.apk`를 설치합니다.
+   이전 `location-manager-verification` APK는 자동 갱신되지 않으며 YOLO 모델이 포함된 과거 파일일 수 있습니다.
+   [배포 준비·검증 상태](../RELEASE_READINESS.md)를 먼저 확인하세요. 이 debug 파일은 공개 배포 승인본이 아닙니다.
 2. 카메라 권한을 허용하고 촬영 방향을 정면/측면으로 명시합니다. 가능하면 화면에 한 사람만 보이게 합니다.
 3. Android Studio Logcat에서 앱 process를 선택하고 tag `RepAnalysis`로 필터링합니다.
 4. 휴대폰/Android 버전, 렌즈, 조명, 촬영 방향, 분석 기준 버전, 수행 횟수, 앱 횟수, 표시/TTS/보고서 일치를 메모합니다.

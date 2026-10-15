@@ -6,6 +6,21 @@ candidates. The Android app never receives the YouTube API key.
 
 ## Setup
 
+**2026-10-15: source-only hardening, NOT deployed/applied.** Remote changes below require separate approval.
+The function now requires a real authenticated, non-anonymous user JWT, not an API key alone.
+Gateway JWT validation stays enabled; the handler also checks Auth `/user` before accessing the cache.
+`supabase/youtube-ranking.sql` adds `youtube_private.request_limits` and the auth-scoped
+`reserve_youtube_ranking_request()` RPC: 6 requests per UTC minute, 120 per UTC day per account,
+including cache hits. A missing/failed RPC returns 503; exceeded limits return 429. No memory fallback.
+The counters are atomically updated on a single account row; direct table access is revoked.
+The body is category-only, up to 512 bytes; overall work is limited to 12 seconds with abort signals.
+
+After approval, apply/review the SQL and verify RLS/concurrency before deploying the new function.
+The Android client already sends the user's access token in `Authorization: Bearer ...`, keeps the
+publishable key in `apikey`, disallows redirects and bounds response bytes. No new API key is needed.
+Neither code nor per-user limits guarantee zero cloud charges: Auth/Edge/DB requests still use resources,
+and many accounts/requests rejected by the gateway can still consume platform usage.
+
 1. In the Supabase SQL Editor, apply `supabase/youtube-ranking.sql`. It creates
    `youtube_api_usage`, `youtube_ranking_cache`, and the atomic reservation RPC.
    The tables have RLS enabled and no `anon` or `authenticated` grants.

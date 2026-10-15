@@ -6,14 +6,20 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.arptapp.data.remote.SupabaseAuthRepository
+import androidx.activity.viewModels
+import com.example.arptapp.viewmodel.PasswordRecoveryViewModel
 import com.example.arptapp.databinding.ActivityPasswordResetBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import androidx.activity.OnBackPressedCallback
 
 class PasswordResetActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPasswordResetBinding
-    private val authRepository = SupabaseAuthRepository()
+    private val recoveryViewModel: PasswordRecoveryViewModel by viewModels()
+    private val authRepository get() = recoveryViewModel.repository
     private var recoveryReady = false
+    private var recoveryJob: Job? = null
+    private var passwordUpdateJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,10 +27,17 @@ class PasswordResetActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.toolbarPasswordReset.setNavigationOnClickListener { returnToLogin() }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = returnToLogin()
+        })
         binding.btnSaveRecoveredPassword.setOnClickListener { saveNewPassword() }
         binding.btnRequestResetAgain.setOnClickListener {
-            startActivity(Intent(this, ForgotPasswordActivity::class.java))
-            finish()
+            recoveryJob?.cancel()
+            lifecycleScope.launch {
+                authRepository.discardPasswordRecovery()
+                startActivity(Intent(this@PasswordResetActivity, ForgotPasswordActivity::class.java))
+                finish()
+            }
         }
         handleRecoveryIntent(intent)
     }
@@ -36,6 +49,17 @@ class PasswordResetActivity : AppCompatActivity() {
     }
 
     private fun handleRecoveryIntent(intent: Intent) {
+        passwordUpdateJob?.cancel()
+        recoveryJob?.cancel() // an older callback must not enable a newer invalid link's form
+        if (recoveryViewModel.isVerified(intent.dataString)) {
+            recoveryReady = true
+            binding.tvPasswordResetStatus.visibility = View.GONE
+            binding.btnRequestResetAgain.visibility = View.GONE
+            binding.resetForm.visibility = View.VISIBLE
+            setLoading(false)
+            return
+        }
+        recoveryViewModel.invalidate()
         recoveryReady = false
         binding.resetForm.visibility = View.GONE
         binding.btnRequestResetAgain.visibility = View.GONE
@@ -43,9 +67,10 @@ class PasswordResetActivity : AppCompatActivity() {
         binding.tvPasswordResetStatus.text = getString(R.string.password_reset_link_checking)
         setLoading(true)
 
-        lifecycleScope.launch {
+        recoveryJob = lifecycleScope.launch {
             authRepository.handlePasswordRecovery(intent)
                 .onSuccess {
+                    recoveryViewModel.markVerified(intent.dataString)
                     recoveryReady = true
                     binding.tvPasswordResetStatus.visibility = View.GONE
                     binding.resetForm.visibility = View.VISIBLE
@@ -60,6 +85,15 @@ class PasswordResetActivity : AppCompatActivity() {
 
     private fun saveNewPassword() {
         if (!recoveryReady) return
+        val version = authRepository.passwordRecoveryAuthorizationVersion() ?: run {
+            recoveryReady = false
+            setLoading(false)
+            binding.tvPasswordResetStatus.text = getString(R.string.password_reset_link_invalid)
+            binding.tvPasswordResetStatus.visibility = View.VISIBLE
+            binding.resetForm.visibility = View.GONE
+            binding.btnRequestResetAgain.visibility = View.VISIBLE
+            return
+        }
         val password = binding.etRecoveredPassword.text?.toString().orEmpty()
         val confirmation = binding.etRecoveredPasswordConfirm.text?.toString().orEmpty()
         binding.tilRecoveredPassword.error = null
@@ -71,10 +105,9 @@ class PasswordResetActivity : AppCompatActivity() {
                 binding.tilRecoveredPasswordConfirm.error = "새 비밀번호가 일치하지 않습니다."
             else -> {
                 setLoading(true)
-                lifecycleScope.launch {
-                    authRepository.updateRecoveredPassword(password)
+                passwordUpdateJob = lifecycleScope.launch {
+                    authRepository.updateRecoveredPassword(password, version)
                         .onSuccess {
-                            runCatching { authRepository.signOut() }
                             returnToLogin("비밀번호를 변경했습니다. 새 비밀번호로 로그인해 주세요.")
                         }
                         .onFailure { error ->
@@ -99,10 +132,16 @@ class PasswordResetActivity : AppCompatActivity() {
     }
 
     private fun returnToLogin(notice: String? = null) {
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            notice?.let { putExtra(MainActivity.EXTRA_NOTICE, it) }
-        })
-        finish()
+        recoveryJob?.cancel()
+        passwordUpdateJob?.cancel()
+        recoveryViewModel.invalidate()
+        lifecycleScope.launch {
+            authRepository.discardPasswordRecovery()
+            startActivity(Intent(this@PasswordResetActivity, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                notice?.let { putExtra(MainActivity.EXTRA_NOTICE, it) }
+            })
+            finish()
+        }
     }
 }

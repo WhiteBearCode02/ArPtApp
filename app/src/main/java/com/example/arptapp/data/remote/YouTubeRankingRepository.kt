@@ -7,6 +7,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.io.ByteArrayOutputStream
+import io.github.jan.supabase.auth.auth
 
 enum class RankingCategory(val label: String) {
     SQUAT("스쿼트"),
@@ -44,13 +46,21 @@ class YouTubeRankingRepository {
             require(BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()) {
                 "Supabase 연결 설정이 없습니다."
             }
+            val auth = SupabaseClientProvider.client.auth
+            auth.awaitInitialization()
+            val session = auth.currentSessionOrNull() ?: error("로그인이 필요합니다.")
+            val userId = session.user?.id ?: error("로그인 계정을 확인할 수 없습니다.")
+            check(AuthSessionStore.current?.userId == userId) { "다시 로그인해 주세요." }
+            require(URL(BuildConfig.SUPABASE_URL).protocol == "https") { "안전한 연결 설정이 필요합니다." }
             val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/youtube-ranking").openConnection()
                 as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 8_000
                 readTimeout = 12_000
                 doOutput = true
+                instanceFollowRedirects = false
                 setRequestProperty("apikey", BuildConfig.SUPABASE_KEY)
+                setRequestProperty("Authorization", "Bearer ${session.accessToken}")
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
             }
             try {
@@ -58,8 +68,19 @@ class YouTubeRankingRepository {
                     output.write(JSONObject().put("category", category.name).toString().toByteArray(Charsets.UTF_8))
                 }
                 val status = connection.responseCode
-                val body = (if (status in 200..299) connection.inputStream else connection.errorStream)
-                    ?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                val bytes = (if (status in 200..299) connection.inputStream else connection.errorStream)?.use { input ->
+                    val output = ByteArrayOutputStream()
+                    val buffer = ByteArray(4096)
+                    while (output.size() <= 128 * 1024) {
+                        val count = input.read(buffer, 0, minOf(buffer.size, 128 * 1024 + 1 - output.size()))
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                    output.toByteArray()
+                } ?: byteArrayOf()
+                check(bytes.size <= 128 * 1024) { "순위 응답이 너무 큽니다." }
+                check(AuthSessionStore.current?.userId == userId && auth.currentUserOrNull()?.id == userId) { "로그인 계정이 변경되었습니다." }
+                val body = bytes.toString(Charsets.UTF_8)
                 val response = runCatching { JSONObject(body) }.getOrElse {
                     error("순위 데이터를 읽을 수 없습니다.")
                 }
