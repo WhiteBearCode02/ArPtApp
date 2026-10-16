@@ -20,281 +20,333 @@
         android:elevation="2dp"
         android:focusable="false" />
 
-    <!-- 카메라 영상의 명암과 관계없이 정보가 읽히도록 하는 최소한의 그라데이션입니다. -->
     <View
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="260dp"
         android:layout_gravity="top"
         android:background="@drawable/bg_camera_top_scrim"
         android:clickable="false" />
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="280dp"
+        android:layout_height="260dp"
         android:layout_gravity="bottom"
         android:background="@drawable/bg_camera_bottom_scrim"
         android:clickable="false" />
 
-    <View
-        android:layout_width="260dp"
-        android:layout_height="260dp"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="-90dp"
-        android:layout_marginEnd="-80dp"
-        android:alpha="0.72"
-        android:background="@drawable/bg_camera_aurora_glow"
-        android:clickable="false" />
-
+    <!-- Only the chrome receives system-bar insets. The camera remains edge-to-edge. -->
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/dashboardChrome"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fitsSystemWindows="true"
-        android:paddingStart="20dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="24dp">
+        android:elevation="4dp"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
 
-        <ImageButton
-            android:id="@+id/btnClose"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_camera_icon_button"
-            android:contentDescription="@string/camera_close"
-            android:padding="12dp"
-            android:src="@drawable/ic_camera_close"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/white" />
-
-        <LinearLayout
-            android:id="@+id/layoutCameraHeader"
+        <!-- The CTA never scrolls. Short screens and large fonts scroll the content above it. -->
+        <ScrollView
+            android:id="@+id/scrollDashboardContent"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            app:layout_constraintEnd_toStartOf="@id/btnSwitchCamera"
-            app:layout_constraintStart_toEndOf="@id/btnClose"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.18"
-                android:text="@string/camera_ai_pose"
-                android:textColor="@color/aurora_mint"
-                android:textSize="10sp" />
-
-            <TextView
-                android:id="@+id/tvDashboardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/exercise_ready"
-                android:textColor="@color/white"
-                android:textSize="20sp" />
-
-            <TextView
-                android:id="@+id/tvCameraLens"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/camera_lens_connecting"
-                android:textColor="@color/aurora_ice"
-                android:textSize="10sp" />
-        </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/btnSwitchCamera"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_camera_icon_button"
-            android:contentDescription="@string/camera_switch"
-            android:padding="11dp"
-            android:src="@drawable/ic_camera_flip"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/white" />
-
-        <LinearLayout
-            android:id="@+id/layoutDetectedExercise"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_camera_status_chip"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="14dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/layoutCameraHeader">
-
-            <View
-                android:layout_width="7dp"
-                android:layout_height="7dp"
-                android:background="@drawable/bg_camera_live_dot" />
-
-            <TextView
-                android:id="@+id/tvDetectedExercise"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/exercise_detecting"
-                android:textColor="#EFFFFFFF"
-                android:textSize="13sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layoutCount"
-            android:layout_width="148dp"
-            android:layout_height="96dp"
-            android:layout_marginBottom="20dp"
-            android:background="@drawable/bg_camera_count_panel"
-            android:gravity="center"
-            android:orientation="vertical"
+            android:layout_height="0dp"
+            android:layout_marginBottom="12dp"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollbars="vertical"
             app:layout_constraintBottom_toTopOf="@id/layoutCameraActions"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent">
-
-            <TextView
-                android:id="@+id/tvCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-light"
-                android:includeFontPadding="false"
-                android:text="0"
-                android:textColor="@color/white"
-                android:textSize="44sp" />
-
-            <TextView
-                android:id="@+id/tvCountUnit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.1"
-                android:text="@string/exercise_count"
-                android:textColor="@color/aurora_ice"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCameraView"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="촬영 방향 선택"
-            android:textAllCaps="false"
-            android:textColor="@color/aurora_ice"
-            app:backgroundTint="#B3102640"
-            app:cornerRadius="16dp"
-            app:layout_constraintTop_toBottomOf="@id/layoutDetectedExercise"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/tvPoseFeedback"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:text="민트: 추적 중 · 주황: 확인할 관절 · 회색: 측정 대기"
-            android:textColor="@color/aurora_ice"
-            android:textSize="14sp"
-            android:accessibilityLiveRegion="polite"
-            app:layout_constraintTop_toBottomOf="@id/btnCameraView"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPersonalReference"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="내 기준 기록"
-            android:textAllCaps="false"
-            android:textColor="@color/aurora_ice"
-            app:backgroundTint="#B3102640"
-            app:cornerRadius="16dp"
-            app:layout_constraintTop_toBottomOf="@id/tvPoseFeedback"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                <LinearLayout
+                    android:id="@+id/layoutCameraHeader"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/tvPerformance"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textSize="11sp"
-            android:textColor="@color/aurora_ice"
-            android:layout_marginTop="4dp"
-            app:layout_constraintTop_toBottomOf="@id/btnPersonalReference"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                    <ImageButton
+                        android:id="@+id/btnClose"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_camera_icon_button"
+                        android:contentDescription="@string/dashboard_back"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_dashboard_back"
+                        app:tint="@color/white" />
 
-        <TextView
-            android:id="@+id/tvYoloDiagnostics"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:textSize="10sp"
-            android:textColor="@color/aurora_ice"
-            android:visibility="gone"
-            android:importantForAccessibility="no"
-            android:maxLines="6"
-            app:layout_constraintTop_toBottomOf="@id/tvPerformance"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp">
+
+                        <TextView
+                            android:id="@+id/tvDashboardTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:gravity="center"
+                            android:text="@string/exercise_ready"
+                            android:textColor="@color/white"
+                            android:textSize="20sp" />
+
+                        <TextView
+                            android:id="@+id/tvCameraLens"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:gravity="center"
+                            android:text="@string/camera_lens_connecting"
+                            android:textColor="@color/aurora_ice"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnSwitchCamera"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_camera_icon_button"
+                        android:contentDescription="@string/camera_switch"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_camera_flip"
+                        app:tint="@color/white" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutDetectedExercise"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_camera_status_chip"
+                    android:gravity="center_vertical"
+                    android:minHeight="36dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp"
+                    app:layout_constrainedWidth="true"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/layoutCameraHeader">
+
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
+                        android:background="@drawable/bg_camera_live_dot" />
+
+                    <TextView
+                        android:id="@+id/tvDetectedExercise"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/exercise_detecting"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutSetupOptions"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_dashboard_glass_panel"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/layoutDetectedExercise">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCameraView"
+                        style="@style/Widget.AIRPTCoach.Dashboard.SetupRow"
+                        android:text="@string/dashboard_camera_view" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:background="#4079C9D0"
+                        android:importantForAccessibility="no" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPersonalReference"
+                        style="@style/Widget.AIRPTCoach.Dashboard.SetupRow"
+                        android:text="@string/dashboard_personal_reference" />
+                </LinearLayout>
+
+                <!-- Clear guide space grows on tall screens; short screens can scroll it. -->
+                <FrameLayout
+                    android:id="@+id/layoutPoseGuide"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:minHeight="160dp"
+                    app:layout_constraintBottom_toTopOf="@id/layoutCount"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/layoutSetupOptions">
+
+                    <TextView
+                        android:id="@+id/tvPoseFeedback"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:accessibilityLiveRegion="polite"
+                        android:background="@drawable/bg_camera_status_chip"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:text="@string/dashboard_pose_guide"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="14sp" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_camera_count_panel"
+                    android:gravity="center"
+                    android:minWidth="148dp"
+                    android:orientation="vertical"
+                    android:paddingStart="24dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="24dp"
+                    android:paddingBottom="12dp"
+                    app:layout_constrainedWidth="true"
+                    app:layout_constraintBottom_toTopOf="@id/layoutYoloDiagnostics"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/exercise_count"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-light"
+                            android:includeFontPadding="false"
+                            android:text="0"
+                            android:textColor="@color/white"
+                            android:textSize="40sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/dashboard_count_unit"
+                            android:textColor="@color/aurora_ice"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCountUnit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/dashboard_count_waiting"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- Main shows this only in DEBUG. Details are initially collapsed. -->
+                <LinearLayout
+                    android:id="@+id/layoutYoloDiagnostics"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_dashboard_glass_panel"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/layoutCount">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnYoloDiagnosticsToggle"
+                        style="@style/Widget.AIRPTCoach.Dashboard.DiagnosticToggle"
+                        android:text="@string/dashboard_yolo_expand" />
+
+                    <LinearLayout
+                        android:id="@+id/layoutYoloDiagnosticsDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvPerformance"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/aurora_ice"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvYoloDiagnostics"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:fontFamily="monospace"
+                            android:importantForAccessibility="no"
+                            android:textColor="@color/aurora_ice"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </ScrollView>
 
         <FrameLayout
             android:id="@+id/layoutCameraActions"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnStartExercise"
-                android:layout_width="196dp"
-                android:layout_height="52dp"
-                android:layout_gravity="center"
+                style="@style/Widget.AIRPTCoach.Dashboard.ExerciseAction"
                 android:background="@drawable/bg_camera_start_button"
-                android:backgroundTint="@null"
-                android:elevation="4dp"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.04"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
                 android:text="@string/exercise_start"
-                android:textAllCaps="false"
-                android:textColor="#FF071426"
-                android:textSize="15sp" />
+                android:textColor="#FF071426" />
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnEndExercise"
-                android:layout_width="196dp"
-                android:layout_height="52dp"
-                android:layout_gravity="center"
+                style="@style/Widget.AIRPTCoach.Dashboard.ExerciseAction"
                 android:background="@drawable/bg_camera_end_button"
-                android:backgroundTint="@null"
-                android:elevation="4dp"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.04"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
                 android:text="@string/exercise_end"
-                android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp"
                 android:visibility="gone" />
         </FrameLayout>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </FrameLayout>

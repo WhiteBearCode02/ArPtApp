@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="personal_reference_title">내 기준 기록</string>
+    <string name="personal_reference_choose_motion">기준 동작을 선택해 주세요</string>
+    <string name="personal_reference_camera_view_value">촬영 방향: %1$s</string>
+    <string name="personal_reference_front">정면</string>
+    <string name="personal_reference_side">측면</string>
+    <string name="personal_reference_choose_view_first">촬영 방향을 먼저 선택해 주세요</string>
+    <string name="personal_reference_login_required">로그인 후 내 기준 기록을 사용할 수 있습니다</string>
+    <string name="personal_reference_squat">스쿼트</string>
+    <string name="personal_reference_shoulder_press">숄더 프레스</string>
+    <string name="personal_reference_current_view_hint">현재 촬영 방향 기준으로 기록</string>
+    <string name="personal_reference_capture_help">전신이 보이게 한 동작을 천천히 수행한 뒤 ‘기준 저장’을 눌러 주세요.</string>
+    <string name="personal_reference_privacy_help">관절 각도만 이 기기에 저장하며 영상은 저장하지 않습니다. 내 동작과의 비교 기준이며, 올바른 자세를 인증하는 기능은 아닙니다.</string>
+    <string name="personal_reference_delete_help">저장한 기준은 ‘내 기준 기록’을 길게 눌러 삭제할 수 있습니다.</string>
+    <string name="personal_reference_cancel">취소</string>
+    <string name="personal_reference_save">기준 저장</string>
+</resources>

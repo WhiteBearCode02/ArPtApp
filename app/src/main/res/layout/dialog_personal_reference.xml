@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_personal_reference_dialog"
+    android:clipToPadding="false"
+    android:fillViewport="false">
+
+    <!-- All content, including Cancel, remains reachable on short/large-font windows. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tvReferenceTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/personal_reference_title"
+            android:textColor="@color/white"
+            android:textSize="22sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/personal_reference_choose_motion"
+            android:textColor="@color/aurora_ice"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvReferenceCameraView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_camera_status_chip"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:textColor="@color/aurora_mint"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/btnReferenceSquat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_personal_reference_option"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="76dp"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium" android:text="@string/personal_reference_squat"
+                    android:textColor="@color/white" android:textSize="17sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/personal_reference_current_view_hint"
+                    android:textColor="@color/aurora_ice" android:textSize="13sp" />
+            </LinearLayout>
+            <TextView android:layout_width="24dp" android:layout_height="wrap_content"
+                android:gravity="center" android:importantForAccessibility="no"
+                android:text="›" android:textColor="@color/aurora_mint" android:textSize="28sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnReferenceShoulderPress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_personal_reference_option"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="76dp"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium" android:text="@string/personal_reference_shoulder_press"
+                    android:textColor="@color/white" android:textSize="17sp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/personal_reference_current_view_hint"
+                    android:textColor="@color/aurora_ice" android:textSize="13sp" />
+            </LinearLayout>
+            <TextView android:layout_width="24dp" android:layout_height="wrap_content"
+                android:gravity="center" android:importantForAccessibility="no"
+                android:text="›" android:textColor="@color/aurora_mint" android:textSize="28sp" />
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="@string/personal_reference_capture_help"
+            android:textColor="@color/white" android:textSize="14sp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/personal_reference_privacy_help"
+            android:textColor="@color/aurora_ice" android:textSize="12sp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/personal_reference_delete_help"
+            android:textColor="@color/aurora_ice" android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelReference"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:minHeight="48dp"
+            android:text="@string/personal_reference_cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/aurora_ice"
+            app:backgroundTint="#1C354F"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+</ScrollView>

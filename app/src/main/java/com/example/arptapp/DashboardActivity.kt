@@ -18,6 +18,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityDashboardBinding
 import com.example.arptapp.data.remote.SupabaseRepository
@@ -42,6 +45,8 @@ import com.example.arptapp.ui.camera.LandmarkDetectionFrame
 import com.example.arptapp.ui.camera.LandmarkExerciseDetector
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
+import com.example.arptapp.ui.dashboard.DashboardUiPolicy
+import com.example.arptapp.ui.dashboard.PersonalReferenceDialog
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import kotlinx.coroutines.launch
@@ -98,6 +103,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val referenceRepository by lazy { com.example.arptapp.data.preferences.PersonalMotionReferenceRepository(this) }
     private val calibrationFrames = mutableListOf<List<Float>>()
     private var calibrationExercise: ExerciseType? = null
+    private var referenceChoiceDialog: AlertDialog? = null
+    private var yoloDiagnosticsExpanded = false
     private val performanceMonitor = com.example.arptapp.domain.analyzer.FramePerformanceMonitor()
     private var lastDiagnosticsAt = 0L
     private var personalSequence: List<FloatArray> = emptyList()
@@ -116,7 +123,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         super.onCreate(savedInstanceState)
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.tvYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
+        setupDashboardInsets()
+        setupYoloDiagnostics()
         renderYoloShadowDiagnostic()
 
         tts = TextToSpeech(this, this)
@@ -143,7 +151,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 val text = getString(if (front) R.string.camera_lens_front else R.string.camera_lens_back)
                 binding.tvCameraLens.text = text
                 binding.btnSwitchCamera.contentDescription = "$text · 카메라 전환"
-                binding.btnSwitchCamera.isEnabled = canSwitch
+                applyDashboardControlState()
                 if (lensSwitchRequested) Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
                 lensSwitchRequested = false
             }
@@ -152,30 +160,83 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         cameraController.initialize()
         checkCameraPermission()
         setupButtons()
+        applyDashboardControlState()
+    }
+
+    /** Keep the camera full-bleed; only interactive chrome avoids bars/cutouts in both orientations. */
+    private fun setupDashboardInsets() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val chrome = binding.dashboardChrome
+        val left = chrome.paddingLeft; val top = chrome.paddingTop
+        val right = chrome.paddingRight; val bottom = chrome.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(chrome) { view, insets ->
+            val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            view.setPadding(left + safe.left, top + safe.top, right + safe.right, bottom + safe.bottom)
+            insets // Do not consume: Preview/Overlay keep their existing full-frame coordinate space.
+        }
+        ViewCompat.requestApplyInsets(chrome)
+    }
+
+    /** Presentation-only projection: never resets or locks a workout, calibration or detector. */
+    private fun applyDashboardControlState() {
+        val state = DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null)
+        binding.btnCameraView.isEnabled = state.cameraViewEnabled
+        binding.btnPersonalReference.isEnabled = state.personalReferenceEnabled
+        binding.btnStartExercise.isEnabled = state.startExerciseEnabled
+        binding.btnSwitchCamera.isEnabled = cameraCanSwitch && state.cameraViewEnabled
+        listOf(binding.btnCameraView, binding.btnPersonalReference, binding.btnStartExercise, binding.btnSwitchCamera)
+            .forEach { it.alpha = if (it.isEnabled) 1f else .5f }
+    }
+
+    private fun setupYoloDiagnostics() {
+        binding.tvYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
+        binding.layoutYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
+        setYoloDiagnosticsExpanded(false)
+        binding.btnYoloDiagnosticsToggle.setOnClickListener {
+            setYoloDiagnosticsExpanded(!yoloDiagnosticsExpanded)
+        }
+    }
+
+    private fun setYoloDiagnosticsExpanded(expanded: Boolean) {
+        yoloDiagnosticsExpanded = BuildConfig.DEBUG && expanded
+        binding.layoutYoloDiagnosticsDetails.visibility = if (yoloDiagnosticsExpanded) View.VISIBLE else View.GONE
+        binding.btnYoloDiagnosticsToggle.text = getString(if (yoloDiagnosticsExpanded)
+            R.string.dashboard_yolo_collapse else R.string.dashboard_yolo_expand)
+        ViewCompat.setStateDescription(binding.btnYoloDiagnosticsToggle, getString(if (yoloDiagnosticsExpanded)
+            R.string.dashboard_yolo_expanded_state else R.string.dashboard_yolo_collapsed_state))
     }
 
     private fun setupButtons() {
         binding.btnPersonalReference.setOnClickListener { togglePersonalReference() }
         binding.btnPersonalReference.setOnLongClickListener {
+            if (isExercising) return@setOnLongClickListener true
             val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
+            if (!canUsePersonalReference(userId)) return@setOnLongClickListener true
+            val selectedView = cameraView
             AlertDialog.Builder(this).setTitle("개인 기준 동작 삭제")
                 .setMessage("현재 촬영 방향의 스쿼트·숄더프레스 개인 기준을 이 기기에서 삭제할까요?")
                 .setPositiveButton("삭제") { _, _ ->
-                    listOf("SQUAT", "SHOULDER_PRESS").forEach { referenceRepository.remove(userId, it, cameraView) }
+                    if (isExercising || cameraView != selectedView ||
+                        com.example.arptapp.data.remote.AuthSessionStore.current?.userId != userId) return@setPositiveButton
+                    listOf("SQUAT", "SHOULDER_PRESS").forEach { referenceRepository.remove(userId, it, selectedView) }
                     personalSequence = emptyList()
                 }.setNegativeButton("취소", null).show()
             true
         }
         binding.btnCameraView.setOnClickListener {
+            if (!DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null).cameraViewEnabled)
+                return@setOnClickListener
             cameraView = when (cameraView) {
                 com.example.arptapp.domain.analyzer.CameraView.UNKNOWN -> com.example.arptapp.domain.analyzer.CameraView.FRONT
                 com.example.arptapp.domain.analyzer.CameraView.FRONT -> com.example.arptapp.domain.analyzer.CameraView.SIDE
                 else -> com.example.arptapp.domain.analyzer.CameraView.UNKNOWN
             }
             binding.btnCameraView.text = when (cameraView) {
-                com.example.arptapp.domain.analyzer.CameraView.FRONT -> "촬영: 정면"
-                com.example.arptapp.domain.analyzer.CameraView.SIDE -> "촬영: 측면"
-                else -> "촬영 방향 선택"
+                com.example.arptapp.domain.analyzer.CameraView.FRONT -> getString(R.string.personal_reference_camera_view_value,
+                    getString(R.string.personal_reference_front))
+                com.example.arptapp.domain.analyzer.CameraView.SIDE -> getString(R.string.personal_reference_camera_view_value,
+                    getString(R.string.personal_reference_side))
+                else -> getString(R.string.dashboard_camera_view)
             }
             invalidatePendingAnalysis()
             cameraController.invalidateShadowEvidence()
@@ -220,10 +281,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private fun togglePersonalReference() {
         if (isExercising) return
         val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
-        if (userId.isBlank() || cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN) {
-            Toast.makeText(this, "로그인 후 촬영 방향을 먼저 선택해 주세요", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (!canUsePersonalReference(userId)) return
         val capturing = calibrationExercise
         if (capturing != null) {
             val reference = com.example.arptapp.domain.analyzer.PersonalMotionReference(capturing.name, cameraView, calibrationFrames.toList())
@@ -233,24 +291,41 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             } else Toast.makeText(this, "유효한 움직임 데이터가 부족합니다. 다시 기록해 주세요", Toast.LENGTH_LONG).show()
             calibrationExercise = null
             calibrationFrames.clear()
-            binding.btnPersonalReference.text = "내 기준 기록"
-            binding.btnCameraView.isEnabled = true
-            binding.btnStartExercise.isEnabled = true
+            binding.btnPersonalReference.text = getString(R.string.dashboard_personal_reference)
+            applyDashboardControlState()
             return
         }
-        AlertDialog.Builder(this).setTitle("개인 비교 기준 기록")
-            .setMessage("종목을 선택하고 전신이 보이도록 한 번의 동작을 천천히 수행한 뒤 저장을 누르세요. 관절 각도만 이 기기에 저장하며 영상은 저장하지 않습니다. 내 동작과의 비교 기준이며 올바른 자세 인증은 아닙니다. 길게 누르면 삭제할 수 있습니다.")
-            .setPositiveButton("스쿼트") { _, _ -> beginReference(ExerciseType.SQUAT) }
-            .setNeutralButton("숄더프레스") { _, _ -> beginReference(ExerciseType.SHOULDER_PRESS) }
-            .setNegativeButton("취소", null).show()
+        if (referenceChoiceDialog?.isShowing == true) return
+        val selectedView = cameraView
+        referenceChoiceDialog = PersonalReferenceDialog.show(this, selectedView) { type ->
+            if (cameraView != selectedView ||
+                com.example.arptapp.data.remote.AuthSessionStore.current?.userId != userId) return@show
+            beginReference(type)
+        }?.also { dialog -> dialog.setOnDismissListener { referenceChoiceDialog = null } }
+    }
+
+    /** Account/view admission only. The original local-only capture and save implementation stays intact. */
+    private fun canUsePersonalReference(userId: String): Boolean {
+        if (cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN) {
+            Toast.makeText(this, R.string.personal_reference_choose_view_first, Toast.LENGTH_SHORT).show()
+            return false
+        }
+        if (userId.isBlank()) {
+            Toast.makeText(this, R.string.personal_reference_login_required, Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
     }
 
     private fun beginReference(type: ExerciseType) {
+        if (isFinishing || isDestroyed || !DashboardUiPolicy.canBeginReference(type, cameraView,
+                isExercising, calibrationExercise != null)) return
+        val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
+        if (!canUsePersonalReference(userId)) return
         calibrationFrames.clear()
         calibrationExercise = type
-        binding.btnPersonalReference.text = "기준 저장"
-        binding.btnCameraView.isEnabled = false
-        binding.btnStartExercise.isEnabled = false
+        binding.btnPersonalReference.text = getString(R.string.personal_reference_save)
+        applyDashboardControlState()
     }
 
     private fun captureReferenceFrame(landmarks: List<NormalizedLandmark>) {
@@ -270,6 +345,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     private fun startExercise() {
+        if (!DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null).startExerciseEnabled) return
         if (cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN) {
             Toast.makeText(this, "촬영 방향을 먼저 선택해 주세요.", Toast.LENGTH_SHORT).show()
             return
@@ -290,9 +366,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         fallbackExerciseClassifier.reset()
         detectedExerciseType = ExerciseType.UNKNOWN
         personalSequence = emptyList()
-        binding.btnCameraView.isEnabled = false
-        binding.btnPersonalReference.isEnabled = false
+        applyDashboardControlState()
         binding.tvCount.text = "0"
+        binding.tvCountUnit.text = getString(R.string.dashboard_count_waiting)
         updateDetectedExerciseUi(ExerciseType.UNKNOWN)
 
         binding.tvDashboardTitle.text = "운동 중"
@@ -309,8 +385,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         if (report == null) {
             binding.btnStartExercise.visibility = View.VISIBLE
             binding.btnEndExercise.visibility = View.GONE
-            binding.btnCameraView.isEnabled = true
-            binding.btnPersonalReference.isEnabled = true
+            applyDashboardControlState()
             binding.tvDashboardTitle.text = getString(R.string.exercise_ready)
             AlertDialog.Builder(this).setTitle("분석 데이터 확인")
                 .setMessage(getString(if (sessionExerciseType == ExerciseType.UNKNOWN)
@@ -618,6 +693,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     override fun onDestroy() {
+        referenceChoiceDialog?.dismiss()
+        referenceChoiceDialog = null
         // 모델/카메라를 먼저 닫아 native 결과가 종료 중인 화면에 도착하는 것을 차단한다.
         if (::cameraController.isInitialized) cameraController.close()
         super.onDestroy()
