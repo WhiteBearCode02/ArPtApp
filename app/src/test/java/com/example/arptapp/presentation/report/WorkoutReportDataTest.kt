@@ -1,6 +1,8 @@
 package com.example.arptapp.presentation.report
 
 import com.example.arptapp.data.ExerciseRecord
+import com.example.arptapp.data.YoloSessionDiagnosticsCodec
+import com.example.arptapp.domain.detection.YoloSessionDiagnostics
 import com.example.arptapp.model.RepAnalysis
 import org.junit.Assert.*
 import org.junit.Test
@@ -81,5 +83,39 @@ class WorkoutReportDataTest {
         val feedback = WorkoutReportPresentation.feedback(100f)
         assertFalse(feedback.contains("완벽"))
         assertFalse(feedback.contains("올바른 자세"))
+    }
+
+    @Test fun `separate local diagnostics survives completion Room model and report round trip`() {
+        val diagnostics = YoloSessionDiagnostics(modelStatus = "MODEL_MISSING", contractStatus = "NOT_VERIFIED",
+            predictionEnabled = false, startedAt = 1000, endedAt = 2000)
+        val raw = YoloSessionDiagnosticsCodec.encode(diagnostics)!!
+        val report = WorkoutReportData.create(totalCount = 4, analysesJson = "[80,90]", yoloDiagnosticsJson = raw)
+            .completedAt("2026-10-16 20:00")
+        val record = report.toRecord("owner-A")
+        assertEquals(raw, record.yoloDiagnosticsJson)
+        assertEquals(raw, WorkoutReportData.fromRecord(record).yoloDiagnosticsJson)
+        assertEquals("[80,90]", record.scoresJson)
+        assertEquals("[80,90]", WorkoutReportData.fromRecord(record).analysesJson)
+        assertEquals(4, record.totalCount)
+        assertEquals(2.0, record.burnedCalories, 0.0)
+    }
+
+    @Test fun `old records retain null optional diagnostics`() {
+        val record = WorkoutReportData.create().completedAt("date").toRecord("owner-A")
+        assertNull(record.yoloDiagnosticsJson)
+        assertNull(WorkoutReportData.fromRecord(record).yoloDiagnosticsJson)
+    }
+
+    @Test fun `malformed local diagnostics never blocks existing analyses`() {
+        val report = WorkoutReportData.create(analysesJson = "[75]", yoloDiagnosticsJson = "{bad}")
+        assertNull(report.yoloDiagnosticsJson)
+        assertEquals("[75]", report.analysesJson)
+        val record = report.toRecord("owner").copy(yoloDiagnosticsJson = "{}")
+        assertNull(WorkoutReportData.fromRecord(record).yoloDiagnosticsJson)
+        assertEquals("[75]", WorkoutReportData.fromRecord(record).analysesJson)
+    }
+
+    @Test fun `oversized diagnostics is discarded before intent or persistence`() {
+        assertNull(WorkoutReportData.create(yoloDiagnosticsJson = "a".repeat(16_385)).yoloDiagnosticsJson)
     }
 }

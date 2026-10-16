@@ -50,7 +50,8 @@ class YoloShadowRunner<F>(
     private val worker: ExecutorService = Executors.newSingleThreadExecutor(),
     private val timer: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     private val initializationTimeoutMs: Long = YoloShadowPolicy.INITIALIZATION_TIMEOUT_MS,
-    private val inferenceTimeoutMs: Long = YoloShadowPolicy.INFERENCE_TIMEOUT_MS
+    private val inferenceTimeoutMs: Long = YoloShadowPolicy.INFERENCE_TIMEOUT_MS,
+    private val observer: YoloShadowObserver = NoYoloShadowObserver
 ) : AutoCloseable {
     private val started = AtomicBoolean()
     private val closed = AtomicBoolean()
@@ -67,21 +68,25 @@ class YoloShadowRunner<F>(
 
     /** Called with the same rotated, non-mirrored source used by MediaPipe; caller retains its ownership. */
     fun trySubmit(frame: F, timestampMs: Long): Boolean {
+        val observation = try { observer.captureContext() } catch (_: Exception) { null }
+        observation?.let { observeSafely { observer.onFrameSeen(it) } }
         if (closed.get() || failed.get() || latest.result.status != DetectorStatus.READY || !gate.tryAcquire(timestampMs)) return false
+        observation?.let { observeSafely { observer.onAdmission(it) } }
         val generation = epoch.get()
         val owned = try { copyFrame(frame) } catch (_: Exception) {
-            gate.release(); disable(DetectorStatus.INFERENCE_FAILED); return false
+            gate.release(); disable(DetectorStatus.INFERENCE_FAILED, observation); return false
         }
         if (closed.get() || failed.get()) { releaseFrame(owned); gate.release(); return false }
-        launch(inferenceTimeoutMs, owned, generation, timestampMs) { detector.detect(owned) }
+        launch(inferenceTimeoutMs, owned, generation, timestampMs, observation) { detector.detect(owned) }
         return true
     }
 
     private fun launch(timeoutMs: Long, frame: F?, generation: Long = epoch.get(), timestampMs: Long = 0,
+                       observation: YoloShadowObservationContext? = null,
                        operation: () -> ExerciseDetectionResult) {
         val completed = AtomicBoolean()
         val deadline = try { timer.schedule({
-            if (completed.compareAndSet(false, true) && !closed.get()) disable(DetectorStatus.TIMED_OUT)
+            if (completed.compareAndSet(false, true) && !closed.get()) disable(DetectorStatus.TIMED_OUT, observation)
         }, timeoutMs, TimeUnit.MILLISECONDS) } catch (_: Exception) {
             frame?.let(releaseFrame); if (frame != null) gate.release(); return
         }
@@ -102,6 +107,7 @@ class YoloShadowRunner<F>(
                                 // Initialization is lens-independent; frame results retain their admission epoch.
                                 latest = YoloShadowSnapshot(result, stable, if (frame == null) epoch.get() else generation)
                                 if (result.status !in listOf(DetectorStatus.READY, DetectorStatus.INITIALIZING)) gate.disable()
+                                observeSafely { observer.onResult(observation, latest, frame != null) }
                                 onSnapshot(latest)
                             }
                         }
@@ -132,19 +138,25 @@ class YoloShadowRunner<F>(
             latest = YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
                 contractVerification = latest.result.contractVerification),
                 generation = nextGeneration)
+            observeSafely { observer.onResult(null, latest, false) }
             onSnapshot(latest)
         }
     }
-    private fun disable(status: DetectorStatus) {
+    private fun disable(status: DetectorStatus, observation: YoloShadowObservationContext? = null) {
         failed.set(true); gate.disable()
         synchronized(evidenceLock) {
             stabilizer.reset()
             if (!closed.get()) {
                 latest = YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO,
                     contractVerification = latest.result.contractVerification), generation = epoch.get())
+                observeSafely { observer.onResult(observation, latest, observation != null) }
                 onSnapshot(latest)
             }
         }
+    }
+    private inline fun observeSafely(action: () -> Unit) {
+        // Diagnostics may fail independently; they must never break admission or native ownership.
+        try { action() } catch (_: Exception) { /* No frame or native exception payload is logged. */ }
     }
     override fun close() {
         if (!closed.compareAndSet(false, true)) return

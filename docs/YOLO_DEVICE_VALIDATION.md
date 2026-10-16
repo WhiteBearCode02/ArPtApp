@@ -51,30 +51,19 @@ Source로 확인한 계약: logical RGB → centered aspect-preserving LetterBox
 4. release에서는 YOLO runner를 생성하지 않고 진단 UI/로그도 숨깁니다. release 실행·서명 배포는 이번 검증 범위가 아닙니다.
 
 원본 `assets` 모델을 복사·삭제·이동하거나 APK에 포함하지 않았습니다. 따라서 이 APK를 설치하는 것만으로 로컬 PC 모델이 휴대폰에 전달되지는 않습니다.
-개발용 resolver는 앱의 `noBackupFilesDir/yolo/airptcoach_yolo26n_exp02_fp32.tflite`를 우선 검사한 뒤 asset을 확인합니다. 앱은 모델을 다운로드하거나 자동 복사하지 않습니다. 기기 모델 provisioning은 이번에 수행하지 않았습니다. 이를 위해 public APK 정책을 해제하지 마세요.
+개발용 resolver는 앱의 `noBackupFilesDir/yolo/airptcoach_yolo26n_exp02_fp32.tflite`만 검사합니다. Asset fallback은 제거했습니다. 앱은 모델을 다운로드하거나 자동 복사하지 않습니다. 기기 모델 provisioning은 이번에 수행하지 않았습니다. 이를 위해 public APK 정책을 해제하지 마세요.
 
-### 개발자가 직접 하는 DEBUG local provisioning (이번 작업에서 실행하지 않음)
+### 개발자가 직접 하는 DEBUG local provisioning (기기 미연결로 미실행)
 
-본인 소유 기기·권리 검토 가능한 로컬 모델·debuggable APK에서만 사용합니다. 모델을 Git/공개 APK/클라우드에 올리지 않습니다. `adb devices`에서 본인이 선택한 기기 serial을 `$device`에 넣으세요. 아래 package는 현 applicationId이며 debug variant에 suffix를 붙였다면 실제 값으로 수정합니다. Release에서는 `run-as`가 허용되지 않는 것이 정상입니다.
+현재 loader는 `noBackupFilesDir/yolo/airptcoach_yolo26n_exp02_fp32.tflite`만 읽습니다. Assets fallback은 제거했습니다. 모델 파일을 PC assets 폴더에 보관하는 기존 정책과 APK 패키징 제외 정책은 그대로이며, 휴대폰으로 자동 복사하지 않습니다.
+
+Windows에서는 검토된 [provision-exp02-model.ps1](../scripts/provision-exp02-model.ps1)을 사용합니다. 이 helper는 debuggable `run-as`, 모델 이름/크기/SHA256, 선택한 기기를 확인하고 binary-safe stream으로 **앱 전용 no_backup** 안에 원자적으로 전달합니다. PowerShell 텍스트 파이프나 `/sdcard`, `/data/local/tmp` 공용 모델 staging을 사용하지 않습니다.
 
 ```powershell
-$device = '본인이_선택한_기기_serial'
-$model = (Resolve-Path 'app/src/main/assets/airptcoach_yolo26n_exp02_fp32.tflite').Path
-if ((Get-FileHash -LiteralPath $model -Algorithm SHA256).Hash -ne '464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749') { throw 'Canonical model hash mismatch' }
-function Invoke-LocalDebugAdb {
-    & adb -s $device @args
-    if ($LASTEXITCODE -ne 0) { throw 'ADB failed; stop and inspect locally' }
-}
-Invoke-LocalDebugAdb shell run-as com.example.arptapp pwd # debuggable 여부 먼저 확인
-Invoke-LocalDebugAdb shell am force-stop com.example.arptapp # mmap 파일 사용 중 덮어쓰기 금지
-Invoke-LocalDebugAdb push $model /data/local/tmp/airptcoach_exp02_debug.tflite
-Invoke-LocalDebugAdb shell run-as com.example.arptapp mkdir -p no_backup/yolo
-Invoke-LocalDebugAdb shell run-as com.example.arptapp cp /data/local/tmp/airptcoach_exp02_debug.tflite no_backup/yolo/airptcoach_yolo26n_exp02_fp32.tflite
-Invoke-LocalDebugAdb shell run-as com.example.arptapp chmod 600 no_backup/yolo/airptcoach_yolo26n_exp02_fp32.tflite
-Invoke-LocalDebugAdb shell rm /data/local/tmp/airptcoach_exp02_debug.tflite # 정확히 이 staging 파일만 제거
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/provision-exp02-model.ps1 -AdbPath 'C:\Users\dlgus\AppData\Local\Android\Sdk\platform-tools\adb.exe' -DeviceSerial '본인_기기_serial'
 ```
 
-각 명령은 종료 코드 실패 시 중단합니다. 실패했다면 원인을 해결하기 전 앱을 재실행하지 말고, 생성된 정확한 staging 파일을 위 `rm` 명령으로 정리하세요. 정상 복사·chmod·cleanup을 확인한 후 앱을 수동 재실행합니다. 외부 임시 staging 파일은 즉시 제거해야 하며 앱 삭제 시 private 복사본도 삭제됩니다. 앱 실행 시 추가 SHA256 검사를 거칩니다. **제공만으로 현재 gate가 해제되지 않으며 실제 prediction은 여전히 비활성**입니다. 전체 device 로그나 serial·모델을 Git에 첨부하지 마세요.
+모델 제공만으로 contract가 활성화되지 않습니다. 실제 이미지·Python reference·Android native Golden 순서, 선택 Golden bundle 제공 방법 및 코드 승격 조건은 [새 체크리스트](ml/EXP02_ANDROID_DEVICE_SHADOW_CHECKLIST.md)를 따르세요. 모델 재배포 권리 정책은 변경하지 않았습니다.
 
 ## 동시성·실패·종료
 
@@ -150,7 +139,7 @@ TensorFlow 기존 중복 namespace, native symbol strip 불가, Gradle 10 대비
 
 ## 비용·공개·보안
 
-새 외부 API·키·SDK·cloud inference·frame/image upload·관절 좌표 저장을 추가하지 않았습니다. 진단은 DEBUG에서 scalar/enum만 사용하고 DB/리포트/서버 payload에 넣지 않습니다. LLM false/Unavailable, 기존 backup 금지, 모델 Git ignore·APK 제외 정책을 유지합니다. 기존 다른 앱 기능의 서버/계정 요금제에 대한 무과금 보장은 이 코드 변경 범위가 아닙니다.
+새 외부 API·키·SDK·cloud inference·frame/image upload·관절 좌표 저장을 추가하지 않았습니다. 최신 단계에서는 DEBUG 세션의 scalar/enum **집계만 별도 nullable Room JSON에 로컬 저장**하고 과거 기록/리포트에서 DEBUG only로 표시합니다. 프레임별 bbox/confidence 로그·원본 미디어·landmark 배열은 저장하지 않으며, 기존 서버/LLM payload에도 추가하지 않습니다. LLM false/Unavailable, 기존 backup 금지, 모델 Git ignore·APK 제외 정책을 유지합니다. 기존 다른 앱 기능의 서버/계정 요금제에 대한 무과금 보장은 이 코드 변경 범위가 아닙니다.
 
 **공개 재배포 권리 미확정**, public release ready 아님. 원격 DB migration/Edge Function 배포/billing 변경/자동 commit/push를 하지 않습니다.
 

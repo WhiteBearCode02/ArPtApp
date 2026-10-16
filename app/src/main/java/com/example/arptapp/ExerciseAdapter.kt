@@ -1,10 +1,12 @@
 package com.example.arptapp
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.arptapp.data.ExerciseRecord
 import com.example.arptapp.databinding.ItemExerciseRecordBinding
+import com.example.arptapp.presentation.report.YoloSessionDiagnosticsPresentation
 import java.util.Locale
 
 /**
@@ -33,6 +35,9 @@ class ExerciseAdapter(
             tvRecordType.text = record.exerciseType.ifBlank { "운동 기록" }
             tvRecordCount.text = "${record.totalCount}회"
             tvRecordCalories.text = "${String.format(Locale.getDefault(), "%.1f", record.burnedCalories)} kcal"
+            tvYoloDiagnosticsStatus.visibility = if (
+                YoloSessionDiagnosticsPresentation.visibleDiagnostics(BuildConfig.DEBUG, record.yoloDiagnosticsJson) != null
+            ) View.VISIBLE else View.GONE
             root.setOnClickListener { onRecordClick(record) }
         }
     }

@@ -36,6 +36,7 @@ class ReportActivity : AppCompatActivity() {
         setupSummary(report, analyses, structured)
         setupRepDetails(analyses, structured)
         setupImprovementSummary(structured, report.feedbackMessage)
+        YoloSessionDiagnosticsRenderer(layoutInflater).render(binding, report.yoloDiagnosticsJson)
         setupAiExplanation(structured)
         binding.btnClose.setOnClickListener { finish() }
     }

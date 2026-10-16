@@ -19,6 +19,8 @@ import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.example.arptapp.domain.detection.YoloShadowSnapshot
+import com.example.arptapp.domain.detection.YoloShadowObserver
+import com.example.arptapp.domain.detection.NoYoloShadowObserver
 import com.example.arptapp.ui.camera.yolo.DebugYoloShadowFactory
 import java.util.concurrent.Executors
 
@@ -47,7 +49,8 @@ class PoseCameraController(
     private val onResult: (PoseFrameResult) -> Unit,
     private val onError: (CameraPipelineStage, Throwable) -> Unit,
     private val onLensChanged: (isFrontFacing: Boolean, canSwitch: Boolean) -> Unit = { _, _ -> },
-    private val onYoloShadowSnapshot: (YoloShadowSnapshot) -> Unit = {}
+    private val onYoloShadowSnapshot: (YoloShadowSnapshot) -> Unit = {},
+    yoloShadowObserver: YoloShadowObserver = NoYoloShadowObserver
 ) : AutoCloseable {
     companion object {
         private const val TAG = "PoseCameraController"
@@ -74,7 +77,7 @@ class PoseCameraController(
     private var preview: Preview? = null
     @Volatile private var closed = false
     @Volatile private var lensFacing = CameraSelector.LENS_FACING_BACK
-    private val yoloShadow = DebugYoloShadowFactory.create(appContext, ::dispatchYoloShadowSnapshot)
+    private val yoloShadow = DebugYoloShadowFactory.create(appContext, ::dispatchYoloShadowSnapshot, yoloShadowObserver)
 
     private fun dispatchYoloShadowSnapshot(snapshot: YoloShadowSnapshot) {
         mainExecutor.execute {

@@ -7,7 +7,6 @@ import com.example.arptapp.domain.detection.*
 import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileNotFoundException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
@@ -38,23 +37,20 @@ internal object DebugYoloModelSource {
     fun open(context: Context): ByteBuffer {
         check(BuildConfig.DEBUG)
         val privateModel = File(context.noBackupFilesDir, "yolo/${YoloModelPolicy.FILE_NAME}")
-        if (privateModel.isFile) {
-            if (privateModel.length() != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
-            return FileInputStream(privateModel).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
-        }
-        try {
-            return context.assets.openFd(YoloModelPolicy.FILE_NAME).use { asset ->
-                if (asset.declaredLength != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
-                FileInputStream(asset.fileDescriptor).use {
-                    it.channel.map(FileChannel.MapMode.READ_ONLY, asset.startOffset, asset.declaredLength)
-                }
-            }
-        } catch (_: FileNotFoundException) { throw MissingYoloModel() }
+        if (!privateModel.isFile) throw MissingYoloModel()
+        // No asset/network fallback. Reject path traversal/symlink escapes before touching bytes.
+        val expectedDirectory = File(context.noBackupFilesDir, "yolo").canonicalFile
+        if (expectedDirectory.parentFile != context.noBackupFilesDir.canonicalFile ||
+            privateModel.canonicalFile.parentFile != expectedDirectory ||
+            privateModel.canonicalFile.name != YoloModelPolicy.FILE_NAME ||
+            privateModel.length() != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
+        return FileInputStream(privateModel).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
     }
 }
 
 object DebugYoloShadowFactory {
-    fun create(context: Context, onSnapshot: (YoloShadowSnapshot) -> Unit): YoloShadowRunner<Bitmap>? {
+    fun create(context: Context, onSnapshot: (YoloShadowSnapshot) -> Unit,
+               observer: YoloShadowObserver = NoYoloShadowObserver): YoloShadowRunner<Bitmap>? {
         if (!BuildConfig.DEBUG) return null
         val app = context.applicationContext
         // Source-backed implementations are wired, but their code-level NOT_VERIFIED gate still
@@ -63,6 +59,6 @@ object DebugYoloShadowFactory {
         return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract),
             YoloExerciseStabilizer(contract.stabilization),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },
-            releaseFrame = { it.recycle() }, onSnapshot = onSnapshot)
+            releaseFrame = { it.recycle() }, onSnapshot = onSnapshot, observer = observer)
     }
 }

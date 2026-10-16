@@ -238,6 +238,48 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Local developer-only aggregate diagnostics. Kept after all user coaching sections. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/yoloShadowSection"
+            style="@style/Widget.AIRPTCoach.Report.Card"
+            android:layout_marginTop="16dp"
+            android:visibility="gone">
+
+            <LinearLayout style="@style/Widget.AIRPTCoach.Report.CardContent">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnToggleYoloShadow"
+                    style="@style/Widget.AIRPTCoach.Report.SecondaryButton"
+                    android:text="@string/yolo_report_show" />
+
+                <LinearLayout
+                    android:id="@+id/yoloShadowDetails"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                        android:layout_marginTop="12dp"
+                        android:accessibilityHeading="true"
+                        android:text="@string/yolo_report_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/yolo_report_developer_note" />
+
+                    <LinearLayout
+                        android:id="@+id/yoloShadowMetricGroups"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClose"
             style="@style/Widget.AIRPTCoach.Report.PrimaryButton"

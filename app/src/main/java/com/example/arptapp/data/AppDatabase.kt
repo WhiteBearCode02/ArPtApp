@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         ExerciseRecord::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,10 +49,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "arpt_database" // 스마트폰 내부에 저장될 실제 DB 파일 이름입니다.
                 )
-                // [Migration 전략] 버전이 올라갔을 때 기존 데이터를 어떻게 처리할지 정합니다. 
-                // 지금은 초기 단계이므로 기존 데이터를 지우고 새로 만드는 방식을 채택합니다.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
-                .fallbackToDestructiveMigration()
+                // Explicit upgrade paths preserve existing workout rows. Unsupported old versions
+                // fail closed instead of silently deleting a user's database.
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 
                 INSTANCE = instance
@@ -60,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN exerciseType TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN averageScore REAL NOT NULL DEFAULT 0")
@@ -69,12 +68,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
                 // 계정과 비밀번호는 Supabase Auth만 관리합니다.
                 db.execSQL("DROP TABLE IF EXISTS health_profiles")
                 db.execSQL("DROP TABLE IF EXISTS users")
+            }
+        }
+
+        /** Additive nullable field: legacy rows read as null without rewriting stored analyses. */
+        internal val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN yoloDiagnosticsJson TEXT")
             }
         }
     }

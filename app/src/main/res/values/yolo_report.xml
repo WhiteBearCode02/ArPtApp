@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="yolo_history_record_present">YOLO Shadow 기록 있음</string>
+    <string name="yolo_report_show">YOLO Shadow 진단 보기 ▾</string>
+    <string name="yolo_report_hide">YOLO Shadow 진단 접기 ▴</string>
+    <string name="yolo_report_title">YOLO Shadow 진단</string>
+    <string name="yolo_report_developer_note">이 정보는 개발/검증용 YOLO Shadow 결과이며, 현재 운동 점수와 자세 분석 판정에는 사용되지 않습니다. 영상·이미지·관절 좌표가 아닌 세션 집계값만 기기에 저장됩니다.</string>
+</resources>

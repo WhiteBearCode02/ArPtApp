@@ -78,6 +78,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var posePeopleCount = 0
     private var shadowThermalStatus = -1
     private var lastShadowLogAt = 0L
+    private val yoloSessionDiagnostics = if (BuildConfig.DEBUG)
+        YoloSessionDiagnosticsBridge(monotonicMs = SystemClock::uptimeMillis) else null
+    private var completedYoloDiagnosticsJson: String? = null
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
     private lateinit var sensorManager: SensorManager
@@ -146,6 +149,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                     renderYoloShadowDiagnostic()
                 }
             },
+            yoloShadowObserver = yoloSessionDiagnostics ?: NoYoloShadowObserver,
             onLensChanged = { front, canSwitch ->
                 cameraCanSwitch = canSwitch
                 val text = getString(if (front) R.string.camera_lens_front else R.string.camera_lens_back)
@@ -374,6 +378,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         isExercising = true
         setYoloDiagnosticsExpanded(false) // Start with the camera and workout information, not debug details.
         mainViewModel.resetSession()
+        completedYoloDiagnosticsJson = null
+        yoloSessionDiagnostics?.begin(System.currentTimeMillis(), SystemClock.uptimeMillis(), cameraView)
         cameraController.invalidateShadowEvidence()
         repAnalysisEngine.reset()
         repFeedbackUntilMs = 0L
@@ -403,6 +409,11 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private fun endExercise() {
         if (!isExercising) return
         isExercising = false
+        // Freeze scalar diagnostics before the confirmation dialog or any new camera work.
+        // This payload is local-only and is never added to the existing Supabase report upload.
+        completedYoloDiagnosticsJson = yoloSessionDiagnostics?.finish(System.currentTimeMillis(),
+            SystemClock.uptimeMillis(), sessionExerciseType, shadowThermalStatus)
+            ?.let(com.example.arptapp.data.YoloSessionDiagnosticsCodec::encode)
         val report = mainViewModel.generateLockedSessionReport()
         if (report == null) {
             restorePreparationUi()
@@ -468,7 +479,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 mainViewModel.getRepAnalyses(report.exerciseType), mainViewModel.structuredReport(report.exerciseType)
             ),
             averageScore = report.averageScore.toFloat(),
-            feedbackMessage = report.feedbackMessage
+            feedbackMessage = report.feedbackMessage,
+            yoloDiagnosticsJson = completedYoloDiagnosticsJson
         )
         startActivity(ReportNavigation.resultIntent(this, data))
         finish()
@@ -497,7 +509,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             shadowThermalStatus = thermal
             binding.yoloDiagnosticsPanel.updatePerformance(String.format(
                 Locale.KOREA,
-                "처리 %.1f FPS · %.0f ms · 발열 단계 %s",
+                "관절 처리 %.1f FPS · %.0f ms · 발열 단계 %s",
                 stats.processedFps,
                 stats.averageLatencyMs,
                 if (thermal < 0) "미지원" else thermal.toString()
@@ -525,14 +537,17 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             binding.overlayView.clearResults()
         }
         posePeopleCount = frame.people.size
+        // Primary lock remains authoritative; shadow callbacks only read this admission context.
+        yoloSessionDiagnostics?.updateContext(sessionExerciseType, shadowThermalStatus)
         renderYoloShadowDiagnostic()
     }
 
     /** Debug-only comparison has no API into MainViewModel, counter, scoring or upload. */
     private fun renderYoloShadowDiagnostic() {
         if (!BuildConfig.DEBUG) return
+        val liveStats = yoloSessionDiagnostics?.current(System.currentTimeMillis(), SystemClock.uptimeMillis())
         val text = DetectorComparisonFormatter.format(DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
-            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus))
+            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps))
         binding.yoloDiagnosticsPanel.updateDiagnostics(text)
         val now = SystemClock.uptimeMillis()
         if (now - lastShadowLogAt >= 1000L) {
@@ -725,6 +740,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     override fun onDestroy() {
         referenceChoiceDialog?.dismiss()
         referenceChoiceDialog = null
+        yoloSessionDiagnostics?.finish(System.currentTimeMillis(), SystemClock.uptimeMillis(), sessionExerciseType, shadowThermalStatus)
         // 모델/카메라를 먼저 닫아 native 결과가 종료 중인 화면에 도착하는 것을 차단한다.
         if (::cameraController.isInitialized) cameraController.close()
         super.onDestroy()

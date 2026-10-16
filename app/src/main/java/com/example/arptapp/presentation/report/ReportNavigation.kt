@@ -20,6 +20,7 @@ object ReportNavigation {
     private const val EXERCISE_TIME = "EXERCISE_TIME"
     private const val BURNED_CALORIES = "BURNED_CALORIES"
     private const val FEEDBACK_MESSAGE = "FEEDBACK_MESSAGE"
+    private const val YOLO_DIAGNOSTICS_JSON = "YOLO_SESSION_DIAGNOSTICS_JSON"
 
     fun read(intent: Intent): WorkoutReportData = WorkoutReportData.create(
         exerciseType = intent.getStringExtra(EXERCISE_TYPE),
@@ -30,7 +31,8 @@ object ReportNavigation {
         workoutDate = intent.getStringExtra(WORKOUT_DATE).orEmpty(),
         durationSeconds = intent.getLongExtra(EXERCISE_TIME, 0L),
         burnedCalories = if (intent.hasExtra(BURNED_CALORIES)) intent.getDoubleExtra(BURNED_CALORIES, 0.0) else null,
-        feedbackMessage = intent.getStringExtra(FEEDBACK_MESSAGE).orEmpty()
+        feedbackMessage = intent.getStringExtra(FEEDBACK_MESSAGE).orEmpty(),
+        yoloDiagnosticsJson = intent.getStringExtra(YOLO_DIAGNOSTICS_JSON)
     )
 
     fun intent(context: Context, report: WorkoutReportData): Intent =
@@ -49,6 +51,8 @@ object ReportNavigation {
             // 미확정 열량은 결과 화면에서 기존 추정식을 적용하므로 0으로 덮어쓰지 않는다.
             report.burnedCalories?.let { putExtra(BURNED_CALORIES, it) }
             putExtra(FEEDBACK_MESSAGE, report.feedbackMessage)
+            // Never merge developer comparison aggregates into REP_ANALYSES_JSON/LLM analyses.
+            report.yoloDiagnosticsJson?.let { putExtra(YOLO_DIAGNOSTICS_JSON, it) }
         }
 
     /** Codec는 구버전 숫자 배열과 현재 회차 객체 배열을 모두 지원하고 손상된 기록은 빈 목록으로 처리한다. */

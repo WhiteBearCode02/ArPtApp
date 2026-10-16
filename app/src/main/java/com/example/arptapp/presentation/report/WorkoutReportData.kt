@@ -1,6 +1,7 @@
 package com.example.arptapp.presentation.report
 
 import com.example.arptapp.data.ExerciseRecord
+import com.example.arptapp.data.YoloSessionDiagnosticsCodec
 import com.example.arptapp.model.RepAnalysis
 import java.util.Locale
 
@@ -17,7 +18,9 @@ data class WorkoutReportData private constructor(
     val workoutDate: String,
     val durationSeconds: Long,
     val burnedCalories: Double?,
-    val feedbackMessage: String
+    val feedbackMessage: String,
+    /** Separate bounded local-only envelope; analysis/score/remote payloads must not consume it. */
+    val yoloDiagnosticsJson: String?
 ) {
     /** 완료 일시는 한 번 확정한다. 칼로리의 0.5 kcal/회는 기존 공학적 추정값이며 실측값이 아니다. */
     fun completedAt(date: String): WorkoutReportData = copy(
@@ -38,7 +41,8 @@ data class WorkoutReportData private constructor(
             exerciseType = exerciseType,
             averageScore = averageScore,
             scoresJson = analysesJson,
-            feedbackMessage = feedbackMessage
+            feedbackMessage = feedbackMessage,
+            yoloDiagnosticsJson = yoloDiagnosticsJson
         )
     }
 
@@ -53,7 +57,8 @@ data class WorkoutReportData private constructor(
             workoutDate: String = "",
             durationSeconds: Long = 0L,
             burnedCalories: Double? = null,
-            feedbackMessage: String = ""
+            feedbackMessage: String = "",
+            yoloDiagnosticsJson: String? = null
         ): WorkoutReportData = WorkoutReportData(
             exerciseType = exerciseType?.takeIf { it.isNotBlank() } ?: "운동 기록",
             totalCount = totalCount.coerceAtLeast(0),
@@ -65,7 +70,10 @@ data class WorkoutReportData private constructor(
             workoutDate = workoutDate,
             durationSeconds = durationSeconds.coerceAtLeast(0L),
             burnedCalories = burnedCalories?.takeIf { it.isFinite() && it >= 0.0 },
-            feedbackMessage = feedbackMessage
+            feedbackMessage = feedbackMessage,
+            // Strict decoder rejects malformed/oversized/unexpected data before local navigation.
+            yoloDiagnosticsJson = YoloSessionDiagnosticsCodec.decode(yoloDiagnosticsJson)
+                ?.let(YoloSessionDiagnosticsCodec::encode)
         )
 
         fun fromRecord(record: ExerciseRecord): WorkoutReportData = create(
@@ -76,7 +84,8 @@ data class WorkoutReportData private constructor(
             workoutDate = record.date,
             durationSeconds = record.duration,
             burnedCalories = record.burnedCalories,
-            feedbackMessage = record.feedbackMessage
+            feedbackMessage = record.feedbackMessage,
+            yoloDiagnosticsJson = record.yoloDiagnosticsJson
         )
     }
 }

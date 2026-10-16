@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "note": "Template only. Copy to ignored local-yolo-validation/manifest.json and replace placeholders with existing, explicitly rights-cleared local images. No images or real results belong in Git.",
+  "samples": [
+    {"id": "squat_front_01", "exercise": "SQUAT", "cameraView": "FRONT", "image": "squat_front_01.png", "rightsCleared": false, "rightsBasis": "TODO: state local validation permission; do not include personal details"},
+    {"id": "squat_side_01", "exercise": "SQUAT", "cameraView": "SIDE", "image": "squat_side_01.png", "rightsCleared": false, "rightsBasis": "TODO: state local validation permission"},
+    {"id": "press_front_01", "exercise": "SHOULDER_PRESS", "cameraView": "FRONT", "image": "press_front_01.png", "rightsCleared": false, "rightsBasis": "TODO: state local validation permission"},
+    {"id": "press_side_01", "exercise": "SHOULDER_PRESS", "cameraView": "SIDE", "image": "press_side_01.png", "rightsCleared": false, "rightsBasis": "TODO: state local validation permission"}
+  ]
+}

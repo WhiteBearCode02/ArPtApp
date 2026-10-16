@@ -54,5 +54,8 @@ data class ExerciseRecord(
     val exerciseType: String = "",
     val averageScore: Float = 0f,
     val scoresJson: String = "[]",
-    val feedbackMessage: String = ""
+    val feedbackMessage: String = "",
+
+    /** Local-only aggregate developer diagnostics; never part of scoresJson or a remote/LLM DTO. */
+    val yoloDiagnosticsJson: String? = null
 )
