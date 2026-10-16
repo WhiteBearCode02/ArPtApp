@@ -32,7 +32,8 @@ class Exp02ActualModelGoldenTest {
     private data class Sample(
         val id: String, val exercise: String, val cameraView: String,
         val rgbFile: String, val rgbSha256: String, val width: Int, val height: Int,
-        val inputTensorSha256: String, val detections: List<Expected>
+        val inputTensorFile: String, val inputTensorSha256: String, val inputTensorByteOrder: String,
+        val detections: List<Expected>
     )
     private data class Reference(
         val schemaVersion: Int, val model: Model, val ultralyticsVersion: String, val wheelSha256: String,
@@ -68,6 +69,9 @@ class Exp02ActualModelGoldenTest {
                         val prepared = preprocessor.preprocess(bitmap)
                         val preEnd = SystemClock.elapsedRealtimeNanos()
                         val tensorHash = sha256(prepared.tensor)
+                        val preprocessing = YoloActualGoldenTensorComparator.compare(
+                            readReferenceTensor(directory, sample), prepared.tensor,
+                            prepared.transform as Exp02FrameTransform)
                         val output = ByteBuffer.allocateDirect(4 * 6 * 8400).order(ByteOrder.nativeOrder())
                         prepared.tensor.rewind()
                         val inferStart = SystemClock.elapsedRealtimeNanos()
@@ -83,17 +87,29 @@ class Exp02ActualModelGoldenTest {
                         val expected = sample.detections.map { YoloGoldenDetection(it.classId, it.confidence,
                             DetectionBox(it.bbox.x1, it.bbox.y1, it.bbox.x2, it.bbox.y2)) }
                         val comparison = YoloActualGoldenComparator.compare(expected, actual)
+                        // Filename labels evaluate semantic sanity only. A wrong/empty model result
+                        // is still legitimate reference evidence and must never be hidden/rejected.
+                        val expectedId = if (sample.exercise == "SQUAT") 0 else 1
                         results += mapOf("id" to sample.id, "exercise" to sample.exercise, "cameraView" to sample.cameraView,
-                            "passed" to comparison.passed, "comparison" to comparison, "detections" to actual,
+                            "passed" to (comparison.passed && preprocessing.passed), "comparison" to comparison,
+                            "detections" to actual, "referenceDetections" to expected,
+                            "predictedClassNames" to actual.map { YoloModelPolicy.classMapping.getValue(it.classId).name },
+                            "referenceClassNames" to expected.map { YoloModelPolicy.classMapping.getValue(it.classId).name },
+                            "detectionsAfterNms" to actual.size, "referenceDetectionsAfterNms" to expected.size,
+                            "classOrdering" to actual.map { it.classId }, "referenceClassOrdering" to expected.map { it.classId },
+                            "semanticSanity" to mapOf("expectedExercise" to sample.exercise,
+                                "topPrediction" to actual.take(1), "topPredictionMatchesExpected" to (actual.firstOrNull()?.classId == expectedId),
+                                "hasExpectedDetection" to actual.any { it.classId == expectedId }),
                             "inputTensorSha256" to tensorHash,
                             "inputTensorByteIdenticalToPython" to (tensorHash == sample.inputTensorSha256),
+                            "preprocessingComparison" to preprocessing,
                             "preprocessMs" to (preEnd - start) / 1e6, "inferenceMs" to (inferEnd - inferStart) / 1e6,
                             "postprocessMs" to (postEnd - inferEnd) / 1e6, "totalMs" to (postEnd - start) / 1e6)
                     } finally { bitmap.recycle() }
                 }
             }
             passed = results.size >= 4 && results.all { it["passed"] == true }
-            assertTrue("Actual-model final detections differ; inspect private android-result.json, do not widen tolerances automatically", passed)
+            assertTrue("Actual-model preprocessing/post-NMS contract differs; inspect private android-result.json, do not widen tolerances automatically", passed)
         } catch (error: Throwable) {
             failure = when (error) {
                 is MissingYoloModel -> "MODEL_MISSING"
@@ -111,7 +127,10 @@ class Exp02ActualModelGoldenTest {
                 "allSamplesPassed" to passed, "failure" to failure, "sdkInt" to Build.VERSION.SDK_INT,
                 "modelId" to YoloModelPolicy.MODEL_ID, "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
                 "tensorMetadata" to metadata, "productionContract" to Exp02YoloContract.verification.name,
-                "toleranceStatus" to "PROVISIONAL_NOT_MEASURED", "samples" to results)), Charsets.UTF_8)
+                "toleranceStatus" to "DETECTION_PROVISIONAL_NOT_MEASURED_PREPROCESS_EXISTING_SYNTHETIC_BOUND",
+                "orderingPolicy" to "EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS",
+                "semanticEvaluationPolicy" to "TOP_POST_NMS_CLASS_VS_FILENAME_SANITY_ONLY_NOT_A_GATE_OR_OVERALL_ACCURACY",
+                "samples" to results)), Charsets.UTF_8)
         }
     }
 
@@ -129,13 +148,22 @@ class Exp02ActualModelGoldenTest {
         require(reference.samples.map { it.exercise to it.cameraView }.toSet() == required)
         for (sample in reference.samples) {
             require(sample.id.matches(Regex("[a-z0-9][a-z0-9_-]{0,63}")) && sample.rgbFile == "${sample.id}.rgb")
+            require(sample.inputTensorFile == "${sample.id}.input.f32")
+            require(sample.inputTensorByteOrder == "LITTLE_ENDIAN")
             require(sample.rgbSha256.matches(Regex("[a-f0-9]{64}")) && sample.inputTensorSha256.matches(Regex("[a-f0-9]{64}")))
-            val expectedId = if (sample.exercise == "SQUAT") 0 else 1
-            require(sample.detections.size in 1..300 && sample.detections.any { it.classId == expectedId })
+            require(sample.detections.size in 0..300)
             require(YoloActualGoldenComparator.compare(sample.detections.map { YoloGoldenDetection(it.classId, it.confidence,
                 DetectionBox(it.bbox.x1, it.bbox.y1, it.bbox.x2, it.bbox.y2)) }, sample.detections.map { YoloGoldenDetection(it.classId, it.confidence,
                 DetectionBox(it.bbox.x1, it.bbox.y1, it.bbox.x2, it.bbox.y2)) }).passed)
         }
+    }
+
+    private fun readReferenceTensor(directory: File, sample: Sample): ByteBuffer {
+        val file = File(directory, sample.inputTensorFile)
+        require(file.canonicalFile.parentFile == directory.canonicalFile && file.isFile && file.length() == 4L * 3 * 640 * 640)
+        val bytes = file.readBytes()
+        require(sha256(ByteBuffer.wrap(bytes)) == sample.inputTensorSha256)
+        return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
     }
 
     private fun decodeIdenticalRgb(directory: File, sample: Sample): Bitmap {

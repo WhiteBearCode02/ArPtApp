@@ -2,16 +2,21 @@
 
 Requires user-provided rights-cleared images and an ALREADY installed ai_edge_litert
 runtime. Never installs/downloads anything. Outputs private RGB media/reference only
-under ignored build/. This does not verify or modify the Android production gate.
+under verified ignored build/ or local_validation/exp02_golden/. This does not
+verify or modify the Android production gate; semantic mistakes are valid evidence.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
+import math
 import re
 from pathlib import Path
+import stat
+import subprocess
 import sys
 from types import SimpleNamespace
 
@@ -20,6 +25,7 @@ MODEL_BYTES = 9894030
 MODEL_SHA256 = "464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749"
 CLASSES = {"SQUAT": 0, "SHOULDER_PRESS": 1}
 REQUIRED = {(exercise, view) for exercise in CLASSES for view in ("FRONT", "SIDE")}
+MAX_ENCODED_IMAGE_BYTES = 32 * 1024 * 1024
 
 
 def sha256(data: bytes) -> str:
@@ -54,12 +60,91 @@ def read_manifest(path: Path) -> list[dict]:
 
 
 def require_private_output(output: Path, repository: Path) -> Path:
-    """Prevent accidentally creating trackable camera media / real model output."""
+    """Fail closed unless every generated file stays inside an ignored, untracked path.
+
+    Resolve BEFORE writing and reject junction/symlink components instead of trusting
+    an apparent build/ prefix. Git commands are read-only and never access a network.
+    """
+    repository = repository.resolve()
     destination = output.resolve()
-    build = (repository / "build").resolve()
-    if destination == build or build not in destination.parents:
-        raise ValueError("Actual Golden output must be a dedicated subdirectory under ignored repository build/")
+    lexical = output.absolute()
+    build = repository / "build"
+    local = repository / "local_validation" / "exp02_golden"
+    if not (build in destination.parents or destination == local or local in destination.parents):
+        raise ValueError("Actual Golden output must stay under ignored build/<dedicated directory> or local_validation/exp02_golden/")
+    for component in (lexical, *lexical.parents):
+        if component == repository:
+            break
+        if component.exists() or component.is_symlink():
+            metadata = component.lstat()
+            if component.is_symlink() or getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0):
+                raise ValueError("Symlink/junction Golden output paths are forbidden")
+    relative = destination.relative_to(repository).as_posix()
+    ignored = subprocess.run(["git", "-C", str(repository), "check-ignore", "--quiet", "--no-index", "--", relative + "/.exp02-private-output-check"],
+                             capture_output=True, check=False)
+    tracked = subprocess.run(["git", "-C", str(repository), "ls-files", "-z", "--", relative], capture_output=True, check=False)
+    if ignored.returncode != 0 or tracked.returncode != 0 or tracked.stdout:
+        raise ValueError("Golden output must be Git-ignored and contain no tracked files")
     return destination
+
+
+def private_child(output: Path, filename: str) -> Path:
+    """Only flat generated filenames; never follow an existing private-file symlink."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,127}", filename):
+        raise ValueError("Invalid generated filename")
+    child = output / filename
+    if child.is_symlink() or child.resolve().parent != output:
+        raise ValueError("Generated output must not follow a symlink or leave its private directory")
+    return child
+
+
+def validate_input_dimensions(width: int, height: int):
+    if isinstance(width, bool) or isinstance(height, bool) or not isinstance(width, int) or not isinstance(height, int):
+        raise ValueError("Input dimensions must be integers")
+    if not 1 <= width <= 8192 or not 1 <= height <= 8192 or width * height > 16_777_216:
+        raise ValueError("Input bounds exceed Android preprocessor safety limits")
+
+
+def post_nms_detections(rows, width: int, height: int) -> tuple[list[dict], int]:
+    """Validate real output, retaining original post-NMS order; no label correction.
+
+    The documented Android fully-clipped safety filter is the ONLY omission. NaN,
+    invented classes or invalid probabilities fail instead of becoming fake boxes.
+    """
+    validate_input_dimensions(width, height)
+    rows = list(rows)
+    if len(rows) > 300:
+        raise ValueError("Post-NMS detection count exceeds the fixed maxDetections=300")
+    detections, clipped = [], 0
+    names = {identifier: exercise for exercise, identifier in CLASSES.items()}
+    for row in rows:
+        if len(row) != 6:
+            raise ValueError("Post-NMS detection row must have exactly six values")
+        values = [float(value) for value in row]
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("Post-NMS output contains non-finite values")
+        x1, y1, x2, y2, confidence, class_value = values
+        if class_value not in names or not 0 <= confidence <= 1:
+            raise ValueError("Invalid post-NMS class or confidence")
+        if not (0 <= x1 <= width and 0 <= x2 <= width and 0 <= y1 <= height and 0 <= y2 <= height):
+            raise ValueError("Post-NMS box is outside the source image")
+        if x2 <= x1 or y2 <= y1:
+            clipped += 1
+            continue
+        identifier = int(class_value)
+        detections.append(dict(classId=identifier, className=names[identifier], confidence=confidence,
+                               bbox=dict(x1=x1, y1=y1, x2=x2, y2=y2)))
+    return detections, clipped
+
+
+def semantic_observation(expected_exercise: str, detections: list[dict]) -> dict:
+    """Sanity-check labels only: never decide runtime equivalence or filter a sample."""
+    expected_id = CLASSES[expected_exercise]
+    top = detections[0] if detections else None
+    return dict(expectedExercise=expected_exercise, topPrediction=top,
+                semanticMatch=top is not None and top["classId"] == expected_id,
+                hasExpectedDetection=any(detection["classId"] == expected_id for detection in detections),
+                detectionsAfterNms=len(detections), classOrdering=[detection["classId"] for detection in detections])
 
 
 def load_pinned_loader(repository: Path):
@@ -81,6 +166,10 @@ def generate(args, repository: Path):
     # Imports only after manifest and model validation, with no full YOLO import/autoinstall side effects.
     samples = read_manifest(args.manifest)
     output = require_private_output(args.output, repository)
+    reference_filename = getattr(args, "reference_filename", "reference.json")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,111}\.json", reference_filename):
+        raise ValueError("Reference filename must be a flat lowercase .json basename")
+    private_child(output, reference_filename)
     model = args.model.resolve()
     if model.name != MODEL_NAME or model.stat().st_size != MODEL_BYTES or sha256(model.read_bytes()) != MODEL_SHA256:
         raise ValueError("Canonical EXP02 model filename/size/SHA256 mismatch")
@@ -90,7 +179,6 @@ def generate(args, repository: Path):
     import cv2
     import numpy as np
     import torch
-    import importlib.metadata
 
     loader = load_pinned_loader(repository)
     reference, source_hashes = loader.load_reference(args.source_root, args.wheel)
@@ -106,64 +194,74 @@ def generate(args, repository: Path):
     backend = SimpleNamespace(nhwc=False, task="detect", end2end=False, head="Detect",
                               names={0: "SQUAT", 1: "SHOULDER_PRESS"}, interpreter=interpreter,
                               input_details=inputs, output_details=outputs)
-    result_samples, rgb_outputs = [], []
+    result_samples, raster_outputs = [], []
     for sample in samples:
         image_path = (args.manifest.parent / sample["image"]).resolve()
+        if not 0 < image_path.stat().st_size <= MAX_ENCODED_IMAGE_BYTES:
+            raise ValueError("Encoded input image must be 1..33554432 bytes")
         encoded = image_path.read_bytes()
         # Ignore EXIF in both paths. Android receives this same decoded RGB raster, not a JPEG re-decode.
         bgr = cv2.imdecode(np.frombuffer(encoded, dtype=np.uint8), cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
         if bgr is None:
             raise ValueError(f"Cannot decode sample {sample['id']}")
         height, width = bgr.shape[:2]
-        if not 1 <= width <= 8192 or not 1 <= height <= 8192 or width * height > 16_777_216:
-            raise ValueError("Input bounds exceed Android preprocessor safety limits")
+        validate_input_dimensions(width, height)
         rgb = np.ascontiguousarray(bgr[..., ::-1]).tobytes()
         tensor = reference["preprocess"](predictor, [bgr])
+        tensor_array = tensor.numpy()
+        if tensor_array.shape != (1, 3, 640, 640) or tensor_array.dtype != np.float32 or not np.isfinite(tensor_array).all() or tensor_array.min() < 0 or tensor_array.max() > 1:
+            raise ValueError("Pinned preprocessing did not produce finite normalized FLOAT32 BCHW input")
+        tensor_bytes = np.ascontiguousarray(tensor_array, dtype=np.dtype("<f4")).tobytes()
         # This is the REAL native interpreter, not SyntheticInterpreter from the synthetic fixture tool.
         raw = reference["forward"](backend, tensor)[0]
+        if raw.shape != (1, 6, 8400) or raw.dtype != np.float32 or not np.isfinite(raw).all():
+            raise ValueError("Real native output is not finite canonical FLOAT32 [1,6,8400]")
         prediction = torch.from_numpy(raw)
         processed = reference["non_max_suppression"](
             prediction, conf_thres=.10, iou_thres=.70, nc=2, multi_label=False,
             agnostic=False, max_det=300, rotated=False, end2end=False)[0]
         if len(processed):
             reference["scale_boxes"]((640, 640), processed[:, :4], (height, width))
-        detections = []
-        for row in processed:
-            box = [float(value) for value in row[:4]]
-            if box[2] <= box[0] or box[3] <= box[1]:
-                continue  # Same documented Android fully-clipped-box safety filter after NMS.
-            detections.append(dict(classId=int(row[5]), className=backend.names[int(row[5])],
-                                   confidence=float(row[4]), bbox=dict(zip(("x1", "y1", "x2", "y2"), box))))
-        if not detections or not any(d["classId"] == CLASSES[sample["exercise"]] for d in detections):
-            raise ValueError(f"Sample {sample['id']} has no expected-exercise post-NMS prediction; cannot use as a positive correctness Golden")
+        detections, clipped = post_nms_detections(processed, width, height)
         rgb_name = f"{sample['id']}.rgb"
-        rgb_outputs.append((rgb_name, rgb))
+        tensor_name = f"{sample['id']}.input.f32"
+        raster_outputs.extend(((rgb_name, rgb), (tensor_name, tensor_bytes)))
         result_samples.append(dict(id=sample["id"], exercise=sample["exercise"], cameraView=sample["cameraView"],
+                                   image=image_path.name, sourceImageBytes=len(encoded),
                                    sourceImageSha256=sha256(encoded), rgbFile=rgb_name, rgbSha256=sha256(rgb),
-                                   width=width, height=height, inputTensorSha256=sha256(tensor.numpy().tobytes()),
-                                   detections=detections))
+                                   width=width, height=height, inputTensorFile=tensor_name,
+                                   inputTensorSha256=sha256(tensor_bytes), inputTensorByteOrder="LITTLE_ENDIAN",
+                                   nmsOutputCount=len(processed), droppedFullyClippedCount=clipped,
+                                   detections=detections, **semantic_observation(sample["exercise"], detections)))
     document = dict(schemaVersion=1, model=dict(id="yolo26n_exp02_fp32", filename=MODEL_NAME, bytes=MODEL_BYTES, sha256=MODEL_SHA256),
                     ultralyticsVersion=loader.VERSION, wheelSha256=loader.WHEEL_SHA256, sourceSha256=source_hashes,
                     modelInferenceExecuted=True, androidNativeInferenceExecuted=False,
                     exportContractVerified=False, pythonVersion=sys.version.split()[0],
-                    runtime=dict(name="ai_edge_litert", version=importlib.metadata.version("ai-edge-litert")),
+                    runtime=dict(name="ai_edge_litert", version=importlib.metadata.version("ai-edge-litert"),
+                                 pythonExecutable=sys.executable, numpyVersion=np.__version__,
+                                 opencvVersion=cv2.__version__, torchVersion=torch.__version__,
+                                 interpreterThreads=2, torchThreads=1, device="CPU"),
                     tensorMetadata=dict(input=dict(shape=[1, 3, 640, 640], dtype="FLOAT32"),
                                         output=dict(shape=[1, 6, 8400], dtype="FLOAT32")),
                     profile="STATIC_LITERT_PREDICT_RGB_FLOAT32_BCHW_BEST_CLASS",
+                    comparisonOrder="POST_NMS_DESCENDING_CONFIDENCE_PRESERVED",
+                    semanticSanityCheck=dict(matched=sum(sample["semanticMatch"] for sample in result_samples),
+                                             total=len(result_samples),
+                                             definition="Top post-NMS prediction matches the user-provided expected exercise; not dataset accuracy and not an equivalence gate."),
                     thresholds=dict(confidence=.10, iou=.70, maxDetections=300),
                     tolerances=dict(confidence=.001, bboxPixels=2.0, detectionCount=0, classMatch="EXACT",
                                     status="PROVISIONAL_NOT_MEASURED",
-                                    rationale="Conservative initial acceptance limits for final detections, not empirical evidence. No automatic widening. Exact post-NMS count/class; order-independent one-to-one same-class matches."),
+                                    rationale="Conservative initial acceptance limits for final detections, not empirical evidence. No automatic widening. Exact post-NMS count/class/order and one-to-one same-class matches; preprocessing error reported separately."),
                     privacy="Local rights-cleared validation rasters and results only; no images or detections are uploaded or committed.",
                     samples=result_samples)
     # Publish reference LAST. A failed run does not replace a previous valid manifest.
     output.mkdir(parents=True, exist_ok=True)
-    for filename, data in rgb_outputs:
-        (output / filename).write_bytes(data)
-    staged = output / "reference.json.pending"
+    for filename, data in raster_outputs:
+        private_child(output, filename).write_bytes(data)
+    staged = private_child(output, reference_filename + ".pending")
     staged.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    staged.replace(output / "reference.json")
-    print(f"Actual-model Python reference generated: {len(samples)} samples in ignored build output.")
+    staged.replace(private_child(output, reference_filename))
+    print(f"Actual-model Python reference generated: {len(samples)} samples in verified Git-ignored local output.")
     print("Android native comparison NOT executed. Production export contract remains NOT_VERIFIED.")
 
 
@@ -175,6 +273,7 @@ def main():
     parser.add_argument("--source-root", type=Path, default=repository / "build/yolo-contract-reference/extracted")
     parser.add_argument("--wheel", type=Path, default=repository / "build/yolo-contract-reference/ultralytics-8.4.176-py3-none-any.whl")
     parser.add_argument("--output", type=Path, default=repository / "build/exp02-actual-golden")
+    parser.add_argument("--reference-filename", default="reference.json", help="Private JSON basename; provisioning may upload it as reference.json")
     args = parser.parse_args()
     try:
         generate(args, repository)

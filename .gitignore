@@ -67,6 +67,10 @@ __pycache__/
 /docs/ml/AIRPTCoach_AIHub_AutoPipeline.ipynb
 # Private, rights-cleared actual-model validation inputs; never package or publish these fixtures.
 /local-yolo-validation/
+# User-supplied private Golden images, manifests and actual predictions stay local-only.
+/local_validation/
+# Explicit defense/documentation for the dedicated local Golden Python environment.
+/local_validation/.venv/
 # Raw decoded Golden rasters may contain identifiable people even without a common image suffix.
 *.rgb
 wandb/
