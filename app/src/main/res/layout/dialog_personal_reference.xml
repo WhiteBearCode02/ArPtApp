@@ -42,59 +42,13 @@
             android:textColor="@color/aurora_mint"
             android:textSize="13sp" />
 
+        <!-- Rows are inflated from the supported exercise policy, in that policy's order. -->
         <LinearLayout
-            android:id="@+id/btnReferenceSquat"
+            android:id="@+id/referenceOptions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:background="@drawable/bg_personal_reference_option"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:minHeight="76dp"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:orientation="vertical">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium" android:text="@string/personal_reference_squat"
-                    android:textColor="@color/white" android:textSize="17sp" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/personal_reference_current_view_hint"
-                    android:textColor="@color/aurora_ice" android:textSize="13sp" />
-            </LinearLayout>
-            <TextView android:layout_width="24dp" android:layout_height="wrap_content"
-                android:gravity="center" android:importantForAccessibility="no"
-                android:text="›" android:textColor="@color/aurora_mint" android:textSize="28sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btnReferenceShoulderPress"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_personal_reference_option"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:minHeight="76dp"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:orientation="vertical">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium" android:text="@string/personal_reference_shoulder_press"
-                    android:textColor="@color/white" android:textSize="17sp" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/personal_reference_current_view_hint"
-                    android:textColor="@color/aurora_ice" android:textSize="13sp" />
-            </LinearLayout>
-            <TextView android:layout_width="24dp" android:layout_height="wrap_content"
-                android:gravity="center" android:importantForAccessibility="no"
-                android:text="›" android:textColor="@color/aurora_mint" android:textSize="28sp" />
-        </LinearLayout>
+            android:orientation="vertical" />
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="16dp" android:text="@string/personal_reference_capture_help"

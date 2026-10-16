@@ -80,6 +80,42 @@ class DashboardUiPolicyTest {
         assertTrue(canBegin(ExerciseType.SQUAT, CameraView.FRONT))
     }
 
+    @Test fun readyShowsSetupAndHidesWorkoutSummary() {
+        assertEquals(DashboardDisplayState(true, false), display(false, false))
+    }
+
+    @Test fun referenceRecordingKeepsSetupSaveActionVisible() {
+        assertEquals(DashboardDisplayState(true, false), display(false, true))
+    }
+
+    @Test fun activeWorkoutReplacesSetupWithCompactSummary() {
+        assertEquals(DashboardDisplayState(false, true), display(true, false))
+    }
+
+    @Test fun activeWorkoutTakesDisplayPriorityOverInconsistentRecordingFlag() {
+        assertEquals(DashboardDisplayState(false, true), display(true, true))
+    }
+
+    @Test fun setupAndWorkoutSummaryAreMutuallyExclusiveForEveryState() {
+        listOf(false, true).forEach { exercising ->
+            listOf(false, true).forEach { recording ->
+                val result = display(exercising, recording)
+                assertTrue(result.showSetup xor result.showWorkoutSummary)
+                assertEquals(exercising, result.showWorkoutSummary)
+            }
+        }
+    }
+
+    @Test fun finishingWorkoutRestoresSetupWithoutChangingAdmissionPolicy() {
+        val ready = display(false, false)
+        display(true, false)
+        assertEquals(ready, display(false, false))
+        assertEquals(DashboardButtonState(true, true, true), state(false, false))
+    }
+
+    private fun display(exercising: Boolean, recording: Boolean) =
+        DashboardUiPolicy.displayState(exercising, recording)
+
     private fun state(exercising: Boolean, recording: Boolean) =
         DashboardUiPolicy.buttonState(exercising, recording)
 

@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
+    <!-- Preview and landmarks stay edge-to-edge; only dashboardChrome receives safe-area insets. -->
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
@@ -17,16 +18,25 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"
+        android:elevation="2dp"
         android:focusable="false" />
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="180dp"
+        android:layout_height="260dp"
         android:layout_gravity="top"
         android:background="@drawable/bg_camera_top_scrim"
-        android:clickable="false" />
+        android:clickable="false"
+        android:importantForAccessibility="no" />
 
-    <!-- Wide screens retain a clear left camera area and independently scrollable right controls. -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="260dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_camera_bottom_scrim"
+        android:clickable="false"
+        android:importantForAccessibility="no" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/dashboardChrome"
         android:layout_width="match_parent"
@@ -37,6 +47,7 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
+        <!-- The right panel leaves the left camera area unobstructed below the fixed header. -->
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/dashboardPanelGuide"
             android:layout_width="wrap_content"
@@ -44,6 +55,7 @@
             android:orientation="vertical"
             app:layout_constraintGuide_percent="0.54" />
 
+        <!-- Fixed header: no scrolling content or diagnostic details can enter this region. -->
         <LinearLayout
             android:id="@+id/layoutCameraHeader"
             android:layout_width="0dp"
@@ -77,8 +89,10 @@
                     android:id="@+id/tvDashboardTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center"
+                    android:maxLines="1"
                     android:text="@string/exercise_ready"
                     android:textColor="@color/white"
                     android:textSize="18sp" />
@@ -87,7 +101,10 @@
                     android:id="@+id/tvCameraLens"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
                     android:gravity="center"
+                    android:maxLines="1"
                     android:text="@string/camera_lens_connecting"
                     android:textColor="@color/aurora_ice"
                     android:textSize="12sp" />
@@ -104,49 +121,15 @@
                 app:tint="@color/white" />
         </LinearLayout>
 
-        <!-- Content grows vertically instead of overlapping the camera guide at larger font sizes. -->
-        <ScrollView
-            android:id="@+id/scrollDashboardGuide"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:fillViewport="true"
-            android:overScrollMode="ifContentScrolls"
-            android:scrollbars="none"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/dashboardPanelGuide"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/layoutCameraHeader">
-
-            <FrameLayout
-                android:id="@+id/layoutPoseGuide"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="96dp">
-
-                <TextView
-                    android:id="@+id/tvPoseFeedback"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:accessibilityLiveRegion="polite"
-                    android:background="@drawable/bg_camera_status_chip"
-                    android:gravity="center"
-                    android:padding="12dp"
-                    android:text="@string/dashboard_pose_guide"
-                    android:textColor="@color/aurora_ice"
-                    android:textSize="14sp" />
-            </FrameLayout>
-        </ScrollView>
-
-        <ScrollView
+        <!-- Bounded scrolling protects the header and fixed CTA on short screens / large fonts. -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/scrollDashboardContent"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="12dp"
-            android:clipToPadding="false"
+            android:clipChildren="true"
+            android:clipToPadding="true"
             android:fillViewport="true"
             android:overScrollMode="ifContentScrolls"
             android:scrollbars="vertical"
@@ -156,37 +139,43 @@
             app:layout_constraintTop_toBottomOf="@id/layoutCameraHeader">
 
             <LinearLayout
+                android:id="@+id/layoutDashboardContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <LinearLayout
                     android:id="@+id/layoutDetectedExercise"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
                     android:background="@drawable/bg_camera_status_chip"
                     android:gravity="center_vertical"
                     android:minHeight="36dp"
                     android:orientation="horizontal"
-                    android:padding="10dp">
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp">
 
                     <View
                         android:layout_width="7dp"
                         android:layout_height="7dp"
-                        android:background="@drawable/bg_camera_live_dot" />
+                        android:background="@drawable/bg_camera_live_dot"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:id="@+id/tvDetectedExercise"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
                         android:text="@string/exercise_detecting"
                         android:textColor="@color/aurora_ice"
                         android:textSize="13sp" />
                 </LinearLayout>
 
+                <!-- Preparation only. Runtime swaps this card for the compact summary below. -->
                 <LinearLayout
                     android:id="@+id/layoutSetupOptions"
                     android:layout_width="match_parent"
@@ -215,106 +204,140 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/layoutCount"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/layoutWorkoutSummary"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_camera_count_panel"
-                    android:gravity="center"
-                    android:minWidth="148dp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    android:paddingStart="24dp"
-                    android:paddingTop="12dp"
-                    android:paddingEnd="24dp"
-                    android:paddingBottom="12dp">
+                    android:visibility="gone">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/exercise_count"
-                        android:textColor="@color/aurora_ice"
-                        android:textSize="12sp" />
+                        android:id="@+id/tvWorkoutDirection"
+                        style="@style/Widget.AIRPTCoach.Dashboard.SummaryText" />
+
+                    <TextView
+                        android:id="@+id/tvWorkoutReference"
+                        style="@style/Widget.AIRPTCoach.Dashboard.SummaryText"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <!-- This empty weighted region reserves the camera center, not an overlay guide. -->
+                <Space
+                    android:id="@+id/layoutCameraClearSpace"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:minHeight="16dp"
+                    android:importantForAccessibility="no" />
+
+                <!-- Expansion reserves real body space; it cannot cover the header or footer. -->
+                <com.example.arptapp.ui.dashboard.YoloDiagnosticsPanel
+                    android:id="@+id/yoloDiagnosticsPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <!-- Bottom group: count -> feedback -> fixed CTA outside this bounded scroll. -->
+                <LinearLayout
+                    android:id="@+id/layoutWorkoutFooter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:id="@+id/layoutCountAndDiagnostics"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvCount"
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:id="@+id/layoutCount"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-light"
-                            android:includeFontPadding="false"
-                            android:text="0"
-                            android:textColor="@color/white"
-                            android:textSize="36sp" />
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_camera_count_panel"
+                            android:gravity="center"
+                            android:minHeight="88dp"
+                            android:orientation="vertical"
+                            android:paddingStart="12dp"
+                            android:paddingTop="8dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="8dp">
 
-                        <TextView
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/exercise_count"
+                                android:textColor="@color/aurora_ice"
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-light"
+                                    android:includeFontPadding="false"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:textSize="36sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:text="@string/dashboard_count_unit"
+                                    android:textColor="@color/aurora_ice"
+                                    android:textSize="14sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvCountUnit"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="@string/dashboard_count_waiting"
+                                android:textColor="@color/aurora_ice"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <!-- DEBUG only; expands an allocated panel above the footer, never an overlay. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnYoloDiagnosticsToggle"
+                            style="@style/Widget.AIRPTCoach.Dashboard.DiagnosticToggle"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="@string/dashboard_count_unit"
-                            android:textColor="@color/aurora_ice"
-                            android:textSize="14sp" />
+                            android:layout_marginStart="8dp"
+                            android:maxWidth="128dp"
+                            android:text="@string/dashboard_yolo_view"
+                            android:visibility="gone" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/tvCountUnit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="@string/dashboard_count_waiting"
-                        android:textColor="@color/aurora_ice"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/layoutYoloDiagnostics"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_dashboard_glass_panel"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnYoloDiagnosticsToggle"
-                        style="@style/Widget.AIRPTCoach.Dashboard.DiagnosticToggle"
-                        android:text="@string/dashboard_yolo_expand" />
-
-                    <LinearLayout
-                        android:id="@+id/layoutYoloDiagnosticsDetails"
+                        android:id="@+id/tvPoseFeedback"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:background="@drawable/bg_camera_status_chip"
+                        android:gravity="center"
                         android:paddingStart="12dp"
+                        android:paddingTop="10dp"
                         android:paddingEnd="12dp"
-                        android:paddingBottom="12dp"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:id="@+id/tvPerformance"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/aurora_ice"
-                            android:textSize="11sp" />
-
-                        <TextView
-                            android:id="@+id/tvYoloDiagnostics"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:fontFamily="monospace"
-                            android:importantForAccessibility="no"
-                            android:textColor="@color/aurora_ice"
-                            android:textSize="10sp" />
-                    </LinearLayout>
+                        android:paddingBottom="10dp"
+                        android:text="@string/dashboard_pose_guide"
+                        android:textColor="@color/aurora_ice"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </LinearLayout>
-        </ScrollView>
+        </androidx.core.widget.NestedScrollView>
 
         <FrameLayout
             android:id="@+id/layoutCameraActions"

@@ -180,17 +180,38 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     /** Presentation-only projection: never resets or locks a workout, calibration or detector. */
     private fun applyDashboardControlState() {
         val state = DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null)
+        val display = DashboardUiPolicy.displayState(isExercising, calibrationExercise != null)
+        binding.layoutSetupOptions.visibility = if (display.showSetup) View.VISIBLE else View.GONE
+        binding.layoutWorkoutSummary.visibility = if (display.showWorkoutSummary) View.VISIBLE else View.GONE
         binding.btnCameraView.isEnabled = state.cameraViewEnabled
         binding.btnPersonalReference.isEnabled = state.personalReferenceEnabled
         binding.btnStartExercise.isEnabled = state.startExerciseEnabled
         binding.btnSwitchCamera.isEnabled = cameraCanSwitch && state.cameraViewEnabled
         listOf(binding.btnCameraView, binding.btnPersonalReference, binding.btnStartExercise, binding.btnSwitchCamera)
             .forEach { it.alpha = if (it.isEnabled) 1f else .5f }
+        renderWorkoutSummary()
+    }
+
+    /** A truthful UI projection: a captured exercise is not necessarily the reference used now. */
+    private fun renderWorkoutSummary() {
+        if (!isExercising) return
+        val direction = getString(when (cameraView) {
+            com.example.arptapp.domain.analyzer.CameraView.FRONT -> R.string.personal_reference_front
+            com.example.arptapp.domain.analyzer.CameraView.SIDE -> R.string.personal_reference_side
+            else -> R.string.dashboard_summary_unknown_direction
+        })
+        val directionText = getString(R.string.dashboard_summary_direction, direction)
+        val referenceText = when {
+            sessionExerciseType == ExerciseType.UNKNOWN -> getString(R.string.dashboard_summary_reference_pending)
+            personalSequence.isNotEmpty() -> getString(R.string.dashboard_summary_reference_active, sessionExerciseType.displayName)
+            else -> getString(R.string.dashboard_summary_reference_none)
+        }
+        if (binding.tvWorkoutDirection.text != directionText) binding.tvWorkoutDirection.text = directionText
+        if (binding.tvWorkoutReference.text != referenceText) binding.tvWorkoutReference.text = referenceText
     }
 
     private fun setupYoloDiagnostics() {
-        binding.tvYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
-        binding.layoutYoloDiagnostics.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
+        binding.btnYoloDiagnosticsToggle.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
         setYoloDiagnosticsExpanded(false)
         binding.btnYoloDiagnosticsToggle.setOnClickListener {
             setYoloDiagnosticsExpanded(!yoloDiagnosticsExpanded)
@@ -199,9 +220,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private fun setYoloDiagnosticsExpanded(expanded: Boolean) {
         yoloDiagnosticsExpanded = BuildConfig.DEBUG && expanded
-        binding.layoutYoloDiagnosticsDetails.visibility = if (yoloDiagnosticsExpanded) View.VISIBLE else View.GONE
+        binding.yoloDiagnosticsPanel.setExpanded(yoloDiagnosticsExpanded)
         binding.btnYoloDiagnosticsToggle.text = getString(if (yoloDiagnosticsExpanded)
-            R.string.dashboard_yolo_collapse else R.string.dashboard_yolo_expand)
+            R.string.dashboard_yolo_hide else R.string.dashboard_yolo_view)
         ViewCompat.setStateDescription(binding.btnYoloDiagnosticsToggle, getString(if (yoloDiagnosticsExpanded)
             R.string.dashboard_yolo_expanded_state else R.string.dashboard_yolo_collapsed_state))
     }
@@ -351,6 +372,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             return
         }
         isExercising = true
+        setYoloDiagnosticsExpanded(false) // Start with the camera and workout information, not debug details.
         mainViewModel.resetSession()
         cameraController.invalidateShadowEvidence()
         repAnalysisEngine.reset()
@@ -383,10 +405,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         isExercising = false
         val report = mainViewModel.generateLockedSessionReport()
         if (report == null) {
-            binding.btnStartExercise.visibility = View.VISIBLE
-            binding.btnEndExercise.visibility = View.GONE
-            applyDashboardControlState()
-            binding.tvDashboardTitle.text = getString(R.string.exercise_ready)
+            restorePreparationUi()
             AlertDialog.Builder(this).setTitle("분석 데이터 확인")
                 .setMessage(getString(if (sessionExerciseType == ExerciseType.UNKNOWN)
                     R.string.exercise_type_unconfirmed else R.string.exercise_analysis_insufficient))
@@ -410,9 +429,19 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패") }
         }
 
+        // Closing the report with Back/outside must not strand an idle screen on a disabled End
+        // action. Restore only UI; the completed report and session data remain unchanged.
+        restorePreparationUi()
         showSessionReport(report) {
             openResultActivity(report, elapsedTime)
         }
+    }
+
+    private fun restorePreparationUi() {
+        binding.btnStartExercise.visibility = View.VISIBLE
+        binding.btnEndExercise.visibility = View.GONE
+        applyDashboardControlState()
+        binding.tvDashboardTitle.text = getString(R.string.exercise_ready)
     }
 
     private fun showSessionReport(report: com.example.arptapp.model.SessionReport, onConfirmed: () -> Unit) {
@@ -466,13 +495,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 (getSystemService(POWER_SERVICE) as android.os.PowerManager).currentThermalStatus
             } else -1
             shadowThermalStatus = thermal
-            binding.tvPerformance.text = String.format(
+            binding.yoloDiagnosticsPanel.updatePerformance(String.format(
                 Locale.KOREA,
                 "처리 %.1f FPS · %.0f ms · 발열 단계 %s",
                 stats.processedFps,
                 stats.averageLatencyMs,
                 if (thermal < 0) "미지원" else thermal.toString()
-            )
+            ))
         }
         val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
         if (mainPersonLandmarks != null) {
@@ -504,7 +533,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         if (!BuildConfig.DEBUG) return
         val text = DetectorComparisonFormatter.format(DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
             sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus))
-        binding.tvYoloDiagnostics.text = text
+        binding.yoloDiagnosticsPanel.updateDiagnostics(text)
         val now = SystemClock.uptimeMillis()
         if (now - lastShadowLogAt >= 1000L) {
             lastShadowLogAt = now
@@ -681,6 +710,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         }
         binding.tvDetectedExercise.text = if (isExercising && sessionExerciseType != ExerciseType.UNKNOWN)
             "세션: ${sessionExerciseType.displayName} · 감지: $displayName" else "인식 중: $displayName"
+        renderWorkoutSummary()
     }
 
     private fun checkCameraPermission() {

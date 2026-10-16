@@ -8,7 +8,7 @@ const dashboard = () => read(javaRoot + "DashboardActivity.kt")
 
 // Resolve this UI's shared styles too: a reusable minHeight is just as real as an inline one.
 const dashboardStyles = new Map([...read("app/src/main/res/values/dashboard_ui.xml")
-  .matchAll(/<style\s+name="([^"]+)"(?:\s+parent="([^"]+)")?\s*>([\s\S]*?)<\/style>/g)]
+  .matchAll(/<style\s+name="([^"]+)"(?:\s+parent="([^"]*)")?\s*>([\s\S]*?)<\/style>/g)]
   .map(match => [match[1], {
     parent: match[2],
     attrs: Object.fromEntries([...match[3].matchAll(/<item\s+name="([^"]+)">([^<]*)<\/item>/g)]
@@ -26,6 +26,15 @@ function resolvedAttributes(node) {
   }
   return { ...inherited(node.attrs.style?.replace(/^@style\//, "")), ...node.attrs }
 }
+
+test("dashboard dotted styles declare their parent explicitly, including no-parent text styles", () => {
+  const source = read("app/src/main/res/values/dashboard_ui.xml")
+  for (const match of source.matchAll(/<style\s+name="([^"]+)"([^>]*)>/g)) {
+    if (match[1].includes(".")) assert.match(match[2], /\bparent="[^"]*"/,
+      `${match[1]} must not infer a nonexistent dotted parent`)
+  }
+  assert.equal(dashboardStyles.get("Widget.AIRPTCoach.Dashboard.SummaryText")?.parent, "")
+})
 
 // Small structural parser for repository-owned Android layouts: no DOM package or network needed.
 // Unlike source-order-only checks, ancestry catches accidentally overlaying independent controls.
@@ -66,48 +75,50 @@ function assertTouchTarget(node, label) {
 
 for (const configuration of ["layout", "layout-land"]) {
   const path = `app/src/main/res/${configuration}/activity_dashboard.xml`
-  test(`${configuration}: full-screen camera and separate, non-overlapping dashboard regions`, () => {
+  test(`${configuration}: full-screen camera and fixed header are separate from scrolling controls`, () => {
     const ui = layout(path)
     for (const id of ["viewFinder", "overlayView"]) {
       const node = ui.byId(id)
       assert.equal(node.attrs["android:layout_width"], "match_parent")
       assert.equal(node.attrs["android:layout_height"], "match_parent")
     }
-    const header = ui.descendants(ui.byId("layoutCameraHeader"))
+    const chrome = ui.byId("dashboardChrome")
+    const headerNode = ui.byId("layoutCameraHeader")
+    const header = ui.descendants(headerNode)
     for (const id of ["btnClose", "tvDashboardTitle", "tvCameraLens", "btnSwitchCamera"]) {
       assert.ok(header.includes(ui.byId(id)), `header owns ${id}`)
     }
     const scroll = ui.byId("scrollDashboardContent")
-    assert.equal(scroll.attrs["android:layout_height"], "0dp", "content scroll is constrained, not unbounded")
-    const content = ui.descendants(scroll)
-    const orderedRegions = configuration === "layout"
-      ? ["layoutSetupOptions", "layoutPoseGuide", "layoutCount", "layoutYoloDiagnostics"]
-      : ["layoutSetupOptions", "layoutCount", "layoutYoloDiagnostics"]
-    const order = orderedRegions
-      .map(id => content.indexOf(ui.byId(id)))
-    assert.ok(order.every(index => index >= 0), "setup, count and debug are in bounded scrolling content")
-    assert.deepEqual([...order].sort((a, b) => a - b), order, "logical region order is preserved")
-    if (configuration === "layout-land") {
-      assert.ok(!content.includes(ui.byId("layoutPoseGuide")), "landscape preserves a separate camera/guide pane")
-      const guideScroll = ui.byId("scrollDashboardGuide")
-      assert.ok(ui.descendants(guideScroll).includes(ui.byId("layoutPoseGuide")))
-      assert.equal(guideScroll.attrs["android:layout_height"], "0dp", "left guide also scrolls in short windows")
-      assert.equal(guideScroll.attrs["app:layout_constraintBottom_toBottomOf"], "parent")
-      assert.equal(guideScroll.attrs["app:layout_constraintTop_toBottomOf"], "@id/layoutCameraHeader")
-      assert.equal(scroll.attrs["app:layout_constraintStart_toStartOf"],
-        guideScroll.attrs["app:layout_constraintEnd_toStartOf"], "left guide and right controls meet at one split guide")
-      assert.equal(ui.byId("layoutCameraActions").attrs["app:layout_constraintStart_toStartOf"],
-        scroll.attrs["app:layout_constraintStart_toStartOf"], "fixed CTA belongs to the same right pane")
-    } else {
-      assert.equal(ui.byId("layoutSetupOptions").attrs["app:layout_constraintTop_toBottomOf"], "@id/layoutDetectedExercise")
-      assert.equal(ui.byId("layoutPoseGuide").attrs["app:layout_constraintTop_toBottomOf"], "@id/layoutSetupOptions")
-      assert.equal(ui.byId("layoutPoseGuide").attrs["app:layout_constraintBottom_toTopOf"], "@id/layoutCount")
-      assert.equal(ui.byId("layoutCount").attrs["app:layout_constraintBottom_toTopOf"], "@id/layoutYoloDiagnostics")
-      assert.equal(ui.byId("layoutYoloDiagnostics").attrs["app:layout_constraintTop_toBottomOf"], "@id/layoutCount")
-    }
-    assert.ok(!content.includes(ui.byId("layoutCameraActions")), "CTA is outside scrolling diagnostic content")
-    assert.equal(scroll.attrs["app:layout_constraintBottom_toTopOf"], "@id/layoutCameraActions")
     const actions = ui.byId("layoutCameraActions")
+    for (const node of [headerNode, scroll, actions]) {
+      assert.ok(chrome.children.includes(node), "header, body and CTA are independent chrome regions")
+    }
+    assert.equal(headerNode.attrs["app:layout_constraintTop_toTopOf"], "parent")
+    assert.equal(scroll.attrs["android:layout_height"], "0dp", "content scroll is constrained, not unbounded")
+    assert.equal(scroll.attrs["app:layout_constraintTop_toBottomOf"], "@id/layoutCameraHeader")
+    assert.equal(scroll.attrs["app:layout_constraintBottom_toTopOf"], "@id/layoutCameraActions")
+    const content = ui.descendants(scroll)
+    assert.ok(!content.includes(headerNode), "the header cannot scroll under another overlay")
+    assert.ok(!content.includes(actions), "primary CTA never scrolls away behind diagnostics")
+    const buttonsInHeader = header.filter(node => /(?:Button)$/.test(node.name))
+    assert.deepEqual(buttonsInHeader, [ui.byId("btnClose"), ui.byId("btnSwitchCamera")],
+      "only back and camera-switch controls are in the header")
+    assert.ok(!header.includes(ui.byId("btnYoloDiagnosticsToggle")), "diagnostics cannot cover header controls")
+    assert.equal(headerNode.attrs["android:orientation"], "horizontal")
+    assert.equal(headerNode.children[0], ui.byId("btnClose"))
+    assert.equal(headerNode.children.at(-1), ui.byId("btnSwitchCamera"))
+    const titleColumn = headerNode.children[1]
+    assert.equal(titleColumn.attrs["android:orientation"], "vertical")
+    assert.deepEqual(titleColumn.children, [ui.byId("tvDashboardTitle"), ui.byId("tvCameraLens")],
+      "the camera state is directly beneath the centered title")
+    assert.equal(scroll.attrs["android:clipChildren"], "true")
+    if (configuration === "layout-land") {
+      assert.equal(scroll.attrs["app:layout_constraintStart_toStartOf"], "@id/dashboardPanelGuide")
+      assert.ok(parseFloat(ui.byId("dashboardPanelGuide").attrs["app:layout_constraintGuide_percent"]) >= 0.5,
+        "landscape leaves at least half of the preview outside the controls pane")
+      assert.equal(actions.attrs["app:layout_constraintStart_toStartOf"],
+        scroll.attrs["app:layout_constraintStart_toStartOf"], "fixed CTA belongs to the same right pane")
+    }
     assert.equal(actions.attrs["app:layout_constraintBottom_toBottomOf"], "parent")
     const actionChildren = ui.descendants(actions)
     assert.ok(actionChildren.includes(ui.byId("btnStartExercise")))
@@ -115,9 +126,38 @@ for (const configuration of ["layout", "layout-land"]) {
     const setup = ui.descendants(ui.byId("layoutSetupOptions"))
     assert.ok(setup.indexOf(ui.byId("btnCameraView")) < setup.indexOf(ui.byId("btnPersonalReference")))
     assert.equal(ui.byId("layoutSetupOptions").attrs["android:orientation"], "vertical")
+    for (const id of ["btnCameraView", "btnPersonalReference"]) {
+      const attrs = resolvedAttributes(ui.byId(id))
+      assert.equal(attrs["android:maxLines"], "1", `${id} is a one-line list menu`)
+      assert.equal(attrs.icon, "@drawable/ic_dashboard_chevron_right")
+      assert.equal(attrs.iconGravity, "end")
+    }
   })
 
-  test(`${configuration}: primary controls are accessible and debug details start hidden`, () => {
+  test(`${configuration}: setup/summary precede clear camera space and lower count-feedback-CTA stack`, () => {
+    const ui = layout(path)
+    const body = ui.byId("layoutDashboardContent")
+    assert.equal(body.attrs["android:orientation"], "vertical")
+    const ordered = ["layoutDetectedExercise", "layoutSetupOptions", "layoutWorkoutSummary",
+      "layoutCameraClearSpace", "yoloDiagnosticsPanel", "layoutWorkoutFooter"].map(id => body.children.indexOf(ui.byId(id)))
+    assert.ok(ordered.every(index => index >= 0), "all sections are direct, stacked body children")
+    assert.deepEqual([...ordered].sort((a, b) => a - b), ordered)
+    assert.equal(ui.byId("layoutWorkoutSummary").attrs["android:visibility"], "gone")
+    assert.equal(ui.byId("layoutCameraClearSpace").children.length, 0,
+      "no text or debug overlay covers the middle camera spacer")
+    assert.ok(parseFloat(ui.byId("layoutCameraClearSpace").attrs["android:layout_weight"]) > 0,
+      "spare height is reserved for unobstructed camera preview")
+    const footer = ui.byId("layoutWorkoutFooter")
+    assert.equal(footer.attrs["android:orientation"], "vertical")
+    const row = ui.byId("layoutCountAndDiagnostics")
+    assert.ok(footer.children.indexOf(row) < footer.children.indexOf(ui.byId("tvPoseFeedback")),
+      "count comes before guidance; the fixed CTA is below this bounded footer")
+    assert.ok(ui.descendants(row).includes(ui.byId("layoutCount")))
+    assert.ok(ui.descendants(row).includes(ui.byId("btnYoloDiagnosticsToggle")))
+    assert.equal(ui.byId("tvPoseFeedback").attrs["android:accessibilityLiveRegion"], "polite")
+  })
+
+  test(`${configuration}: primary controls are accessible and no diagnostic detail exists on main screen`, () => {
     const ui = layout(path)
     for (const id of ["btnClose", "btnSwitchCamera", "btnCameraView", "btnPersonalReference",
       "btnStartExercise", "btnEndExercise", "btnYoloDiagnosticsToggle"]) {
@@ -128,31 +168,36 @@ for (const configuration of ["layout", "layout-land"]) {
       assert.ok(parseFloat(resolvedAttributes(ui.byId(id))["android:layout_width"]) >= 48,
         `${id} also has a 48dp-wide icon hit target`)
     }
-    assert.equal(ui.byId("layoutYoloDiagnostics").attrs["android:visibility"], "gone")
-    assert.equal(ui.byId("layoutYoloDiagnosticsDetails").attrs["android:visibility"], "gone")
-    const details = ui.descendants(ui.byId("layoutYoloDiagnosticsDetails"))
-    assert.ok(details.includes(ui.byId("tvYoloDiagnostics")))
-    assert.ok(details.includes(ui.byId("tvPerformance")))
+    assert.equal(ui.byId("btnYoloDiagnosticsToggle").attrs["android:visibility"], "gone")
+    assert.equal(ui.byId("yoloDiagnosticsPanel").attrs["android:visibility"], "gone")
+    assert.doesNotMatch(read(path), /@\+id\/(?:layoutYoloDiagnosticsDetails|tvYoloDiagnostics|tvPerformance)\b/,
+      "raw/stable/FPS/latency detail belongs only to the opt-in diagnostic panel")
   })
 }
 
-test("personal reference is an ordered two-row selection with one separate bottom cancel", () => {
+test("personal reference uses expandable vertical rows with one separate bottom cancel", () => {
   const ui = layout("app/src/main/res/layout/dialog_personal_reference.xml")
-  const squat = ui.byId("btnReferenceSquat")
-  const shoulder = ui.byId("btnReferenceShoulderPress")
+  const options = ui.byId("referenceOptions")
   const cancel = ui.byId("btnCancelReference")
-  assert.ok(ui.all.indexOf(squat) < ui.all.indexOf(shoulder))
-  assert.ok(ui.all.indexOf(shoulder) < ui.all.indexOf(cancel))
-  for (const [label, node] of [["squat row", squat], ["shoulder press row", shoulder], ["cancel", cancel]]) {
-    assertTouchTarget(node, label)
-  }
+  assert.equal(options.attrs["android:orientation"], "vertical")
+  assert.ok(ui.all.indexOf(options) < ui.all.indexOf(cancel))
+  assertTouchTarget(cancel, "cancel")
+  const row = layout("app/src/main/res/layout/item_personal_reference_option.xml")
+  assertTouchTarget(row.byId("referenceOptionRow"), "reusable exercise row")
+  assert.equal(row.byId("referenceOptionRow").attrs["android:focusable"], "true")
+  row.byId("tvReferenceOptionTitle")
+  row.byId("tvReferenceOptionSubtitle")
   const dialog = read(javaRoot + "ui/dashboard/PersonalReferenceDialog.kt")
-  assert.match(dialog, /DashboardUiPolicy\.referenceExerciseOptions\[0\]/)
-  assert.match(dialog, /DashboardUiPolicy\.referenceExerciseOptions\[1\]/)
-  assert.match(dialog, /btnReferenceSquat\.setOnClickListener/)
-  assert.match(dialog, /btnReferenceShoulderPress\.setOnClickListener/)
+  assert.match(dialog, /DashboardUiPolicy\.referenceExerciseOptions\.forEach/)
+  assert.match(dialog, /ItemPersonalReferenceOptionBinding\.inflate/)
+  assert.match(dialog, /referenceOptions\.addView\(row\.root\)/)
+  assert.match(dialog, /row\.root\.setOnClickListener\s*\{\s*select\(type\)/)
   assert.match(dialog, /btnCancelReference\.setOnClickListener/)
   assert.doesNotMatch(dialog, /setPositiveButton|setNeutralButton|setNegativeButton/)
+  assert.doesNotMatch(dialog, /referenceExerciseOptions\[[01]\]|btnReferenceSquat|btnReferenceShoulderPress/)
+  assert.match(dialog, /if \(selected \|\| !dialog\.isShowing\) return/)
+  const policy = read(javaRoot + "ui/dashboard/DashboardUiPolicy.kt")
+  assert.match(policy, /listOf\(ExerciseType\.SQUAT, ExerciseType\.SHOULDER_PRESS\)/)
   assert.match(dialog, /cameraView/)
 })
 
@@ -172,21 +217,59 @@ test("dashboard calls the existing recording entry only after presentation admis
   assert.match(source, /referenceRepository\.remove\(/)
 })
 
-test("collapsible diagnostic stays DEBUG-only without feeding the primary exercise classifier", () => {
+test("presentation state swaps setup for summary without mutating a session", () => {
   const source = dashboard()
-  assert.match(source, /tvYoloDiagnostics\.visibility = if \(BuildConfig\.DEBUG\) View\.VISIBLE else View\.GONE/)
-  assert.match(source, /layoutYoloDiagnostics\.visibility = if \(BuildConfig\.DEBUG\) View\.VISIBLE else View\.GONE/)
+  assert.match(source, /DashboardUiPolicy\.displayState\(/)
+  assert.match(source, /layoutSetupOptions\.visibility\s*=\s*if\s*\([^)]*\.showSetup\)/)
+  assert.match(source, /layoutWorkoutSummary\.visibility\s*=\s*if\s*\([^)]*\.showWorkoutSummary\)/)
+  const policy = read(javaRoot + "ui/dashboard/DashboardUiPolicy.kt")
+  assert.match(policy, /isExercising -> DashboardDisplayState\(showSetup = false, showWorkoutSummary = true\)/)
+  assert.doesNotMatch(policy, /viewModel|resetSession|observeDetectedExercise|startExercise\(|save\(|remove\(/)
+  assert.match(source, /WindowInsetsCompat\.Type\.systemBars\(\) or WindowInsetsCompat\.Type\.displayCutout\(\)/,
+    "bottom CTA respects system bars and cutout insets")
+})
+
+test("report dismissal cannot leave an idle screen stranded on the End action", () => {
+  const source = dashboard()
+  const end = source.slice(source.indexOf("private fun endExercise()"), source.indexOf("private fun restorePreparationUi()"))
+  assert.equal((end.match(/restorePreparationUi\(\)/g) ?? []).length, 2,
+    "both insufficient-report and completed-report paths restore presentation state")
+  assert.ok(end.lastIndexOf("restorePreparationUi()") < end.indexOf("showSessionReport(report)"))
+  const restore = source.slice(source.indexOf("private fun restorePreparationUi()"), source.indexOf("private fun showSessionReport("))
+  assert.match(restore, /btnStartExercise\.visibility = View.VISIBLE/)
+  assert.match(restore, /btnEndExercise\.visibility = View.GONE/)
+  assert.match(restore, /applyDashboardControlState\(\)/)
+  assert.doesNotMatch(restore, /resetSession|reset\(|remove\(|uploadSession|generateLockedSessionReport/)
+})
+
+test("opt-in allocated diagnostic panel stays DEBUG-only without feeding the primary exercise classifier", () => {
+  const source = dashboard()
+  assert.match(source, /btnYoloDiagnosticsToggle\.visibility = if \(BuildConfig\.DEBUG\) View\.VISIBLE else View\.GONE/)
   assert.match(source, /btnYoloDiagnosticsToggle\.setOnClickListener/)
-  const expand = source.slice(source.indexOf("private fun setYoloDiagnosticsExpanded("))
-  assert.match(expand, /BuildConfig\.DEBUG/)
-  assert.match(expand, /layoutYoloDiagnosticsDetails\.visibility/)
+  assert.match(source, /yoloDiagnosticsPanel\.setExpanded\(/)
+  const panel = read(javaRoot + "ui/dashboard/YoloDiagnosticsPanel.kt")
+  assert.match(panel, /FrameLayout/)
+  assert.match(panel, /BuildConfig\.DEBUG/)
+  assert.doesNotMatch(panel, /BottomSheetDialog|PopupWindow|AlertDialog/,
+    "diagnostics use allocated layout height, never cover count, guidance or fixed CTA")
+  const details = layout("app/src/main/res/layout/view_yolo_diagnostics_panel.xml")
+  details.byId("tvYoloDiagnostics")
+  details.byId("tvPerformance")
+  const viewport = details.all.find(node => node.name === "androidx.core.widget.NestedScrollView")
+  assert.ok(viewport, "long diagnostics have their own bounded scroll viewport")
+  assert.ok(parseFloat(viewport.attrs["android:layout_height"]) <= 160)
+  assert.equal(viewport.attrs["android:clipChildren"], "true")
+  assert.match(panel, /fun setExpanded\(/)
+  assert.match(panel, /fun updateDiagnostics\(/)
+  assert.match(panel, /fun updatePerformance\(/)
   assert.match(source, /primaryExerciseDetector = LandmarkExerciseDetector\(fallbackExerciseClassifier\)/)
   assert.match(source, /updateCurrentExerciseType\(primaryExerciseDetector\.detect\(LandmarkDetectionFrame/)
   assert.doesNotMatch(source, /observeDetectedExercise\(yolo|updateCurrentExerciseType\(.*yolo/i)
 })
 
 test("new dashboard presentation modules add no API calls, credentials or billable providers", () => {
-  for (const file of ["ui/dashboard/DashboardUiPolicy.kt", "ui/dashboard/PersonalReferenceDialog.kt"]) {
+  for (const file of ["ui/dashboard/DashboardUiPolicy.kt", "ui/dashboard/PersonalReferenceDialog.kt",
+    "ui/dashboard/YoloDiagnosticsPanel.kt"]) {
     assert.doesNotMatch(read(javaRoot + file),
       /https?:\/\/|HttpClient|OkHttp|Retrofit|SUPABASE|LLM_API_KEY|accessToken|FileOutputStream|writeBytes/)
   }

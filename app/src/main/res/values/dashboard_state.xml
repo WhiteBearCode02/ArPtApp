@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dashboard_yolo_hide">YOLO 진단 닫기</string>
+    <string name="dashboard_diagnostics_title">개발자 진단 · YOLO Shadow</string>
+    <string name="dashboard_summary_direction">방향: %1$s</string>
+    <string name="dashboard_summary_unknown_direction">미선택</string>
+    <string name="dashboard_summary_reference_pending">기준: 운동 감지 후 확인</string>
+    <string name="dashboard_summary_reference_active">기준: %1$s</string>
+    <string name="dashboard_summary_reference_none">기준: 내 기준 미등록</string>
+</resources>

@@ -14,6 +14,22 @@ object DashboardUiPolicy {
     val referenceExerciseOptions: List<ExerciseType> =
         listOf(ExerciseType.SQUAT, ExerciseType.SHOULDER_PRESS)
 
+    /**
+     * Project state into mutually exclusive setup and workout-summary sections.
+     *
+     * A reference recording keeps its SAVE action in the setup card. If an inconsistent pair of
+     * active flags arrives during a transition, the active workout wins so setup never overlays it.
+     * This is presentation only; it does not start/stop a workout or a reference recording.
+     */
+    fun displayState(
+        isExercising: Boolean,
+        isRecordingReference: Boolean
+    ): DashboardDisplayState = when {
+        isExercising -> DashboardDisplayState(showSetup = false, showWorkoutSummary = true)
+        isRecordingReference -> DashboardDisplayState(showSetup = true, showWorkoutSummary = false)
+        else -> DashboardDisplayState(showSetup = true, showWorkoutSummary = false)
+    }
+
     fun buttonState(
         isExercising: Boolean,
         isRecordingReference: Boolean
@@ -35,6 +51,11 @@ object DashboardUiPolicy {
         !isExercising &&
         !isRecordingReference
 }
+
+data class DashboardDisplayState(
+    val showSetup: Boolean,
+    val showWorkoutSummary: Boolean
+)
 
 data class DashboardButtonState(
     val cameraViewEnabled: Boolean,

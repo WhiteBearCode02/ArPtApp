@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="144dp"
+    android:background="@drawable/bg_dashboard_glass_panel"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:fillViewport="false"
+    android:scrollbars="vertical">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="12dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/dashboard_diagnostics_title" android:textSize="12sp"
+            android:textColor="@color/aurora_mint" />
+        <TextView android:id="@+id/tvPerformance" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="6dp"
+            android:textSize="11sp" android:textColor="@color/aurora_ice" />
+        <TextView android:id="@+id/tvYoloDiagnostics" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="6dp"
+            android:fontFamily="monospace" android:textSize="10sp"
+            android:textColor="@color/aurora_ice" android:importantForAccessibility="no" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -29,14 +29,21 @@ test("contract gate precedes runtime call and unknown exports retain three fail-
 })
 
 test("shadow UI and logging are unreachable in non-debug activity paths", () => {
-  assert.match(dashboard, /tvYoloDiagnostics.visibility = if \(BuildConfig.DEBUG\) View.VISIBLE else View.GONE/)
+  assert.match(dashboard, /btnYoloDiagnosticsToggle.visibility = if \(BuildConfig.DEBUG\) View.VISIBLE else View.GONE/)
+  assert.match(dashboard, /yoloDiagnosticsPanel\.setExpanded\(/)
+  const panel = read(root + "ui/dashboard/YoloDiagnosticsPanel.kt")
+  assert.match(panel, /BuildConfig\.DEBUG/)
+  assert.match(panel, /visibility =.*View\.GONE/)
   const render = dashboard.slice(dashboard.indexOf("private fun renderYoloShadowDiagnostic()"), dashboard.indexOf("private fun onCameraPipelineError("))
   assert.match(render, /if \(!BuildConfig.DEBUG\) return/)
   assert.match(render, /Log.d\("YoloShadow", text\)/)
   assert.doesNotMatch(render, /observeDetectedExercise|resetSession|processAngle|uploadSession|addCompletedRep|generateFinalReport/)
   for (const layout of ["layout", "layout-land"]) {
-    assert.match(read(`app/src/main/res/${layout}/activity_dashboard.xml`), /id="@\+id\/tvYoloDiagnostics"/)
+    const source = read(`app/src/main/res/${layout}/activity_dashboard.xml`)
+    assert.doesNotMatch(source, /id="@\+id\/(?:tvYoloDiagnostics|tvPerformance)"/)
+    assert.match(source, /id="@\+id\/yoloDiagnosticsPanel"/)
   }
+  assert.match(read("app/src/main/res/layout/view_yolo_diagnostics_panel.xml"), /id="@\+id\/tvYoloDiagnostics"/)
 })
 
 test("only the original classifier adapter feeds workout type selection", () => {
