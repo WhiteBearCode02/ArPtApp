@@ -1,222 +1,247 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/reportScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen">
+    android:background="@drawable/bg_screen"
+    android:clipToPadding="true"
+    android:fillViewport="true">
 
+    <!-- Root insets protect system bars; all content stays within the same scroll flow. -->
     <LinearLayout
+        android:id="@+id/reportContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="운동 결과 리포트"
-            android:textColor="@color/text_primary"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            style="@style/TextAppearance.AIRPTCoach.Report.ScreenTitle"
+            android:accessibilityHeading="true"
+            android:text="@string/report_screen_title" />
 
         <TextView
             android:id="@+id/tvExerciseType"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="스쿼트"
-            android:textColor="@color/color_primary"
-            android:textSize="20sp" />
+            style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+            android:layout_marginTop="12dp"
+            android:text="@string/report_exercise_default"
+            android:textColor="@color/aurora_ice" />
 
         <TextView
             android:id="@+id/tvWorkoutDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="운동 일시"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="4dp"
+            android:text="@string/report_date_default" />
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            app:cardBackgroundColor="@color/color_surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIRPTCoach.Report.Card"
+            android:layout_marginTop="20dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+            <LinearLayout style="@style/Widget.AIRPTCoach.Report.CardContent">
 
                 <TextView
-                    android:id="@+id/tvTotalCount"
-                    android:layout_width="wrap_content"
+                    style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                    android:accessibilityHeading="true"
+                    android:text="@string/report_session_summary" />
+
+                <!-- Flexible columns wrap enlarged fonts instead of clipping fixed-height cells. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="총 10 회"
-                    android:textColor="#FFFFFF"
-                    android:textSize="18sp" />
+                    android:layout_marginTop="16dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvTotalCount"
+                        style="@style/TextAppearance.AIRPTCoach.Report.SummaryMetric"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/report_count_default" />
+
+                    <TextView
+                        android:id="@+id/tvAvgScore"
+                        style="@style/TextAppearance.AIRPTCoach.Report.SummaryMetric"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/report_score_default" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvDuration"
+                        style="@style/TextAppearance.AIRPTCoach.Report.SummaryMetric"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/report_duration_default" />
+
+                    <TextView
+                        android:id="@+id/tvCalories"
+                        style="@style/TextAppearance.AIRPTCoach.Report.SummaryMetric"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/report_calories_default" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvAvgScore"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="평균 자세 점수: 기록 없음"
-                    android:textColor="@color/color_success"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/report_estimate_note" />
 
-                <TextView
-                    android:id="@+id/tvDuration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="운동 시간: 00분 00초"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tvCalories"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="예상 소모 칼로리: 0.0 kcal"
-                    android:textColor="@color/color_accent"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                <View
+                    style="@style/Widget.AIRPTCoach.Report.Divider"
+                    android:layout_marginTop="16dp" />
 
                 <TextView
                     android:id="@+id/tvFeedback"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="피드백 메시지"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
+                    style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/report_summary_default" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        </androidx.cardview.widget.CardView>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/aiExplanationSection"
+            style="@style/Widget.AIRPTCoach.Report.Card"
+            android:layout_marginTop="16dp">
+
+            <LinearLayout style="@style/Widget.AIRPTCoach.Report.CardContent">
+
+                <TextView
+                    style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                    android:accessibilityHeading="true"
+                    android:text="@string/report_ai_title" />
+
+                <TextView
+                    style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/report_ai_role" />
+
+                <TextView
+                    android:id="@+id/tvAiStatus"
+                    style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                    android:layout_marginTop="12dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:text="@string/report_ai_preparing_description" />
+
+                <ProgressBar
+                    android:id="@+id/aiProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="12dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGenerateAi"
+                    style="@style/Widget.AIRPTCoach.Report.SecondaryButton"
+                    android:layout_marginTop="12dp"
+                    android:enabled="false"
+                    android:text="@string/report_ai_preparing" />
+
+                <TextView
+                    android:id="@+id/tvAiReport"
+                    style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                    android:layout_marginTop="14dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="횟수별 자세 점수"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+            android:layout_marginTop="28dp"
+            android:accessibilityHeading="true"
+            android:text="@string/report_chart_title" />
+
+        <TextView
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="6dp"
+            android:text="@string/report_chart_role" />
 
         <com.github.mikephil.charting.charts.BarChart
             android:id="@+id/chart"
             android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:layout_marginTop="16dp" />
+            android:layout_height="200dp"
+            android:layout_marginTop="12dp"
+            android:contentDescription="@string/report_chart_description" />
 
         <TextView
             android:id="@+id/tvChartEmpty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:background="@drawable/bg_trend_row"
-            android:gravity="center"
-            android:padding="18dp"
-            android:text="이 기록에는 회차별 자세 점수가 저장되어 있지 않습니다."
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_report_note"
+            android:padding="16dp"
+            android:text="@string/report_chart_empty"
             android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvRepDetailsHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="횟수별 분석"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+            android:layout_marginTop="28dp"
+            android:accessibilityHeading="true"
+            android:text="@string/report_rep_section_title" />
 
         <TextView
             android:id="@+id/tvRepAnalysisNote"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
             android:layout_marginTop="6dp"
-            android:text="관절 각도와 감지된 오류를 바탕으로 한 참고용 추정입니다. 카메라 각도나 가림에 따라 결과가 달라질 수 있어요."
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
+            android:text="@string/report_local_analysis_note" />
+
+        <TextView
+            android:id="@+id/tvRepEmpty"
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_report_note"
+            android:padding="16dp"
+            android:text="@string/report_reps_empty"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/repAnalysisContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:orientation="vertical" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_trend_row"
-            android:orientation="vertical"
-            android:padding="16dp">
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/improvementSummarySection"
+            style="@style/Widget.AIRPTCoach.Report.Card"
+            android:layout_marginTop="8dp"
+            android:visibility="gone">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="AI 설명 · 선택 기능"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+            <LinearLayout style="@style/Widget.AIRPTCoach.Report.CardContent">
 
-            <TextView
-                android:id="@+id/tvAiStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="현재 AI 설명은 비활성 상태입니다. 위의 로컬 분석은 인터넷 없이 제공됩니다."
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp" />
+                <TextView
+                    style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                    android:accessibilityHeading="true"
+                    android:text="@string/report_improvement_summary_title" />
 
-            <ProgressBar
-                android:id="@+id/aiProgress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginTop="12dp"
-                android:indeterminate="true"
-                android:visibility="gone" />
+                <TextView
+                    android:id="@+id/tvImprovementSummary"
+                    style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <Button
-                android:id="@+id/btnGenerateAi"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="12dp"
-                android:text="AI 설명 생성"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvAiReport"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-        </LinearLayout>
-
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClose"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
+            style="@style/Widget.AIRPTCoach.Report.PrimaryButton"
             android:layout_marginTop="24dp"
-            android:text="닫기"
-            android:textSize="16sp"
-            app:backgroundTint="@color/color_primary" />
-
+            android:text="@string/report_close" />
     </LinearLayout>
-
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

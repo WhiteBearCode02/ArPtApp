@@ -11,6 +11,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.arptapp.data.remote.AuthSessionStore
 import com.example.arptapp.databinding.ActivityResultBinding
 import com.example.arptapp.presentation.report.ReportNavigation
+import com.example.arptapp.presentation.report.ReportWindowInsets
 import com.example.arptapp.presentation.report.WorkoutResultViewModel
 import com.example.arptapp.presentation.report.WorkoutSaveState
 import com.google.android.material.snackbar.Snackbar
@@ -25,6 +26,7 @@ class ResultActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ReportWindowInsets.apply(this, binding.root)
 
         val report = resultViewModel.resolveReport(ReportNavigation.read(intent))
         // 저장을 시작한 계정에 귀속한다. 나중에 계정이 바뀌어도 다른 계정으로 재귀속하지 않는다.
@@ -62,11 +64,8 @@ class ResultActivity : AppCompatActivity() {
 
     private fun displayExerciseSummary(count: Int) {
         binding.tvFinalCount.text = "${count}회"
-        binding.tvResultTitle.text = when {
-            count >= 20 -> "와우! 완벽한 루틴이었어요! 🔥"
-            count >= 10 -> "충분히 잘하고 계세요! 👍"
-            else -> "시작이 반이에요! 내일은 더 많이 해봐요. 😊"
-        }
+        // Repetition count alone cannot establish form quality or justify asking for more exercise.
+        binding.tvResultTitle.setText(if (count > 0) R.string.result_review_ready else R.string.result_finished)
     }
 
     private fun returnToHome() {

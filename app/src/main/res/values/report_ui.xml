@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="report_card_surface">#E6102238</color>
+    <color name="report_card_border">#4D7391A8</color>
+    <color name="report_improvement">#FFD08A</color>
+    <color name="report_divider">#36537089</color>
+
+    <string name="report_screen_title">운동 결과</string>
+    <string name="report_exercise_default">운동 기록</string>
+    <string name="report_date_default">운동 일시 정보 없음</string>
+    <string name="report_session_summary">이번 운동 한눈에</string>
+    <string name="report_count_default">총 횟수\n기록 없음</string>
+    <string name="report_score_default">세션 평균\n기록 없음</string>
+    <string name="report_duration_default">운동 시간\n기록 없음</string>
+    <string name="report_calories_default">예상 칼로리\n기록 없음</string>
+    <string name="report_estimate_note">점수는 초기 공학 기준에 따른 참고값이며, 칼로리는 예상값입니다.</string>
+    <string name="report_summary_default">저장된 운동 관찰 내용을 확인해 보세요.</string>
+    <string name="report_ai_title">AI 설명 · 선택 기능</string>
+    <string name="report_ai_role">로컬 측정 결과를 쉽게 풀어 설명하는 영역입니다. AI가 자세를 직접 측정하는 것은 아닙니다.</string>
+    <string name="report_ai_preparing_description">AI 설명 기능은 준비 중입니다. 아래 로컬 자세 분석은 인터넷 없이 확인할 수 있습니다.</string>
+    <string name="report_chart_title">회차별 점수 흐름</string>
+    <string name="report_chart_role">그래프에서 전체 흐름을 보고, 아래 카드에서 회차별 관찰 내용을 확인하세요.</string>
+    <string name="report_chart_description">회차별 자세 점수 그래프. 개별 회차의 점수와 분석은 아래 카드에서도 확인할 수 있습니다.</string>
+    <string name="report_chart_empty">이 기록에는 회차별 점수가 저장되어 있지 않습니다.</string>
+    <string name="report_rep_section_title">로컬 자세 분석 · 회차별 결과</string>
+    <string name="report_local_analysis_note">관절 각도와 관찰 내용을 바탕으로 한 참고용 분석입니다. 촬영 방향·가림·측정 범위에 따라 결과가 달라지며, 의료적 판단을 대신하지 않습니다.</string>
+    <string name="report_reps_empty">이 기록에는 회차별 분석이 없습니다. 상단의 저장된 운동 요약을 확인해 주세요.</string>
+    <string name="report_improvement_summary_title">전체 개선 요약</string>
+    <string name="report_close">닫기</string>
+    <string name="report_rep_summary_heading">요약</string>
+    <string name="report_rep_strengths_heading">✓ 잘한 점</string>
+    <string name="report_rep_improvements_heading">! 개선할 점</string>
+    <string name="report_rep_priority_heading">→ 다음 회차 팁</string>
+    <string name="report_rep_legacy_heading">저장된 회차 분석</string>
+    <string name="report_result_title">운동을 마쳤어요</string>
+    <string name="report_result_count_label">총 운동 횟수</string>
+    <string name="report_result_count_default">기록 없음</string>
+    <string name="report_result_description">상세 리포트에서 회차별 관찰 내용과 다음 운동에서 확인할 점을 살펴보세요.</string>
+    <string name="report_result_open_report">상세 리포트 보기</string>
+    <string name="report_result_back_home">홈으로 돌아가기</string>
+
+    <!-- Explicit base parents prevent Android's dotted-name implicit style inheritance. -->
+    <style name="TextAppearance.AIRPTCoach.Report.Body" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:lineSpacingExtra">5dp</item>
+        <item name="android:breakStrategy">high_quality</item>
+    </style>
+    <style name="TextAppearance.AIRPTCoach.Report.BodyMuted" parent="TextAppearance.AIRPTCoach.Report.Body">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="TextAppearance.AIRPTCoach.Report.SectionTitle" parent="TextAppearance.AIRPTCoach.Report.Body">
+        <item name="android:textSize">18sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.AIRPTCoach.Report.ScreenTitle" parent="TextAppearance.AIRPTCoach.Report.SectionTitle">
+        <item name="android:textSize">28sp</item>
+    </style>
+    <style name="TextAppearance.AIRPTCoach.Report.SummaryMetric" parent="TextAppearance.AIRPTCoach.Report.Body">
+        <item name="android:textSize">17sp</item>
+        <item name="android:lineSpacingExtra">7dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <style name="Widget.AIRPTCoach.Report.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="cardBackgroundColor">@color/report_card_surface</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardUseCompatPadding">false</item>
+        <item name="strokeColor">@color/report_card_border</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+    <style name="Widget.AIRPTCoach.Report.CardContent" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">20dp</item>
+    </style>
+    <style name="Widget.AIRPTCoach.Report.Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/report_divider</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+    <style name="Widget.AIRPTCoach.Report.SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/aurora_ice</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="strokeColor">@color/report_card_border</item>
+        <item name="rippleColor">#3381E8D3</item>
+    </style>
+    <style name="Widget.AIRPTCoach.Report.PrimaryButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@color/color_primary_variant</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+</resources>

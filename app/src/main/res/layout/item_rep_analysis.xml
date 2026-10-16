@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp"
+    style="@style/Widget.AIRPTCoach.Report.Card">
+
+    <LinearLayout style="@style/Widget.AIRPTCoach.Report.CardContent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvRepNumber"
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:accessibilityHeading="true" />
+
+            <TextView
+                android:id="@+id/tvRepScore"
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/aurora_ice" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvRepStatus"
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="8dp" />
+
+        <View
+            style="@style/Widget.AIRPTCoach.Report.Divider"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+            android:layout_marginTop="16dp"
+            android:accessibilityHeading="true"
+            android:text="@string/report_rep_summary_heading"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvRepSummary"
+            style="@style/TextAppearance.AIRPTCoach.Report.Body"
+            android:layout_marginTop="6dp" />
+
+        <!-- Empty evidence sections are hidden, not interpreted as a positive finding. -->
+        <LinearLayout
+            android:id="@+id/strengthsSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:accessibilityHeading="true"
+                android:text="@string/report_rep_strengths_heading"
+                android:textColor="@color/aurora_mint"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvRepStrengths"
+                style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/improvementsSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:accessibilityHeading="true"
+                android:text="@string/report_rep_improvements_heading"
+                android:textColor="@color/report_improvement"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvRepImprovements"
+                style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/prioritySection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_report_priority"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:accessibilityHeading="true"
+                android:text="@string/report_rep_priority_heading"
+                android:textColor="@color/aurora_lilac"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvRepPriority"
+                style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                android:layout_marginTop="6dp"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvRepNotes"
+            style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted"
+            android:layout_marginTop="16dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/legacySection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TextAppearance.AIRPTCoach.Report.SectionTitle"
+                android:accessibilityHeading="true"
+                android:text="@string/report_rep_legacy_heading"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvLegacyDetail"
+                style="@style/TextAppearance.AIRPTCoach.Report.Body"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToggleMetrics"
+            style="@style/Widget.AIRPTCoach.Report.SecondaryButton"
+            android:layout_marginTop="20dp"
+            android:text="@string/report_metrics_show"
+            android:visibility="gone" />
+
+        <!-- Inflated lazily on first expansion; state is independent for every rep card. -->
+        <LinearLayout
+            android:id="@+id/metricGroupsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:visibility="gone" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A vertical label/value pair stays readable on narrow displays and with enlarged system fonts. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:screenReaderFocusable="true">
+
+    <TextView
+        android:id="@+id/tvMetricLabel"
+        style="@style/TextAppearance.AIRPTCoach.Report.BodyMuted" />
+
+    <TextView
+        android:id="@+id/tvMetricValue"
+        style="@style/TextAppearance.AIRPTCoach.Report.Body"
+        android:layout_marginTop="2dp"
+        android:textSize="16sp" />
+</LinearLayout>

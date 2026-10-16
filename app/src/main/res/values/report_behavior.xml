@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="report_rep_number">%1$d회차</string>
+    <string name="report_score_value">%1$d점</string>
+    <string name="report_score_missing">점수 기록 없음</string>
+    <string name="report_metrics_show">상세 측정값 보기 ▼</string>
+    <string name="report_metrics_hide">상세 측정값 접기 ▲</string>
+    <string name="report_metrics_show_for_rep">%1$d회차 상세 측정값 보기</string>
+    <string name="report_metrics_hide_for_rep">%1$d회차 상세 측정값 접기</string>
+    <string name="report_expanded">펼쳐짐</string>
+    <string name="report_collapsed">접힘</string>
+    <string name="report_chart_accessibility">회차별 점수 변화 그래프. 각 점수와 분석 내용은 아래 회차 카드에서도 확인할 수 있습니다.</string>
+    <string name="report_ai_disabled">AI 설명 기능은 준비 중입니다. 로컬 자세 분석은 인터넷 없이 확인할 수 있습니다.</string>
+    <string name="report_ai_show">AI 설명 보기</string>
+    <string name="report_ai_preparing">AI 설명 준비 중</string>
+    <string name="report_ai_unmeasured">이 기록에는 AI 설명에 필요한 구조화된 회차 측정이 없습니다. 로컬 분석을 확인해 주세요.</string>
+    <string name="report_ai_available">선택한 경우에만 관절 각도·관찰 요약을 서버에 전달해 설명합니다. 영상·관절 좌표·계정 정보는 LLM에 전달하지 않습니다.</string>
+    <string name="report_summary_count">총 횟수\n%1$d회</string>
+    <string name="report_summary_average">세션 평균\n%1$d점</string>
+    <string name="report_summary_average_missing">세션 평균\n점수 기록 없음</string>
+    <string name="report_summary_duration">운동 시간\n%1$s</string>
+    <string name="report_summary_calories">예상 칼로리\n%1$.1f kcal</string>
+    <string name="report_summary_calories_missing">예상 칼로리\n기록 없음</string>
+    <string name="result_finished">운동을 마쳤어요</string>
+    <string name="result_review_ready">이번 운동을 돌아보세요</string>
+</resources>
