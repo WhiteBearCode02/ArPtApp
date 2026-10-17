@@ -47,6 +47,9 @@ import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.example.arptapp.ui.dashboard.DashboardUiPolicy
 import com.example.arptapp.ui.dashboard.PersonalReferenceDialog
+import com.example.arptapp.ui.dashboard.DebugValidationControls
+import com.example.arptapp.ui.dashboard.DebugPositiveValidationControls
+import com.example.arptapp.ui.dashboard.DebugLocalSessionUploadPolicy
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import java.util.*
 import kotlinx.coroutines.launch
@@ -108,6 +111,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var calibrationExercise: ExerciseType? = null
     private var referenceChoiceDialog: AlertDialog? = null
     private var yoloDiagnosticsExpanded = false
+    private var debugValidationControls: DebugValidationControls? = null
+    private var sessionLocalOnlyValidation = false
     private val performanceMonitor = com.example.arptapp.domain.analyzer.FramePerformanceMonitor()
     private var lastDiagnosticsAt = 0L
     private var personalSequence: List<FloatArray> = emptyList()
@@ -160,6 +165,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 lensSwitchRequested = false
             }
         )
+        debugValidationControls = DebugPositiveValidationControls.attach(this, binding.yoloDiagnosticsPanel,
+            cameraController::requestValidationFrame, cameraController::cancelValidationFrame)
         binding.btnSwitchCamera.isEnabled = false
         cameraController.initialize()
         checkCameraPermission()
@@ -183,6 +190,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     /** Presentation-only projection: never resets or locks a workout, calibration or detector. */
     private fun applyDashboardControlState() {
+        debugValidationControls?.setSessionActive(isExercising)
         val state = DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null)
         val display = DashboardUiPolicy.displayState(isExercising, calibrationExercise != null)
         binding.layoutSetupOptions.visibility = if (display.showSetup) View.VISIBLE else View.GONE
@@ -375,6 +383,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             Toast.makeText(this, "촬영 방향을 먼저 선택해 주세요.", Toast.LENGTH_SHORT).show()
             return
         }
+        sessionLocalOnlyValidation = debugValidationControls?.freezeLocalOnlyForSession() == true
         isExercising = true
         setYoloDiagnosticsExpanded(false) // Start with the camera and workout information, not debug details.
         mainViewModel.resetSession()
@@ -428,7 +437,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val analyses = mainViewModel.getRepAnalyses(report.exerciseType)
         val burnedCalories = report.totalReps * 0.5
 
-        lifecycleScope.launch {
+        // Explicit DEBUG local-validation consent only. Release and normal sessions retain upload.
+        if (DebugLocalSessionUploadPolicy.shouldUpload(BuildConfig.DEBUG, sessionLocalOnlyValidation)) lifecycleScope.launch {
             supabaseRepository.uploadSession(
                 report = report,
                 records = records,
@@ -738,6 +748,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     override fun onDestroy() {
+        debugValidationControls?.close()
+        debugValidationControls = null
         referenceChoiceDialog?.dismiss()
         referenceChoiceDialog = null
         yoloSessionDiagnostics?.finish(System.currentTimeMillis(), SystemClock.uptimeMillis(), sessionExerciseType, shadowThermalStatus)
@@ -757,6 +769,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     override fun onPause() {
+        debugValidationControls?.onHostPaused()
+        if (::cameraController.isInitialized) cameraController.cancelValidationFrame()
         sensorManager.unregisterListener(this)
         super.onPause()
     }

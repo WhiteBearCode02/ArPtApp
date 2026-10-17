@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.example.arptapp.BuildConfig
 import com.example.arptapp.databinding.ViewYoloDiagnosticsPanelBinding
@@ -31,5 +32,10 @@ class YoloDiagnosticsPanel @JvmOverloads constructor(
     fun updatePerformance(text: String) {
         if (!BuildConfig.DEBUG) return
         binding.tvPerformance.text = text
+    }
+
+    /** Debug variant content remains inside the existing bounded scroll viewport, never an overlay. */
+    fun attachValidationControls(view: View) {
+        if (BuildConfig.DEBUG) (binding.root.getChildAt(0) as? ViewGroup)?.addView(view)
     }
 }

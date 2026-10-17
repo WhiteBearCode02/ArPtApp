@@ -8,6 +8,8 @@
 - 기존 `LandmarkExerciseDetector`가 Primary이며 YOLO는 비교 전용입니다. 회차·점수·칼로리·운동 종류 lock에 YOLO 진단을 사용하지 않습니다.
 - 모델·실제 검증 이미지·RGB raster·실제 reference/result JSON·venv는 Git에 올리지 않습니다. 승인된 공식 패키지 설치 외 유료 API·서버 업로드·GPU/양자화 최적화는 하지 않습니다.
 
+양성 후보의 DEBUG 수동 촬영, private 전송, 실제 Python/native 비교 및 사용자 운동의 저장/재시작 검증은 [EXP02_POSITIVE_VALIDATION.md](EXP02_POSITIVE_VALIDATION.md)를 따릅니다. 도구 구현/합성 저장 테스트 통과는 실제 positive 또는 사용자 세션 통과를 의미하지 않습니다.
+
 ## 1. 모델과 DEBUG APK 확인
 
 정해진 모델만 사용합니다.

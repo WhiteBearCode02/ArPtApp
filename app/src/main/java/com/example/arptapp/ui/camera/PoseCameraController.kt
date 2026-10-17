@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.SystemClock
 import android.util.Log
+import com.example.arptapp.BuildConfig
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -40,7 +41,8 @@ enum class CameraPipelineStage { MODEL_INITIALIZATION, CAMERA_BINDING, POSE_INFE
  *
  * Activity는 권한·운동 세션·화면 표시만 관리한다. 이 모듈은 프리뷰 바인딩, RGBA 변환,
  * 회전 정규화, 제출 간격, 모델 해제를 책임지며 결과/오류 콜백은 메인 스레드로 전달한다.
- * 영상·관절 좌표를 파일이나 서버에 저장하지 않는다. `close()`는 Activity 종료 시 호출한다.
+ * 자체 저장/전송은 하지 않는다. DEBUG 수동 요청 시에만 빌린 한 프레임을 별도 private 검증
+ * 포트에 전달한다(자동 저장 없음). `close()`는 Activity 종료 시 호출한다.
  */
 class PoseCameraController(
     context: Context,
@@ -69,6 +71,7 @@ class PoseCameraController(
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val submissionPolicy = FrameSubmissionPolicy()
     private val frameTracker = CameraFrameTracker()
+    private val manualValidationFrame = if (BuildConfig.DEBUG) ManualValidationFrameGate<Bitmap>() else null
     // 분석 executor와 메인 스레드의 모델 close()가 동시에 native 자원을 사용하지 않게 한다.
     private val inferenceLock = Any()
     private var poseLandmarker: PoseLandmarker? = null
@@ -87,6 +90,12 @@ class PoseCameraController(
 
     /** Clears observational evidence only; never changes the landmark detector or workout lock. */
     fun invalidateShadowEvidence() { yoloShadow?.invalidate() }
+
+    /** DEBUG opt-in only. The callback must copy synchronously; this borrowed bitmap is not owned. */
+    fun requestValidationFrame(callback: (Bitmap?) -> Unit): Boolean =
+        !closed && manualValidationFrame?.request(frameTracker.currentGeneration(), SystemClock.uptimeMillis(), callback) == true
+
+    fun cancelValidationFrame() { manualValidationFrame?.cancel() }
 
     val isFrontFacing: Boolean
         get() = lensFacing == CameraSelector.LENS_FACING_FRONT
@@ -166,6 +175,7 @@ class PoseCameraController(
         }
         val selectedFacing = if (selected == CameraLens.BACK) CameraSelector.LENS_FACING_BACK else CameraSelector.LENS_FACING_FRONT
         val selector = CameraSelector.Builder().requireLensFacing(selectedFacing).build()
+        cancelValidationFrame()
         frameTracker.advance()
         yoloShadow?.invalidate()
         val generation = frameTracker.currentGeneration()
@@ -208,6 +218,8 @@ class PoseCameraController(
                 // Admission makes one short owned copy; all resize/color/layout work and native
                 // inference remain on the shadow worker. Never recycle/share MediaPipe's input.
                 yoloShadow?.trySubmit(normalizedBitmap, timestamp)
+                // No request means no copy, persistence or validation inference on ordinary frames.
+                manualValidationFrame?.offer(normalizedBitmap, generation, timestamp)
             }
         } catch (error: Exception) {
             dispatchError(CameraPipelineStage.FRAME_PROCESSING, error)
@@ -237,6 +249,7 @@ class PoseCameraController(
     override fun close() {
         if (closed) return
         closed = true
+        cancelValidationFrame()
         yoloShadow?.close()
         frameTracker.advance()
         imageAnalyzer?.clearAnalyzer()
