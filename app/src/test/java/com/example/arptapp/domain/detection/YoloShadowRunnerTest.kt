@@ -12,7 +12,8 @@ import org.junit.Test
 
 class YoloShadowRunnerTest {
     private fun ready() = ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
-        ExerciseDetection(ExerciseType.SQUAT, .9f, DetectionSource.YOLO))
+        ExerciseDetection(ExerciseType.SQUAT, .9f, DetectionSource.YOLO),
+        contractVerification = ExportContractVerification.VERIFIED, shadowRuntimeEnabled = true)
     private class Detector(val initializeAction: () -> ExerciseDetectionResult,
                            val detectAction: () -> ExerciseDetectionResult) : ExerciseDetector<Int> {
         val closed = CountDownLatch(1)

@@ -23,9 +23,13 @@ data class ExerciseDetection(
 data class ExerciseDetectionResult(
     val status: DetectorStatus, val source: DetectionSource, val selected: ExerciseDetection? = null,
     val detectionCount: Int = 0, val timings: DetectionTimings? = null,
-    val contractVerification: ExportContractVerification = ExportContractVerification.NOT_VERIFIED
+    val contractVerification: ExportContractVerification = ExportContractVerification.NOT_VERIFIED,
+    val shadowRuntimeEnabled: Boolean = false
 ) {
     val exerciseType: ExerciseType get() = selected?.exerciseType ?: ExerciseType.UNKNOWN
+    /** The runner checks this BEFORE copying a camera frame; detector rechecks before preprocessing. */
+    val predictionAllowed: Boolean get() = shadowRuntimeEnabled &&
+        contractVerification == ExportContractVerification.VERIFIED && status == DetectorStatus.READY
 }
 
 /** A replaceable inference port; callers must not route shadow output into SessionExerciseLock. */

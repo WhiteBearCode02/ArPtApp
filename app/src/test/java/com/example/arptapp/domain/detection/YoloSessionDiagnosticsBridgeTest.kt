@@ -16,7 +16,8 @@ class YoloSessionDiagnosticsBridgeTest {
         ExerciseDetectionResult(status, DetectionSource.YOLO,
             if (timed) ExerciseDetection(ExerciseType.SQUAT, .8f, DetectionSource.YOLO) else null,
             timings = if (timed) DetectionTimings(1, 2, 3, 6) else null,
-            contractVerification = if (status == DetectorStatus.READY) ExportContractVerification.VERIFIED else ExportContractVerification.NOT_VERIFIED), stable)
+            contractVerification = if (status == DetectorStatus.READY) ExportContractVerification.VERIFIED else ExportContractVerification.NOT_VERIFIED,
+            shadowRuntimeEnabled = true), stable)
     private fun begin() = bridge.begin(10_000, 1000, CameraView.SIDE)
     private fun finish() = requireNotNull(bridge.finish(11_000, 2000, ExerciseType.SQUAT, 2))
     private fun admit(): YoloShadowObservationContext = requireNotNull(bridge.captureContext()).also {

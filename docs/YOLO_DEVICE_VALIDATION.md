@@ -2,6 +2,8 @@
 
 기준일: 2026-10-16. 상태: **local development / research validation**.
 
+> 최신 2026-10-17: 사용자 승인 후 contract `VERIFIED` / 독립 DEBUG Shadow ON / release OFF입니다. 실행에는 canonical private 모델 load·tensor 검사까지 필요합니다. 이 문서 아래의 NOT_VERIFIED/비활성 설명은 최초 구현 당시 기록입니다. [최신 rollout·새 빌드·실시간 baseline 확인 여부](ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md)를 우선 확인하세요. Landmark Primary와 사진/모델 Git·APK 제외는 유지합니다.
+
 > 정확한 8.4.176 소스 기반 전처리·decoder·NMS와 Python/Kotlin 합성 Golden 검증 구조를 추가했습니다. OpenCV 보간 차이의 실제 모델 영향과 Android native 호환성이 미검증이므로 **전체 NOT_VERIFIED / 실제 prediction 비활성 / Landmark Primary**입니다.
 
 이 문서는 YOLO accuracy 또는 모바일 inference 성공 보고가 아닙니다. 이번에 제공된 [canonical concise notebook](ml/AIRPTCoach_EXP02_Export_Verify.ipynb) 전체와 PyPI Ultralytics **8.4.176 wheel**의 실제 source를 대조했습니다. [21개 항목별 근거·hash·predict/val 차이](ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)를 함께 읽어 주세요. Notebook은 실행·수정하지 않았고 과거 test metric을 재측정하지 않았습니다.

@@ -262,7 +262,7 @@ def generate(args, repository: Path):
     staged.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     staged.replace(private_child(output, reference_filename))
     print(f"Actual-model Python reference generated: {len(samples)} samples in verified Git-ignored local output.")
-    print("Android native comparison NOT executed. Production export contract remains NOT_VERIFIED.")
+    print("Android native comparison NOT executed. Production export contract is not inspected or changed by this tool.")
 
 
 def main():

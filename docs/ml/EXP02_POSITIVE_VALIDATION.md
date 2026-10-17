@@ -1,6 +1,6 @@
 # EXP02 양성 경로 · 로컬 세션 검증
 
-이 문서는 DEBUG 전용 수동 검증 절차입니다. **실시간 prediction은 비활성이고 production contract는 `NOT_VERIFIED`**입니다. 후보가 검출되거나 테스트가 통과해도 상수를 자동 승격하지 않습니다. Landmark Primary, 운동 잠금·횟수·점수·자세 분석, confidence `0.10`, IoU `0.70`, max detections `300`은 유지합니다.
+이 문서는 DEBUG 전용 수동 검증 절차와 과거 결과입니다. **후속 사용자 승인으로 contract는 `VERIFIED`, 독립 DEBUG Shadow gate는 ON/release OFF**로 변경됐습니다([최신 rollout](EXP02_RUNTIME_SHADOW_ROLLOUT.md)). 수동 검증 도구는 기존 `NOT_VERIFIED` 증거와 새 `VERIFIED` 증거를 구분해 읽으며 스스로 contract/실시간 gate를 바꾸지 않습니다. Landmark Primary, 운동 잠금·횟수·점수·자세 분석, confidence `0.10`, IoU `0.70`, max detections `300`은 유지합니다.
 
 두 운동 실제 양성과 다중 겹침 NMS까지 요구하는 후속 승격 기준·최신 판정은 [EXP02_VERIFIED_REVIEW.md](EXP02_VERIFIED_REVIEW.md)를 따릅니다. 아래 기존 SQUAT 최소 조건의 통과 기록을 class1까지 검증된 것으로 확대하지 않습니다.
 
@@ -112,7 +112,7 @@ Android 입력/결과는 private `no_backup/yolo/positive-golden/`에만 둡니�
 
 이 표의 대기 항목은 사용자 수동 촬영/실제 운동을 받은 뒤 실제 증거로만 갱신합니다.
 
-당시 SQUAT 단계의 최소 A(실제 양성 확보)·B(동일 입력 runtime 동등성)·C(실제 세션 영속성/Report/History 확인)는 충족했습니다. 이후 추가 SHOULDER_PRESS 실제 양성1장과 기존 actual/controlled NMS 근거를 확인해 현재 문서상 판정은 **READY_FOR_VERIFIED_REVIEW**입니다. [최신 리뷰](EXP02_VERIFIED_REVIEW.md)의 실측값과 제한을 따릅니다. production 상수는 사용자의 별도 승인 없이 변경하지 않아 `NOT_VERIFIED`이며 실시간 prediction은 여전히 비활성입니다.
+당시 SQUAT 단계의 최소 A(실제 양성 확보)·B(동일 입력 runtime 동등성)·C(실제 세션 영속성/Report/History 확인)는 충족했습니다. 이후 추가 SHOULDER_PRESS 실제 양성1장과 기존 actual/controlled NMS 근거를 확인해 **READY_FOR_VERIFIED_REVIEW**로 판정했습니다. 그 시점의 production 상수는 승인 전이라 `NOT_VERIFIED`였고, 이후 사용자가 명시 승인한 계약 승격·DEBUG gate 분리 변경은 [최신 rollout](EXP02_RUNTIME_SHADOW_ROLLOUT.md)에 구분 기록합니다.
 
 이 절의 최초 실제 양성 검출은 class 0(SQUAT) 범위였습니다. 후속 class1 실제 양성과 actual/controlled NMS 비교는 최신 리뷰에 구분 기록합니다. 추가 숄더 프레스 confidence 약10.8%는 안정화 기준 `.60` 미만이므로 안정된 인식이나 모델 성능 통과로 표현하지 않습니다. 다른 구도/해상도 전체를 소수 입력으로 보장하지 않습니다. 사진 정답은 별도로 사용자가 명시해야 하며, 미지정 상태에서 운동 종류를 추측하거나 전체 accuracy를 산출하지 않습니다. 후보 SHA/이미지별 bbox/confidence, 실제 운동 record 식별자·횟수·시간 및 세션 증거는 ignored 로컬 자료/기기 private 파일에만 남깁니다.
 

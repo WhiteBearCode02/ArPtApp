@@ -52,6 +52,15 @@ class YoloSessionDiagnosticsPresentationTest {
         assertEquals("활성", rows["Prediction"])
     }
 
+    @Test fun `runtime gate and primary remain distinct from contract and readiness`() {
+        val value = missing().copy(modelStatus = "READY", contractStatus = "VERIFIED", shadowRuntimeEnabled = false)
+        assertEquals("DISABLED", rows(value)["Shadow Runtime"])
+        assertTrue(rows(value)["Prediction"]!!.startsWith("비활성"))
+        assertTrue(rows(value)["Primary"]!!.startsWith("LANDMARK"))
+        assertEquals("ENABLED", rows(value.copy(predictionEnabled = true, shadowRuntimeEnabled = true))["Shadow Runtime"])
+        assertEquals("기록 없음 · 이전 버전", rows(missing())["Shadow Runtime"])
+    }
+
     @Test fun `known match excludes UNKNOWN and unknown rate uses separate stated denominator`() {
         val value = missing().copy(expectedSessionExercise = "SQUAT", cameraView = "SIDE",
             matchingStableFrames = 92, mismatchingStableFrames = 3, unknownStableFrames = 15)

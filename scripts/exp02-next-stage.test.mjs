@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 const read = path => readFileSync(path, 'utf8')
 
-test('next-stage review cannot change production verification or primary policy', () => {
-  assert.match(read('app/src/main/java/com/example/arptapp/domain/detection/Exp02YoloContract.kt'), /get\(\) = ExportContractVerification\.NOT_VERIFIED/)
+test('approved verification stays separate from runtime gate and primary policy', () => {
+  assert.match(read('app/src/main/java/com/example/arptapp/domain/detection/Exp02YoloContract.kt'), /get\(\) = ExportContractVerification\.VERIFIED/)
   const dashboard = read('app/src/main/java/com/example/arptapp/DashboardActivity.kt')
   assert.match(dashboard, /primaryExerciseDetector = LandmarkExerciseDetector/)
-  assert.match(read('docs/ml/EXP02_VERIFIED_REVIEW.md'), /상수만 바꾸면 Dashboard 실시간 Shadow까지 켜질 수/)
+  assert.match(read('app/src/main/java/com/example/arptapp/domain/detection/YoloRuntimePolicy.kt'), /contract == ExportContractVerification\.VERIFIED && shadowRuntimeEnabled && modelStatus == DetectorStatus\.READY/)
 })
 test('positive native class coverage is an evidence assertion, not a prediction rewrite', () => {
   const source = read('app/src/androidTest/java/com/example/arptapp/ui/camera/yolo/Exp02PositiveModelGoldenTest.kt')

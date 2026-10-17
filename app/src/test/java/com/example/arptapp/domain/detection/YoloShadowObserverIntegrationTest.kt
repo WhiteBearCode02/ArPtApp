@@ -15,7 +15,7 @@ class YoloShadowObserverIntegrationTest {
     private fun ready(timed: Boolean = false) = ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
         selected = if (timed) ExerciseDetection(ExerciseType.SQUAT, .8f, DetectionSource.YOLO) else null,
         timings = if (timed) DetectionTimings(1, 2, 3, 6) else null,
-        contractVerification = ExportContractVerification.VERIFIED)
+        contractVerification = ExportContractVerification.VERIFIED, shadowRuntimeEnabled = true)
     private fun stabilizer() = YoloExerciseStabilizer(YoloStabilizationPolicy(.5f, windowSize = 1, minimumAgreeing = 1))
     private fun result(queue: LinkedBlockingQueue<YoloShadowSnapshot>) = requireNotNull(queue.poll(5, TimeUnit.SECONDS))
     private class Detector(private val initializeAction: () -> ExerciseDetectionResult,

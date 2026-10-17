@@ -17,6 +17,10 @@ object YoloSessionDiagnosticsPresentation {
             row("모델 기준 SHA256 · 실제 로드 증명 아님", value.modelSha256.ifBlank { "정보 없음" }),
             row("모델 상태", value.modelStatus),
             row("Export 계약", value.contractStatus),
+            row("Shadow Runtime", when (value.shadowRuntimeEnabled) {
+                true -> "ENABLED"; false -> "DISABLED"; null -> "기록 없음 · 이전 버전"
+            }),
+            row("Primary", "LANDMARK · YOLO는 판정에 사용하지 않음"),
             row("Prediction", if (value.predictionEnabled) "활성" else "비활성 · 실제 prediction 표본이 없을 수 있습니다"),
             row("세션 운동", exercise(value.expectedSessionExercise)),
             row("촬영 방향", when (value.cameraView) { "FRONT" -> "정면"; "SIDE" -> "측면"; else -> "UNKNOWN" }),

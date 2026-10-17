@@ -70,7 +70,7 @@ class YoloShadowRunner<F>(
     fun trySubmit(frame: F, timestampMs: Long): Boolean {
         val observation = try { observer.captureContext() } catch (_: Exception) { null }
         observation?.let { observeSafely { observer.onFrameSeen(it) } }
-        if (closed.get() || failed.get() || latest.result.status != DetectorStatus.READY || !gate.tryAcquire(timestampMs)) return false
+        if (closed.get() || failed.get() || !latest.result.predictionAllowed || !gate.tryAcquire(timestampMs)) return false
         observation?.let { observeSafely { observer.onAdmission(it) } }
         val generation = epoch.get()
         val owned = try { copyFrame(frame) } catch (_: Exception) {
@@ -95,14 +95,14 @@ class YoloShadowRunner<F>(
                 try {
                     if (closed.get() || failed.get()) return@execute
                     val result = try { operation() } catch (_: Exception) {
-                        ExerciseDetectionResult(DetectorStatus.INFERENCE_FAILED, DetectionSource.YOLO)
+                        latest.result.copy(status = DetectorStatus.INFERENCE_FAILED, selected = null, detectionCount = 0, timings = null)
                     } catch (_: LinkageError) {
-                        ExerciseDetectionResult(DetectorStatus.INFERENCE_FAILED, DetectionSource.YOLO)
+                        latest.result.copy(status = DetectorStatus.INFERENCE_FAILED, selected = null, detectionCount = 0, timings = null)
                     }
                     if (completed.compareAndSet(false, true) && !closed.get() && !failed.get()) {
                         synchronized(evidenceLock) {
                             if ((frame == null || generation == epoch.get()) && !closed.get() && !failed.get()) {
-                                val stable = if (result.status == DetectorStatus.READY && frame != null)
+                                val stable = if (result.predictionAllowed && frame != null)
                                     stabilizer.observe(result.selected, timestampMs) else ExerciseType.UNKNOWN
                                 // Initialization is lens-independent; frame results retain their admission epoch.
                                 latest = YoloShadowSnapshot(result, stable, if (frame == null) epoch.get() else generation)
@@ -136,7 +136,8 @@ class YoloShadowRunner<F>(
         stabilizer.reset()
         if (!closed.get() && latest.result.status == DetectorStatus.READY) {
             latest = YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
-                contractVerification = latest.result.contractVerification),
+                contractVerification = latest.result.contractVerification,
+                shadowRuntimeEnabled = latest.result.shadowRuntimeEnabled),
                 generation = nextGeneration)
             observeSafely { observer.onResult(null, latest, false) }
             onSnapshot(latest)
@@ -148,7 +149,8 @@ class YoloShadowRunner<F>(
             stabilizer.reset()
             if (!closed.get()) {
                 latest = YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO,
-                    contractVerification = latest.result.contractVerification), generation = epoch.get())
+                    contractVerification = latest.result.contractVerification,
+                    shadowRuntimeEnabled = latest.result.shadowRuntimeEnabled), generation = epoch.get())
                 observeSafely { observer.onResult(observation, latest, observation != null) }
                 onSnapshot(latest)
             }

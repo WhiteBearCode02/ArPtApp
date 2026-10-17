@@ -66,7 +66,7 @@ class PositiveComparisonTests(unittest.TestCase):
                 summary.summarize(reference, android)
 
     def test_contract_bypass_promotion_or_threshold_widening_rejected(self):
-        for key, value in (("contractPromotionPerformed", True), ("predictionUsedForSession", True), ("productionContract", "VERIFIED")):
+        for key, value in (("contractPromotionPerformed", True), ("predictionUsedForSession", True), ("productionContract", "FORGED")):
             reference, android = self.evidence()
             android[key] = value
             with self.subTest(key=key), self.assertRaises(ValueError):
@@ -76,6 +76,14 @@ class PositiveComparisonTests(unittest.TestCase):
             reference["tolerances"][key] = value
             with self.subTest(tolerance=key), self.assertRaises(ValueError):
                 summary.summarize(reference, android)
+
+    def test_approved_verified_snapshot_remains_verified_without_tool_promotion(self):
+        reference, android = self.evidence()
+        android["productionContract"] = "VERIFIED"
+        result = summary.summarize(reference, android)
+        self.assertEqual("VERIFIED", result["productionContract"])
+        self.assertFalse(result["contractPromotionPerformed"])
+        self.assertFalse(result["exportContractVerified"])
 
     def test_count_class_confidence_bbox_order_or_preprocess_failure_prevents_pass(self):
         changes = [lambda doc: doc["samples"][0]["detections"].clear(),

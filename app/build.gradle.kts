@@ -50,7 +50,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Explicit local-only Shadow rollout. Contract VERIFIED alone cannot enable inference.
+            buildConfigField("boolean", "YOLO_SHADOW_ENABLED", "true")
+        }
         release {
+            buildConfigField("boolean", "YOLO_SHADOW_ENABLED", "false")
             isMinifyEnabled = false // 코드 난독화 비활성화 (개발 단계)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

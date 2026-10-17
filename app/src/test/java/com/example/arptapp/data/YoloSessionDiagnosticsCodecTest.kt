@@ -13,7 +13,7 @@ class YoloSessionDiagnosticsCodecTest {
         val collector = YoloSessionDiagnosticsCollector()
         val snapshot = YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
             ExerciseDetection(ExerciseType.SQUAT, .9f, DetectionSource.YOLO), timings = DetectionTimings(2, 8, 3, 13),
-            contractVerification = ExportContractVerification.VERIFIED), ExerciseType.SQUAT)
+            contractVerification = ExportContractVerification.VERIFIED, shadowRuntimeEnabled = true), ExerciseType.SQUAT)
         val token = collector.reset(1000, 100, CameraView.SIDE, snapshot)
         collector.observeFrameSeen(token); collector.observeAdmission(token)
         collector.observeSnapshot(token, snapshot, ExerciseType.SQUAT, 2, 500)
@@ -25,6 +25,24 @@ class YoloSessionDiagnosticsCodecTest {
         assertEquals(original, YoloSessionDiagnosticsCodec.decode(encoded))
         assertFalse(encoded.contains("boundingBox")); assertFalse(encoded.contains("landmark")); assertFalse(encoded.contains("userId"))
         assertTrue(encoded.length < YoloSessionDiagnosticsCodec.MAX_JSON_CHARS)
+    }
+
+    @Test fun independentGateRoundTripsAndRejectsContradictoryActivation() {
+        val value = successful()
+        assertEquals(true, YoloSessionDiagnosticsCodec.decode(YoloSessionDiagnosticsCodec.encode(value))!!.shadowRuntimeEnabled)
+        assertNull(YoloSessionDiagnosticsCodec.encode(value.copy(shadowRuntimeEnabled = false)))
+        val disabled = missing().copy(modelStatus = "READY", contractStatus = "VERIFIED", shadowRuntimeEnabled = false)
+        assertEquals(false, YoloSessionDiagnosticsCodec.decode(YoloSessionDiagnosticsCodec.encode(disabled))!!.shadowRuntimeEnabled)
+        assertNull(YoloSessionDiagnosticsCodec.encode(disabled.copy(shadowRuntimeEnabled = true)))
+    }
+
+    @Test fun oldJsonWithoutRuntimeGateRetainsUnknownInsteadOfInventingEnabled() {
+        val raw = requireNotNull(YoloSessionDiagnosticsCodec.encode(missing())).replace(",\"shadowRuntimeEnabled\":null", "")
+        val decoded = requireNotNull(YoloSessionDiagnosticsCodec.decode(raw))
+        assertNull(decoded.shadowRuntimeEnabled)
+        assertFalse(raw.contains("shadowRuntimeEnabled"))
+        assertEquals("Do not change a historical canonical diagnostic hash by appending a null gate", raw,
+            YoloSessionDiagnosticsCodec.encode(decoded))
     }
 
     @Test fun modelMissingAndNotVerifiedRoundTripWithNullMetrics() {

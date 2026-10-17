@@ -128,7 +128,7 @@ class PositiveReferenceTests(unittest.TestCase):
         summary = positive.candidate_summary([dict(detections=detections)])
         self.assertEqual(1, summary["positiveCandidateCount"])
         self.assertEqual("ANDROID_COMPARISON_PENDING", summary["positiveEquivalenceStatus"])
-        self.assertEqual("NOT_VERIFIED", summary["productionContract"])
+        self.assertEqual("NOT_INSPECTED", summary["productionContract"])
 
     def test_empty_result_preserved_and_not_positive(self):
         observation = positive.semantic_observation("SQUAT", [])

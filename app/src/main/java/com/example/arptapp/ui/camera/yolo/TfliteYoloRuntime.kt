@@ -53,10 +53,11 @@ object DebugYoloShadowFactory {
                observer: YoloShadowObserver = NoYoloShadowObserver): YoloShadowRunner<Bitmap>? {
         if (!BuildConfig.DEBUG) return null
         val app = context.applicationContext
-        // Source-backed implementations are wired, but their code-level NOT_VERIFIED gate still
-        // prevents frame copies and Interpreter.run. Model presence must NEVER promote the contract.
+        // Independent, explicit DEBUG rollout gate. Model presence and VERIFIED alone do not run frames.
+        val runtimePolicy = YoloRuntimePolicy.forBuild(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED)
         val contract = Exp02YoloContract.components(Exp02BitmapPreprocessor())
-        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract),
+        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract,
+            runtimePolicy = runtimePolicy),
             YoloExerciseStabilizer(contract.stabilization),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },
             releaseFrame = { it.recycle() }, onSnapshot = onSnapshot, observer = observer)

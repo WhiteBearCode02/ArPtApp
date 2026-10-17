@@ -1,6 +1,6 @@
 # EXP02 두 운동·NMS 계약 승격 리뷰
 
-현재 판정: **READY_FOR_VERIFIED_REVIEW**. 추가 수동 숄더 프레스 후보에서 실제 class1 양성의 Python/Android 동등성을 확보했습니다. 이는 정의된 contract의 승격 리뷰 근거가 갖춰졌다는 뜻이지 자동 승격이나 실시간 사용 승인이 아닙니다. 현재 production 상수는 `NOT_VERIFIED`이며 Landmark Primary / YOLO Shadow / 실시간 prediction 비활성 상태를 유지합니다. 사용자 승인 후 별도 변경에서 activation 게이트 분리까지 검토해야 합니다.
+리뷰 완료 판정: **READY_FOR_VERIFIED_REVIEW**. 후속 요청에서 사용자가 코드 승격 및 DEBUG 실시간 Shadow를 명시적으로 승인했습니다. 현재 contract는 `VERIFIED`, 독립 DEBUG runtime gate는 ON/release는 OFF이며 Landmark Primary는 그대로입니다. [최신 rollout 및 이번 실기기 실행 여부](EXP02_RUNTIME_SHADOW_ROLLOUT.md)를 확인하세요. 아래 재시도 전/당시 실행 기록의 `NOT_VERIFIED`·비활성은 과거 증거이며 소급 수정하지 않습니다.
 
 ## 판정 기준
 
@@ -38,9 +38,9 @@ confidence threshold `.10`, IoU `.70`, max detections300 및 기존 confidence `
 
 ## 승격과 실시간 활성화는 별도
 
-코드 리뷰에서 중요한 결합을 확인했습니다. 현재 `YoloExerciseDetector.initialize()`는 contract가 VERIFIED이고 stabilizer 설정이 있으면 READY가 되며, runner는 READY에서 실시간 추론을 허용합니다. **추후 상수만 바꾸면 Dashboard 실시간 Shadow까지 켜질 수 있습니다.**
+승격 전 코드 리뷰에서 중요한 결합을 확인했습니다. 당시 `YoloExerciseDetector.initialize()`는 contract가 VERIFIED이고 stabilizer 설정이 있으면 READY가 되며, runner는 READY에서 실시간 추론을 허용했습니다. **당시에는 상수만 바꾸면 Dashboard 실시간 Shadow까지 켜질 수 있었습니다.** 후속 승인 변경에서 독립 runtime gate를 분리했으며 최신 구현은 rollout 문서를 따릅니다.
 
-따라서 후속 승격 변경에서는 먼저 code-level contract 검증과 Dashboard activation의 단계/게이트를 분리해 별도 검증해야 합니다. 이번 작업에서는 상수·실시간 설정·Primary·안정화/FPS interval을 변경하지 않습니다. READY_FOR_VERIFIED_REVIEW 판정도 실시간 활성화 승인을 뜻하지 않습니다.
+이 리뷰 단계에서는 code-level contract 검증과 Dashboard activation의 단계/게이트 분리를 후속 조건으로 남겼고, 당시 상수·실시간 설정·Primary·안정화/FPS interval을 변경하지 않았습니다. READY_FOR_VERIFIED_REVIEW 자체는 실시간 활성화 승인이 아니었으며, 이후 사용자의 별도 명시 승인으로 진행했습니다.
 
 ## 실행 순서
 

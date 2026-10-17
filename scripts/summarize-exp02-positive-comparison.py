@@ -3,7 +3,7 @@
 The Kotlin comparator remains the executable acceptance implementation. This tool
 checks provenance/matching coverage and reports its exact confidence/bbox/order/
 preprocessing evidence. A label mismatch never changes runtime equivalence. Empty
-outputs never count as positive evidence. Production NOT_VERIFIED is untouched.
+outputs never count as positive evidence. The production contract is never changed by this tool.
 """
 from __future__ import annotations
 
@@ -32,7 +32,8 @@ def summarize(reference: dict, android: dict) -> dict:
         raise ValueError("Expected an actual, unpromoted private Python positive reference")
     if reference.get("model", {}).get("sha256") != transfer.positive.actual.MODEL_SHA256 or android.get("modelSha256") != transfer.positive.actual.MODEL_SHA256:
         raise ValueError("Python/Android model identity mismatch")
-    if android.get("schemaVersion") != 1 or android.get("validationPurpose") != "POSITIVE_CANDIDATE" or android.get("productionContract") != "NOT_VERIFIED":
+    transfer.positive.validate_isolated_contract(android)
+    if android.get("schemaVersion") != 1 or android.get("validationPurpose") != "POSITIVE_CANDIDATE":
         raise ValueError("Expected an isolated Android positive comparison result")
     if android.get("contractPromotionPerformed") is not False or android.get("predictionUsedForSession") is not False:
         raise ValueError("Validation evidence must not bypass/promote or control a session")
@@ -112,7 +113,7 @@ def summarize(reference: dict, android: dict) -> dict:
     positive_pass = native_executed and all(sample["runtimeEquivalence"] == "PASS" for sample in results) and positive_pairs > 0 and android.get("allSamplesPassed") is True and android.get("positiveEquivalentPairs") == positive_pairs and required_coverage
     return dict(schemaVersion=1, validationPurpose="POSITIVE_CANDIDATE_SUMMARY", positiveEquivalentPairs=positive_pairs,
         positiveEquivalenceStatus="PASS" if positive_pass else "NOT_VERIFIED", androidNativeInferenceExecuted=native_executed,
-        exportContractVerified=False, productionContract="NOT_VERIFIED", contractPromotionPerformed=False,
+        exportContractVerified=False, productionContract=android["productionContract"], contractPromotionPerformed=False,
         requiredPositiveClass=required_class, requiredClassPositivePairs=required_pairs, requiredClassCoverageSatisfied=required_coverage,
         policy="Summarizes recorded Kotlin comparison; no new tolerance, no label gate, no automatic VERIFIED promotion.", samples=results)
 
@@ -135,7 +136,7 @@ def main():
         paths[2].parent.mkdir(parents=True, exist_ok=True)
         with paths[2].open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
-        print(f"Recorded positive equivalence: {result['positiveEquivalenceStatus']}; production NOT_VERIFIED unchanged.")
+        print(f"Recorded positive equivalence: {result['positiveEquivalenceStatus']}; recorded production {result['productionContract']}, not changed by this tool.")
     except (ValueError, OSError, TypeError) as error:
         parser.exit(2, f"Positive comparison summary blocked: {error}\n")
 

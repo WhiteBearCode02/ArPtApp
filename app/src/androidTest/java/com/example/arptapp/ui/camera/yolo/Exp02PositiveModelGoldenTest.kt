@@ -19,7 +19,7 @@ import java.security.MessageDigest
 
 /**
  * Positive-only evidence gate in the instrumented test APK, never in a workout/session pipeline.
- * Directly exercises the same production components WITHOUT changing its NOT_VERIFIED constant.
+ * Directly exercises the same production components WITHOUT changing contract or runtime gates.
  * Requires an actual private Python reference; no synthetic fallback or auto-verification exists.
  */
 @RunWith(AndroidJUnit4::class)

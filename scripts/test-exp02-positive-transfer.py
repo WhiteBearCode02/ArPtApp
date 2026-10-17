@@ -60,7 +60,7 @@ class PositiveTransferTests(unittest.TestCase):
     def test_image_identity_dimensions_thresholds_contract_and_model_are_not_mutable(self):
         image = self.image()
         mutations = [("imageSha256", "0" * 64), ("image", "other.png"), ("width", 101), ("modelId", "wrong"),
-                     ("modelSha256", "0" * 64), ("productionContract", "VERIFIED"),
+                     ("modelSha256", "0" * 64), ("productionContract", "FORGED"),
                      ("thresholds", dict(confidence=.01, iou=.70, maxDetections=300))]
         for key, value in mutations:
             result = self.result(image)
@@ -80,6 +80,18 @@ class PositiveTransferTests(unittest.TestCase):
             mutate(changed)
             with self.assertRaises(ValueError):
                 transfer.validate_android_candidate(changed, NAME, image)
+
+    def test_verified_snapshot_requires_explicit_nonpromotion_and_no_session_routing(self):
+        image = self.image()
+        result = self.result(image)
+        result.update(productionContract="VERIFIED")
+        with self.assertRaises(ValueError):
+            transfer.validate_android_candidate(result, NAME, image)
+        result.update(predictionUsedForSession=False, contractPromotionPerformed=False)
+        transfer.validate_android_candidate(result, NAME, image)
+        result["predictionUsedForSession"] = True
+        with self.assertRaises(ValueError):
+            transfer.validate_android_candidate(result, NAME, image)
 
     def test_json_nonfinite_oversize_or_nonobject_rejected(self):
         for data in (b'{"confidence":NaN}', b"[]", b"", b"x" * (transfer.MAX_JSON_BYTES + 1)):

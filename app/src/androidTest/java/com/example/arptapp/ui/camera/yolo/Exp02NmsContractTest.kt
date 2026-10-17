@@ -19,7 +19,7 @@ import java.security.MessageDigest
  * Offline raw-output decoder/NMS evidence, isolated in the test APK. No images, models,
  * sessions, DB or network are accessed. Controlled evidence is never called actual-image
  * evidence; an actual case requires a provenance-bound frozen normalized model output.
- * Does NOT load an Interpreter, enable live prediction or alter NOT_VERIFIED.
+ * Does NOT load an Interpreter, enable live prediction or alter contract verification.
  */
 @RunWith(AndroidJUnit4::class)
 class Exp02NmsContractTest {
@@ -151,7 +151,7 @@ class Exp02NmsContractTest {
             "15f4bbac5c69fd9a5a9395f5957a7ce561e3eb4620699a9c2ff11ed38ec7d34c")
         require(reference.modelSha256 == YoloModelPolicy.CANONICAL_SHA256)
         require(reference.normalizedOutput == NormalizedOutput(listOf(1, 6, 8400), "FLOAT32", "LITTLE_ENDIAN"))
-        require(reference.productionContract == "NOT_VERIFIED" && !reference.contractPromotionPerformed &&
+        require(reference.productionContract in setOf("NOT_VERIFIED", "NOT_INSPECTED") && !reference.contractPromotionPerformed &&
             !reference.predictionUsedForSession && !reference.modelInferenceExecutedByThisTool)
         require(reference.thresholds == Thresholds(.10f, .70f, 300))
         require(reference.comparison == Comparison("EXACT", "EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS", 1e-6f, 1e-4f))

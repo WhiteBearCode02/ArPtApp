@@ -115,11 +115,27 @@ def semantic_observation(expected_exercise: str | None, detections: list[dict]) 
                 classOrdering=[detection["classId"] for detection in detections])
 
 
+def validate_isolated_contract(document: dict) -> str:
+    """Read an evidence snapshot, never promote it. Keep legacy pre-gate evidence immutable.
+
+    VERIFIED results are valid only when explicitly isolated from session routing and promotion.
+    This allows the existing DEBUG tools to work after a separately approved code-level rollout.
+    """
+    status = document.get("productionContract")
+    if status not in ("NOT_VERIFIED", "VERIFIED"):
+        raise ValueError("Unknown production contract evidence status")
+    if status == "VERIFIED" and (document.get("predictionUsedForSession") is not False or
+                                 document.get("contractPromotionPerformed") is not False):
+        raise ValueError("Verified validation must explicitly remain isolated and non-promoting")
+    return status
+
+
 def validate_capture_provenance(document: dict, image: str, image_hash: str, rgb_hash: str, width: int, height: int):
     """Same saved camera PNG must decode to the SAME logical RGB raster on Python."""
     if document.get("schemaVersion") != 1 or document.get("validationPurpose") != "EXPLICIT_DEBUG_POSITIVE_CANDIDATE":
         raise ValueError("Expected an explicitly saved DEBUG candidate result")
-    if document.get("modelSha256") != actual.MODEL_SHA256 or document.get("productionContract") != "NOT_VERIFIED":
+    validate_isolated_contract(document)
+    if document.get("modelSha256") != actual.MODEL_SHA256:
         raise ValueError("Captured Android model/contract provenance mismatch")
     if document.get("image") != image or document.get("imageSha256") != image_hash or document.get("sourceImageSha256") != image_hash or document.get("decodedRgbSha256") != rgb_hash:
         raise ValueError("Android captured PNG/RGB and Python decoded raster differ")
@@ -133,7 +149,7 @@ def candidate_summary(samples: list[dict]) -> dict:
     return dict(candidateCount=len(samples), positiveCandidateCount=sum(bool(sample["detections"]) for sample in samples),
                 emptyCandidateCount=sum(not sample["detections"] for sample in samples),
                 positiveCriterion="At least one actual post-NMS detection at unchanged confidence=0.10, iou=0.70; no semantic label gate.",
-                positiveEquivalenceStatus="ANDROID_COMPARISON_PENDING", productionContract="NOT_VERIFIED")
+                positiveEquivalenceStatus="ANDROID_COMPARISON_PENDING", productionContract="NOT_INSPECTED")
 
 
 def require_empty_output(output: Path):
@@ -274,7 +290,7 @@ def generate(args, repository: Path):
         pending.replace(actual.private_child(output, "reference.json"))
     summary = document["candidateSummary"]
     print(f"RUN: {len(result_samples)} actual native candidate inferences; {summary['positiveCandidateCount']} positive, {summary['emptyCandidateCount']} empty.")
-    print("Python output preserved as-is. Android comparison pending; production contract NOT_VERIFIED.")
+    print("Python output preserved as-is. Android comparison pending; this tool does not inspect or change the production contract.")
 
 
 def main():

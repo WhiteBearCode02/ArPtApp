@@ -145,8 +145,7 @@ def validate_android_candidate(document: dict, filename: str, image: bytes):
     positive.actual.validate_input_dimensions(width, height)
     if (document.get("width"), document.get("height")) != (width, height):
         raise ValueError("PNG dimensions differ from Android result")
-    if document.get("productionContract") != "NOT_VERIFIED":
-        raise ValueError("Candidate validation must not promote/bypass the production contract")
+    positive.validate_isolated_contract(document)
     detections = document.get("detections")
     if not isinstance(detections, list) or len(detections) > 300:
         raise ValueError("Invalid Android detection list")
@@ -260,7 +259,8 @@ def export_comparison(adb: PrivateAdb, args, repository: Path):
     remote_bundle = run_directory(REMOTE_BUNDLE, getattr(args, "run_id", None))
     data = adb.read_private(remote_bundle + "/android-positive-result.json", MAX_JSON_BYTES)
     result = json_object(data)
-    if result.get("schemaVersion") != 1 or result.get("modelSha256") != positive.actual.MODEL_SHA256 or result.get("productionContract") != "NOT_VERIFIED":
+    positive.validate_isolated_contract(result)
+    if result.get("schemaVersion") != 1 or result.get("modelSha256") != positive.actual.MODEL_SHA256:
         raise ValueError("Private Android comparison provenance mismatch")
     output.mkdir(parents=True, exist_ok=True)
     path = positive.actual.private_child(output, "android-positive-result.json")
@@ -295,7 +295,7 @@ def validate_nms_bundle(bundle: Path, repository: Path):
             or reference.get("modelSha256") != positive.actual.MODEL_SHA256
             or reference.get("ultralyticsVersion") != "8.4.176"
             or reference.get("wheelSha256") != positive.actual.load_pinned_loader(repository).WHEEL_SHA256
-            or reference.get("productionContract") != "NOT_VERIFIED"
+            or reference.get("productionContract") not in ("NOT_VERIFIED", "NOT_INSPECTED")
             or reference.get("contractPromotionPerformed") is not False
             or reference.get("predictionUsedForSession") is not False
             or reference.get("modelInferenceExecutedByThisTool") is not False):
@@ -355,7 +355,8 @@ def export_nms_comparison(adb: PrivateAdb, args, repository: Path):
     output = positive.require_private_path(args.output, repository, directory=True)
     data = adb.read_private(run_directory(REMOTE_NMS, args.run_id) + "/android-nms-result.json", MAX_JSON_BYTES)
     result = json_object(data)
-    if (result.get("modelSha256") != positive.actual.MODEL_SHA256 or result.get("productionContract") != "NOT_VERIFIED"
+    positive.validate_isolated_contract(result)
+    if (result.get("modelSha256") != positive.actual.MODEL_SHA256
             or result.get("contractPromotionPerformed") is not False or result.get("predictionUsedForSession") is not False):
         raise ValueError("NMS result provenance mismatch")
     output.mkdir(parents=True, exist_ok=True)

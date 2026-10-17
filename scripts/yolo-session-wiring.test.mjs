@@ -57,7 +57,8 @@ test("live YOLO FPS is separate from existing landmark performance", () => {
 test("local validation media are ignored and contract still cannot be promoted by a runtime flag", () => {
   assert.match(read(".gitignore"), /\/local-yolo-validation\//)
   const contract = read(base + "domain/detection/Exp02YoloContract.kt")
-  assert.match(contract, /get\(\) = ExportContractVerification.NOT_VERIFIED/)
+  assert.match(contract, /get\(\) = ExportContractVerification.VERIFIED/)
+  assert.match(read("app/src/main/java/com/example/arptapp/domain/detection/YoloExerciseDetector.kt"), /runtimePolicy.predictionAllowed/)
   assert.doesNotMatch(contract, /getenv|getProperty|SharedPreferences|FORCE_VERIFIED/)
   assert.match(read("app/build.gradle.kts"), /ignoreAssetsPattern = "[^"\n]*\*\.tflite/)
 })

@@ -12,13 +12,13 @@ class YoloSessionDiagnosticsCollectorTest {
     private val collector = YoloSessionDiagnosticsCollector()
     private fun initial(status: DetectorStatus = DetectorStatus.READY,
                         contract: ExportContractVerification = ExportContractVerification.VERIFIED) =
-        YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO, contractVerification = contract))
+        YoloShadowSnapshot(ExerciseDetectionResult(status, DetectionSource.YOLO, contractVerification = contract, shadowRuntimeEnabled = true))
     private fun begin(snapshot: YoloShadowSnapshot = initial()) = collector.reset(10_000, 1000, CameraView.SIDE, snapshot)
     private fun frame(raw: ExerciseType = ExerciseType.SQUAT, stable: ExerciseType = raw, confidence: Float? = .8f,
                       timings: DetectionTimings? = DetectionTimings(2, 8, 3, 13)) =
         YoloShadowSnapshot(ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
             raw.takeIf { it != ExerciseType.UNKNOWN }?.let { ExerciseDetection(it, confidence, DetectionSource.YOLO) },
-            timings = timings, contractVerification = ExportContractVerification.VERIFIED), stable)
+            timings = timings, contractVerification = ExportContractVerification.VERIFIED, shadowRuntimeEnabled = true), stable)
     private fun sample(token: Long, snapshot: YoloShadowSnapshot = frame(), expected: ExerciseType = ExerciseType.SQUAT,
                        thermal: Int = 0, time: Long = 1500) {
         collector.observeFrameSeen(token); collector.observeAdmission(token)
@@ -182,6 +182,15 @@ class YoloSessionDiagnosticsCollectorTest {
         val token = begin(initial(DetectorStatus.READY, ExportContractVerification.NOT_VERIFIED))
         val result = end(token)
         assertEquals("READY", result.modelStatus); assertFalse(result.predictionEnabled)
+    }
+
+    @Test fun disabledGateRejectsEvenAReadyTimedSnapshotAsInferenceEvidence() {
+        val off = frame().let { it.copy(result = it.result.copy(shadowRuntimeEnabled = false)) }
+        val token = begin(off)
+        sample(token, off)
+        val result = end(token)
+        assertFalse(result.predictionEnabled); assertEquals(false, result.shadowRuntimeEnabled)
+        assertEquals(0L, result.processedFrames); assertNull(result.averageConfidence)
     }
 
     @Test fun unknownViewIsPreservedAndWallClockReversalDoesNotInventNegativeDuration() {

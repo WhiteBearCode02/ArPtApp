@@ -2,6 +2,8 @@
 
 기준일: 2026-10-16 · 모델: `yolo26n_exp02_fp32` · **Landmark Primary / YOLO DEBUG Shadow**
 
+> 후속 2026-10-17: actual negative·두 class positive·Android native·NMS 근거와 사용자 승인으로 contract가 `VERIFIED`가 됐습니다. 실행은 독립 DEBUG Shadow gate와 canonical model readiness를 모두 요구합니다. 아래 상태 표는 최초 소스 검토 당시의 기록입니다. 최신 상태와 성능 미검증 범위는 [rollout](EXP02_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다. VERIFIED는 runtime contract equivalence이며 model accuracy 보장이 아닙니다.
+
 ## 상태와 검증 경계
 
 | 구분 | 이 문서 작성 시 상태 | 의미 |

@@ -242,7 +242,7 @@ def generate(args, repository: Path):
         document = dict(schemaVersion=1, validationPurpose=PURPOSE, ultralyticsVersion=loader.VERSION,
                         wheelSha256=loader.WHEEL_SHA256, sourceSha256=hashes,
                         normalizedOutput=dict(shape=list(SHAPE), dtype="FLOAT32", byteOrder="LITTLE_ENDIAN"),
-                        modelSha256=actual.MODEL_SHA256, productionContract="NOT_VERIFIED",
+                        modelSha256=actual.MODEL_SHA256, productionContract="NOT_INSPECTED",
                         contractPromotionPerformed=False, predictionUsedForSession=False,
                         thresholds=dict(confidence=CONFIDENCE, iou=IOU, maxDetections=MAX_DETECTIONS),
                         comparison=dict(classMatch="EXACT", ordering="EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS",

@@ -91,13 +91,14 @@ test("summary distinguishes positive evidence from negative equivalence and neve
   const source = read("scripts/summarize-exp02-positive-comparison.py")
   assert.match(source, /positive_pairs > 0/)
   assert.match(source, /positiveEquivalenceStatus="PASS" if positive_pass else "NOT_VERIFIED"/)
-  assert.match(source, /exportContractVerified=False, productionContract="NOT_VERIFIED"/)
+  assert.match(source, /exportContractVerified=False, productionContract=android\["productionContract"\]/)
   assert.match(source, /semanticCorrectness/)
   assert.match(source, /Exact representation of the unchanged Kotlin \.001f/)
 })
 
-test("production policy stays NOT_VERIFIED with unchanged confidence NMS and APK exclusion", () => {
-  assert.match(read(base + "main/java/com/example/arptapp/domain/detection/Exp02YoloContract.kt"), /get\(\) = ExportContractVerification\.NOT_VERIFIED/)
+test("reviewed contract retains independent gate unchanged confidence NMS and APK exclusion", () => {
+  assert.match(read(base + "main/java/com/example/arptapp/domain/detection/Exp02YoloContract.kt"), /get\(\) = ExportContractVerification\.VERIFIED/)
+  assert.match(read(base + "main/java/com/example/arptapp/domain/detection/YoloExerciseDetector.kt"), /YoloRuntimePolicy\.DISABLED/)
   const policy = read(base + "main/java/com/example/arptapp/domain/detection/Exp02PostProcessor.kt")
   assert.match(policy, /APP_ENGINEERING_INITIAL_RAW_CONFIDENCE = \.10f/)
   assert.match(policy, /IOU_THRESHOLD = \.70f/)

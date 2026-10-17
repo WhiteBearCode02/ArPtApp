@@ -4,6 +4,8 @@ import com.example.arptapp.domain.analyzer.CameraView
 import com.example.arptapp.domain.classifier.ExerciseType
 import java.util.Collections
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 
 /**
  * Local-only, bounded session aggregate. Never contains a frame, box, landmark, account or LLM DTO.
@@ -43,7 +45,11 @@ data class YoloSessionDiagnostics(
     val unknownSessionFrames: Long = 0,
     val cameraView: String = CameraView.UNKNOWN.name,
     val startedAt: Long,
-    val endedAt: Long
+    val endedAt: Long,
+    /** Independent gate, not model readiness. null preserves pre-gate historical records honestly. */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val shadowRuntimeEnabled: Boolean? = null
 ) {
     /** UNKNOWN is not a negative label and is excluded from this denominator. */
     val knownMatchRate: Double? get() = (matchingStableFrames + mismatchingStableFrames)
@@ -69,7 +75,7 @@ class YoloSessionDiagnosticsCollector {
         require(startedAtEpochMs >= 0 && startedAtMonotonicMs >= 0)
         nextToken = if (nextToken == Long.MAX_VALUE) 1 else nextToken + 1
         active = State(nextToken, startedAtEpochMs, startedAtMonotonicMs, cameraView,
-            initialSnapshot.result.status, initialSnapshot.result.contractVerification)
+            initialSnapshot.result.status, initialSnapshot.result.contractVerification, initialSnapshot.result.shadowRuntimeEnabled)
         return nextToken
     }
 
@@ -89,10 +95,11 @@ class YoloSessionDiagnosticsCollector {
         val state = state(token) ?: return
         state.status = snapshot.result.status
         state.contract = snapshot.result.contractVerification
+        state.shadowEnabled = snapshot.result.shadowRuntimeEnabled
         state.observeThermal(thermalStatus)
         val timings = snapshot.result.timings
         // READY initialization/invalidation is not an inference. Failed frames contribute no fake zeros.
-        if (!isFrame || snapshot.result.status != DetectorStatus.READY || timings == null ||
+        if (!isFrame || !snapshot.result.predictionAllowed || timings == null ||
             completedAtMonotonicMs < state.monotonicStart || state.processed >= state.admitted ||
             listOf(timings.preprocessMs, timings.inferenceMs, timings.postprocessMs, timings.totalMs).any { it < 0 }) return
         state.processed = increment(state.processed)
@@ -134,7 +141,8 @@ class YoloSessionDiagnosticsCollector {
         val duration = observedAtMonotonicMs.coerceAtLeast(state.monotonicStart) - state.monotonicStart
         val result = YoloSessionDiagnostics(
             modelStatus = state.status.name, contractStatus = state.contract.name,
-            predictionEnabled = state.status == DetectorStatus.READY && state.contract == ExportContractVerification.VERIFIED,
+            predictionEnabled = state.shadowEnabled && state.status == DetectorStatus.READY && state.contract == ExportContractVerification.VERIFIED,
+            shadowRuntimeEnabled = state.shadowEnabled,
             totalFramesSeen = state.seen, admittedFrames = state.admitted, processedFrames = state.processed,
             activeDurationMs = duration,
             averageProcessedFps = if (state.processed > 0 && duration > 0) state.processed.toDouble() * 1000 / duration else null,
@@ -156,7 +164,7 @@ class YoloSessionDiagnosticsCollector {
     private fun state(token: Long): State? = active?.takeIf { it.token == token }
 
     private class State(val token: Long, val epochStart: Long, val monotonicStart: Long, val view: CameraView,
-                        var status: DetectorStatus, var contract: ExportContractVerification) {
+                        var status: DetectorStatus, var contract: ExportContractVerification, var shadowEnabled: Boolean) {
         var seen = 0L; var admitted = 0L; var processed = 0L
         var matching = 0L; var mismatching = 0L; var unknown = 0L; var unknownSession = 0L
         var maxThermal: Int? = null

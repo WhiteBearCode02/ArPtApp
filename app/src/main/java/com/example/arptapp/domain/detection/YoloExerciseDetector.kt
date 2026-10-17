@@ -7,7 +7,8 @@ import java.nio.ByteOrder
 class YoloExerciseDetector<F>(
     private val runtimeFactory: () -> YoloTensorRuntime,
     private val contract: YoloContractComponents<F> = UnverifiedYoloContract.components(),
-    private val clockMs: () -> Long = { System.nanoTime() / 1_000_000 }
+    private val clockMs: () -> Long = { System.nanoTime() / 1_000_000 },
+    private val runtimePolicy: YoloRuntimePolicy = YoloRuntimePolicy.DISABLED
 ) : ExerciseDetector<F> {
     private var runtime: YoloTensorRuntime? = null
     private var result = state(DetectorStatus.INITIALIZING)
@@ -30,7 +31,7 @@ class YoloExerciseDetector<F>(
     }
     override fun detect(frame: F): ExerciseDetectionResult {
         initialize()
-        if (result.status != DetectorStatus.READY) return result
+        if (!runtimePolicy.predictionAllowed(contract.verification, result.status)) return result
         val start = clockMs()
         return try {
             val prepared = contract.preprocessor.preprocess(frame)
@@ -52,7 +53,8 @@ class YoloExerciseDetector<F>(
             result = ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
                 MainExerciseDetectionSelector.select(detections), detections.size,
                 DetectionTimings((preprocessed-start).coerceAtLeast(0), (inferred-preprocessed).coerceAtLeast(0),
-                    (end-inferred).coerceAtLeast(0), (end-start).coerceAtLeast(0)), contract.verification)
+                    (end-inferred).coerceAtLeast(0), (end-start).coerceAtLeast(0)), contract.verification,
+                runtimePolicy.shadowRuntimeEnabled)
             result
         } catch (_: ExportContractNotVerified) { fail(DetectorStatus.CONTRACT_NOT_VERIFIED) }
         catch (_: InvalidYoloOutput) { fail(DetectorStatus.INVALID_OUTPUT) }
@@ -61,7 +63,7 @@ class YoloExerciseDetector<F>(
         catch (_: LinkageError) { fail(DetectorStatus.INFERENCE_FAILED) }
     }
     private fun state(status: DetectorStatus) = ExerciseDetectionResult(status, DetectionSource.YOLO,
-        contractVerification = contract.verification)
+        contractVerification = contract.verification, shadowRuntimeEnabled = runtimePolicy.shadowRuntimeEnabled)
     private fun fail(status: DetectorStatus): ExerciseDetectionResult {
         // Called only on the owner worker, never concurrently with Interpreter.run.
         runCatching { runtime?.close() }; runtime = null; output = null

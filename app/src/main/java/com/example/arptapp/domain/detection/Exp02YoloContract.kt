@@ -1,17 +1,17 @@
 package com.example.arptapp.domain.detection
 
 /**
- * Exact-source-backed candidate implementation, deliberately NOT named "Verified".
- * Source evidence: docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md.
+ * VERIFIED means Python/Android runtime contract equivalence, NOT model accuracy or safety.
+ * Evidence: docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md and EXP02_VERIFIED_REVIEW.md.
  *
- * TODO(EXP02_EXPORT_CONTRACT): OpenCV INTER_LINEAR uint8 rounding is not bitwise reproduced by
- * the independent bilinear implementation (observed <= 1/255, not mere float error). Review that
- * difference with an actual-model golden before changing this CODE-LEVEL gate. No env/property,
- * remote flag, or model presence can promote it. Android native compatibility is separate.
+ * Reviewed actual negative / both-class positive Golden and Android native results support this
+ * code-level promotion. General interpolation is not claimed bitwise identical: the existing
+ * <=1/255 comparison bound is retained. No environment/property/model can promote a new export.
+ * Realtime execution additionally requires YoloRuntimePolicy AND a ready canonical model.
  */
 object Exp02YoloContract {
     const val SOURCE_VERSION = "8.4.176"
-    val verification: ExportContractVerification get() = ExportContractVerification.NOT_VERIFIED
+    val verification: ExportContractVerification get() = ExportContractVerification.VERIFIED
 
     fun <F> components(preprocessor: YoloPreprocessor<F>) = YoloContractComponents(
         verification, preprocessor, Exp02OutputDecoder(), Exp02PostProcessor(),

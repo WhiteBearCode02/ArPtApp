@@ -8,13 +8,14 @@ const dashboard = read(root + "DashboardActivity.kt")
 const camera = read(root + "ui/camera/PoseCameraController.kt")
 const factory = read(root + "ui/camera/yolo/TfliteYoloRuntime.kt")
 
-test("production factory is DEBUG-only and source-backed ports remain code-gated NOT_VERIFIED", () => {
+test("production factory is DEBUG-only and approved contract is independent of runtime rollout", () => {
   assert.match(factory, /if \(!BuildConfig.DEBUG\) return null/)
   assert.match(factory, /Exp02YoloContract.components\(Exp02BitmapPreprocessor\(\)\)/)
   assert.doesNotMatch(factory, /ExportContractVerification.VERIFIED|Yolo26Classifier\(/)
   const contract = read(root + "domain/detection/Exp02YoloContract.kt")
-  assert.match(contract, /get\(\) = ExportContractVerification.NOT_VERIFIED/)
-  assert.doesNotMatch(contract, /getenv|getProperty|BuildConfig|SharedPreferences|ExportContractVerification.VERIFIED/)
+  assert.match(contract, /get\(\) = ExportContractVerification.VERIFIED/)
+  assert.doesNotMatch(contract, /getenv|getProperty|BuildConfig|SharedPreferences/)
+  assert.match(factory, /YoloRuntimePolicy.forBuild\(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED\)/)
 })
 
 test("contract gate precedes runtime call and unknown exports retain three fail-closed ports", () => {
@@ -54,7 +55,8 @@ test("only the original classifier adapter feeds workout type selection", () => 
 
 test("unavailable shadow paths cannot copy source frames and use a dedicated lifecycle", () => {
   const runner = read(root + "domain/detection/YoloShadowRunner.kt")
-  assert.ok(runner.indexOf("latest.result.status != DetectorStatus.READY") < runner.indexOf("copyFrame(frame)"))
+  assert.ok(runner.indexOf("!latest.result.predictionAllowed") >= 0)
+  assert.ok(runner.indexOf("!latest.result.predictionAllowed") < runner.indexOf("copyFrame(frame)"))
   assert.match(runner, /MIN_FRAME_INTERVAL_MS = 250L/)
   assert.match(runner, /Executors.newSingleThreadExecutor\(\)/)
   assert.match(camera, /yoloShadow\?\.start\(\)/)

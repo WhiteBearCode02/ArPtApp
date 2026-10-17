@@ -61,7 +61,8 @@ test("pixel comparison retains existing strict padding and single-byte interpola
 
 test("contract activation and model exclusion are not controlled by private fixtures", () => {
   const contract = read("app/src/main/java/com/example/arptapp/domain/detection/Exp02YoloContract.kt")
-  assert.match(contract, /get\(\) = ExportContractVerification\.NOT_VERIFIED/)
+  assert.match(contract, /get\(\) = ExportContractVerification\.VERIFIED/)
+  assert.match(read("app/src/main/java/com/example/arptapp/domain/detection/YoloRuntimePolicy.kt"), /debug && requested/)
   assert.doesNotMatch(contract, /reference_results|local_validation|System\.getenv|SharedPreferences/)
   assert.match(read("app/build.gradle.kts"), /ignoreAssetsPattern = "[^"\n]*\*\.tflite/)
 })
