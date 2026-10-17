@@ -75,6 +75,8 @@ EXP02 모델·사진·local_validation·venv는 Git 미추적, 모델/검증 입
 
 최초에는 USB 기기가 없어 device 항목을 NOT_RUN으로 두었으나 이후 사용자가 연결했습니다. 새 DEBUG 앱과 test APK를 데이터 삭제 없이 업데이트 설치했고 canonical private 모델 SHA 및 기존 private RGB fixture 보존을 확인했습니다. **실제 카메라 운동 baseline은 controlled native 검증과 별도**로 기록합니다.
 
+아래 build/JVM/Python 및42개 파일 검사는 앞선 계약 승격 작업의 실행 이력입니다. 후속 사용자 운동의 새 instrumentation3개와 문서 변경 검사는 별도 구분합니다.
+
 | 이번 검사 | 결과 |
 |---|---|
 | assembleDebug / assembleDebugAndroidTest / assembleRelease | PASS, 최종 코드 offline build1분23초 |
@@ -90,7 +92,7 @@ EXP02 모델·사진·local_validation·venv는 Git 미추적, 모델/검증 입
 | 이번 device controlled runner / private 재시작 | 4tests PASS, 실제 native4회 포함, live camera와 구분 |
 | private storage / Room / migration | 13tests PASS(6+2+5) |
 | 기존 실제 사용자 행 restart / Report UI | 2tests PASS, canonical 진단 SHA 유지, 읽기 전용 |
-| 새 실제 운동 baseline | MAX(id) 읽기 baseline1test PASS, 사용자 운동·저장 확인 대기 |
+| 새 실제 운동 baseline | 실제 카메라 추론 집계·사용자 저장·새 프로세스 재조회·Report 렌더링 PASS, 후속 검증은 아래 참조 |
 
 새 코드의 JVM 검사는 VERIFIED+OFF/ON, NOT_VERIFIED+ON, release 강제OFF, runner 무복사 차단, gate와 진단 호환성, 반대 YOLO 결과에도 Primary/rep/score/report 불변을 포함합니다. Gradle10 deprecation 안내는 기존 비차단 경고이며 새 의존성/버전 변경으로 해결하려 하지 않았습니다.
 
@@ -100,11 +102,25 @@ EXP02 모델·사진·local_validation·venv는 Git 미추적, 모델/검증 입
 
 최종 controlled repeat4회 실측: raw SQUAT4, stable SQUAT1/UNKNOWN3, match1/mismatch0/unknown3, confidence 평균·최대 약0.91452229. 평균pre183ms/infer128.25ms/post45ms/total356.25ms, processedFPS2.772이며 test thermal은 미측정(null), cameraView는 UNKNOWN입니다. 이는 고정된 private raster 반복 처리 속도이지 CameraX+MediaPipe와 함께 실행한 실제 운동 baseline이 아닙니다.
 
-새 앱으로 기존 실제 사용자 행을 재시작·재조회하고 Report 접힘/펼침/각 metric 표시를 검증했습니다. 신규 gate-null 생략으로 과거 진단 canonical hash도 그대로입니다. 그 후 MAX(id)만 읽는 새 baseline을 만들고 사용자에게 실제 운동·저장을 요청했습니다. 아직 새 세션이 저장됐다는 확인이나 live 성능값을 만들지 않습니다.
+새 앱으로 기존 실제 사용자 행을 재시작·재조회하고 Report 접힘/펼침/각 metric 표시를 검증했습니다. 신규 gate-null 생략으로 과거 진단 canonical hash도 그대로입니다. 그 후 MAX(id)만 읽는 새 baseline을 만들고 사용자에게 실제 운동·저장을 요청했으며, 후속 검증에서 새 사용자 저장 행과 실제 카메라 집계를 확인했습니다.
 
 기기 연결 시 `shadowEvidenceRun=<새 안전한 ID>`를 지정해 `verifiedDefaultOffLoadsModelWithoutPreprocessingOrNativeRun`, `unverifiedContractCannotRunEvenWithDebugGateOn`, `enabledFactoryRunsNativeAndRoundTripsOnlyAggregates`를 method별로 실행합니다. 마지막 controlled 결과를 만든 후 별도 force-stop/process에서 `readControlledAggregateAfterRestart`를 실행합니다. 입력은 기존 private `yolo/positive-golden/reference.json`의 candidate_02 RGB가 필요하며 없는 경우 임의 생성하지 않습니다. `controlled-shadow.json`/`controlled-readback.json`은 private noBackup `yolo/realtime-shadow/<run>/`에만 배타 생성하며 기존 실행을 덮어쓰지 않습니다. 이 검사를 실제 사용자 DB 재시작 검증으로 표현하지 않습니다.
 
 기존 `YoloSessionPersistenceDeviceTest`의 readBaseline→사용자 실제 저장→captureNewlySavedRecord→force-stop→verifySameRecordAfterRestart→openSelectedReport 절차도 유지합니다. 과거 행 회귀에는 새 `sessionEvidenceRun` 및 기존 `sessionSourceEvidenceRun`을 사용해 원본 증거를 보존합니다. 새 실시간 세션 저장 결과는 사용자의 실제 운동 후에만 보고할 수 있습니다.
+
+### 후속 실제 카메라 세션 검증 (2026-10-17)
+
+사용자가 실제 운동을 마친 뒤 운동 종류와 촬영 방향을 명시했습니다. baseline 이후 새 사용자 저장 행이 정확히 하나 있었고, 저장된 Landmark 세션 종목·촬영 방향이 사용자 답변과 일치했습니다. 진단은 `modelStatus=READY`, `contractStatus=VERIFIED`, `shadowRuntimeEnabled=true`, `predictionEnabled=true`이며 실제 카메라 native 완료 프레임과 유효한 confidence/latency/FPS 집계를 포함했습니다.
+
+- 실제 사용자 저장 행 확인: **PASS**. harness가 운동을 삽입하거나 추론을 대신 실행하지 않았습니다.
+- force-stop 후 새 PID의 동일 record/횟수/시간/진단 내용/canonical SHA 재조회: **PASS**.
+- 저장된 상세 Report의 초기 접힘·펼침·모든 metric label/value 렌더링: **PASS**.
+- 이번에 새로 실행한 instrumentation은 위3개이며 모두 통과했습니다. 이전 build/JVM/Node/Python 이력을 이번 fresh 실행으로 표시하지 않습니다. 앱 소스 변경이 없어 build/JVM은 재실행하지 않았습니다.
+- 자동 Report 진입 검증이며 실제 History 행을 사용자가 탭했다는 증거로 확대하지 않습니다(`historyRowTapPerformed=false`).
+
+개인 운동 기록 식별자·횟수·시간·개별 집계 수치·진단 SHA 및 scalar 원본은 기기 private noBackup과 Git ignored `local_validation/exp02_runtime_rollout/`의 **로컬 전용 보고서**에만 보존합니다. 공개 문서에는 개별 baseline 수치를 복사하지 않습니다. 이미지·영상·프레임·전체 Logcat·계정/프로필·자세 분석 원본은 수집/업로드하지 않았습니다.
+
+이번 세션은 실제 카메라 Shadow baseline 및 저장 경로의 근거입니다. raw/stable은 프레임별 관측이며 Landmark 반복 횟수와 다릅니다. UNKNOWN과 세션 확정 전 비교 제외를 유지하며, known-match만으로 전체 모델 accuracy를 주장하지 않습니다. 임계값·안정화·Primary·rep/score/routing/coaching 변경 없이 결과를 기록했습니다.
 
 ## 다음 실기기 절차 (최대5)
 
@@ -114,9 +130,11 @@ EXP02 모델·사진·local_validation·venv는 Git 미추적, 모델/검증 입
 4. 종료·결과 저장 후 History→그 운동→상세 Report→YOLO 진단에서 실제 processedFrames와 집계/confidence/latency를 확인합니다. raw/stable 일치율은 동기화된 정답 accuracy가 아닙니다.
 5. 앱을 종료·재실행하고 같은 기록/진단이 유지되는지 확인합니다. 이후 운동·방향별 baseline을 비교하되 threshold/stabilizer tuning은 별도 요청으로 진행합니다.
 
-## 변경 파일
+## 변경 파일 (계약 승격 단계)
 
 전체42개(public source/test/docs)입니다. 기존 모델·사진·과거 증거·사용자 운동 DB/분석 로직은 변경하지 않았습니다. 자동 commit/push는 하지 않습니다.
+
+후속 실제 카메라 baseline 검증에서는 앱 소스 변경 없이 이 문서1개만 공개 변경했습니다. 개별 수치 보고서와 검증 상태 갱신은 ignored 로컬 자료이며 아래42개는 앞선 계약 승격 작업의 이력입니다.
 
 ```text
 README.md
@@ -163,7 +181,7 @@ scripts/yolo-shadow.test.mjs
 scripts/yolo-runtime-gate.test.mjs
 ```
 
-## 커밋 메시지 제안
+## 커밋 메시지 제안 (계약 승격 단계)
 
 ```text
 feat: EXP02 계약 검증과 DEBUG Shadow 실행 게이트 분리
@@ -173,4 +191,14 @@ feat: EXP02 계약 검증과 DEBUG Shadow 실행 게이트 분리
 - 로컬 세션 gate 상태와 과거 JSON 호환성 및 리포트 진단 보강
 - gate/Primary 안전 회귀와 실기기 controlled runner 검사 준비
 - 실시간 baseline 미실행 및 모델 정확도 한계를 문서화
+```
+
+후속 실제 카메라 baseline 검증의 커밋 제안(공개 문서만 변경):
+
+```text
+docs: 실제 카메라 Shadow 세션과 저장 회귀 검증 결과 기록
+
+- 사용자 저장 기록·재시작·상세 리포트 검증 PASS 반영
+- 개별 운동 수치와 진단 원본은 Git 제외 로컬 보고서에만 보존
+- 프레임 집계와 반복 횟수·모델 정확도의 차이 명시
 ```
