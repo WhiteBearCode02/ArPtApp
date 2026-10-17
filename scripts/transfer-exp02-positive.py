@@ -20,6 +20,7 @@ import uuid
 PACKAGE = "com.example.arptapp"
 REMOTE_CANDIDATES = "no_backup/exp02_positive"
 REMOTE_BUNDLE = "no_backup/yolo/positive-golden"
+REMOTE_NMS = "no_backup/yolo/nms-contract"
 CANDIDATE_PATTERN = r"positive_candidate_[0-9]{8}_[0-9]{6}_[0-9]{3}_[a-f0-9]{8}\.png"
 MAX_PNG_BYTES = 32 * 1024 * 1024
 MAX_JSON_BYTES = 2 * 1024 * 1024
@@ -37,6 +38,14 @@ def load_positive_helpers():
 
 
 positive = load_positive_helpers()
+
+
+def run_directory(base: str, run_id: str | None) -> str:
+    if run_id is None:
+        return base
+    if not isinstance(run_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", run_id):
+        raise ValueError("Use a unique lowercase safe run id")
+    return base + "/runs/" + run_id
 
 
 def sha256(data: bytes) -> str:
@@ -230,9 +239,10 @@ def validate_bundle(bundle: Path, repository: Path) -> list[tuple[str, Path, int
 
 def provision_reference(adb: PrivateAdb, args, repository: Path):
     uploads = validate_bundle(args.bundle, repository)
+    remote_bundle = run_directory(REMOTE_BUNDLE, getattr(args, "run_id", None))
     # Explicit command requires no active exercise session; not an automatic side effect of capture.
     adb.call("exec-out", "am", "force-stop", PACKAGE)
-    adb.call("exec-out", "run-as", PACKAGE, "mkdir", "-p", REMOTE_BUNDLE)
+    create_empty_remote_run(adb, remote_bundle)
     for filename, path, expected_size, expected_hash in uploads:
         # Freeze the validated identity and hold at most one raster/tensor in memory.
         positive.require_private_path(path, repository)
@@ -241,13 +251,14 @@ def provision_reference(adb: PrivateAdb, args, repository: Path):
         data = path.read_bytes()
         if len(data) != expected_size or sha256(data) != expected_hash:
             raise ValueError("Private fixture changed after preflight")
-        adb.write_private(REMOTE_BUNDLE + "/" + filename, data)
+        adb.write_private(remote_bundle + "/" + filename, data)
     print(f"Provisioned {len(uploads)} validated private candidate fixtures; production contract unchanged.")
 
 
 def export_comparison(adb: PrivateAdb, args, repository: Path):
     output = positive.require_private_path(args.output, repository, directory=True)
-    data = adb.read_private(REMOTE_BUNDLE + "/android-positive-result.json", MAX_JSON_BYTES)
+    remote_bundle = run_directory(REMOTE_BUNDLE, getattr(args, "run_id", None))
+    data = adb.read_private(remote_bundle + "/android-positive-result.json", MAX_JSON_BYTES)
     result = json_object(data)
     if result.get("schemaVersion") != 1 or result.get("modelSha256") != positive.actual.MODEL_SHA256 or result.get("productionContract") != "NOT_VERIFIED":
         raise ValueError("Private Android comparison provenance mismatch")
@@ -258,6 +269,99 @@ def export_comparison(adb: PrivateAdb, args, repository: Path):
     with path.open("xb") as stream:
         stream.write(data)
     print("Exported private Android comparison JSON only; no contract promotion.")
+
+
+def create_empty_remote_run(adb: PrivateAdb, remote: str):
+    root = adb.verify_debug_device()
+    adb.call("exec-out", "run-as", PACKAGE, "mkdir", "-p", remote)
+    resolved = adb.call("exec-out", "run-as", PACKAGE, "readlink", "-f", remote).decode("ascii").strip()
+    if resolved != root + "/" + remote:
+        raise ValueError("Private run directory resolves outside its exact path")
+    if adb.call("exec-out", "run-as", PACKAGE, "ls", "-A", remote).strip():
+        raise ValueError("Private run already contains evidence; choose a new run id")
+    adb.call("exec-out", "run-as", PACKAGE, "mkdir", remote + "/.evidence-claim")
+    adb.call("exec-out", "run-as", PACKAGE, "chmod", "700", remote)
+
+
+def validate_nms_bundle(bundle: Path, repository: Path):
+    """Only transport provenance/bounds; production NMS decisions stay in the reference/test."""
+    bundle = positive.require_private_path(bundle, repository, directory=True)
+    reference_file = positive.require_private_path(bundle / "reference.json", repository)
+    if not reference_file.is_file() or not 0 < reference_file.stat().st_size <= MAX_JSON_BYTES:
+        raise ValueError("Missing bounded NMS reference")
+    encoded = reference_file.read_bytes()
+    reference = json_object(encoded)
+    if (reference.get("schemaVersion") != 1 or reference.get("validationPurpose") != "EXP02_NMS_CONTRACT"
+            or reference.get("modelSha256") != positive.actual.MODEL_SHA256
+            or reference.get("ultralyticsVersion") != "8.4.176"
+            or reference.get("wheelSha256") != positive.actual.load_pinned_loader(repository).WHEEL_SHA256
+            or reference.get("productionContract") != "NOT_VERIFIED"
+            or reference.get("contractPromotionPerformed") is not False
+            or reference.get("predictionUsedForSession") is not False
+            or reference.get("modelInferenceExecutedByThisTool") is not False):
+        raise ValueError("NMS reference provenance mismatch")
+    if reference.get("normalizedOutput") != dict(shape=[1, 6, 8400], dtype="FLOAT32", byteOrder="LITTLE_ENDIAN"):
+        raise ValueError("NMS raw tensor contract mismatch")
+    if reference.get("thresholds") != dict(confidence=.10, iou=.70, maxDetections=300):
+        raise ValueError("NMS thresholds must remain unchanged")
+    expected_comparison = dict(classMatch="EXACT", ordering="EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS",
+                               confidenceTolerance=1e-6, bboxTolerancePixels=1e-4)
+    if any(reference.get("comparison", {}).get(key) != value for key, value in expected_comparison.items()):
+        raise ValueError("Frozen raw NMS tolerances may not widen")
+    cases = reference.get("cases")
+    if not isinstance(cases, list) or not 1 <= len(cases) <= 14:
+        raise ValueError("NMS reference requires 1..14 bounded cases")
+    uploads, seen = [], set()
+    for case in cases:
+        identifier = case.get("id", "")
+        if not isinstance(identifier, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,70}", identifier) or identifier in seen:
+            raise ValueError("Unsafe duplicate NMS case id")
+        seen.add(identifier)
+        if case.get("evidenceType") not in ("ACTUAL_IMAGE_NMS", "CONTROLLED_MODEL_FORMAT_NMS"):
+            raise ValueError("NMS evidence type must distinguish actual and controlled")
+        if case["evidenceType"] == "ACTUAL_IMAGE_NMS" and (case.get("sourceModelInferenceExecuted") is not True or
+                any(not re.fullmatch(r"[a-f0-9]{64}", case.get(key, "")) for key in ("sourceImageSha256", "sourceReferenceSha256"))):
+            raise ValueError("Actual NMS needs recorded actual output provenance")
+        positive.actual.validate_input_dimensions(case.get("width"), case.get("height"))
+        filename = identifier + ".output.f32"
+        if case.get("rawOutputFile") != filename or case.get("rawOutputByteOrder") != "LITTLE_ENDIAN":
+            raise ValueError("Unsafe NMS tensor filename/order")
+        path = positive.require_private_path(bundle / filename, repository)
+        if not path.is_file() or path.stat().st_size != 4 * 6 * 8400:
+            raise ValueError("NMS tensor size mismatch")
+        data = path.read_bytes()
+        if sha256(data) != case.get("rawOutputSha256"):
+            raise ValueError("NMS raw tensor SHA256 mismatch")
+        uploads.append((filename, path, len(data), sha256(data)))
+    uploads.append(("reference.json", reference_file, len(encoded), sha256(encoded)))
+    return uploads
+
+
+def provision_nms(adb: PrivateAdb, args, repository: Path):
+    uploads = validate_nms_bundle(args.bundle, repository)
+    remote = run_directory(REMOTE_NMS, args.run_id)
+    adb.call("exec-out", "am", "force-stop", PACKAGE)
+    create_empty_remote_run(adb, remote)
+    for filename, path, expected_size, expected_hash in uploads:
+        positive.require_private_path(path, repository)
+        data = path.read_bytes()
+        if len(data) != expected_size or sha256(data) != expected_hash:
+            raise ValueError("NMS fixture changed after preflight")
+        adb.write_private(remote + "/" + filename, data)
+    print(f"Provisioned {len(uploads)} frozen raw NMS fixtures privately; no model or image transfer.")
+
+
+def export_nms_comparison(adb: PrivateAdb, args, repository: Path):
+    output = positive.require_private_path(args.output, repository, directory=True)
+    data = adb.read_private(run_directory(REMOTE_NMS, args.run_id) + "/android-nms-result.json", MAX_JSON_BYTES)
+    result = json_object(data)
+    if (result.get("modelSha256") != positive.actual.MODEL_SHA256 or result.get("productionContract") != "NOT_VERIFIED"
+            or result.get("contractPromotionPerformed") is not False or result.get("predictionUsedForSession") is not False):
+        raise ValueError("NMS result provenance mismatch")
+    output.mkdir(parents=True, exist_ok=True)
+    with positive.actual.private_child(output, "android-nms-result.json").open("xb") as stream:
+        stream.write(data)
+    print("Exported scalar NMS comparison JSON only; actual/controlled evidence types remain separate.")
 
 
 def main():
@@ -271,13 +375,22 @@ def main():
     export.add_argument("--output", type=Path, default=repository / "local_validation/exp02_positive")
     provision = actions.add_parser("provision-reference", help="Force-stops DEBUG app; do not run during exercise")
     provision.add_argument("--bundle", type=Path, default=repository / "local_validation/exp02_positive/bundle")
+    provision.add_argument("--run-id", help="Unique private device run; retains previous evidence")
     result = actions.add_parser("export-comparison")
     result.add_argument("--output", type=Path, default=repository / "local_validation/exp02_positive/bundle")
+    result.add_argument("--run-id")
+    nms = actions.add_parser("provision-nms", help="Frozen raw output only, not images/models; force-stops DEBUG app")
+    nms.add_argument("--bundle", type=Path, required=True)
+    nms.add_argument("--run-id", required=True)
+    nms_result = actions.add_parser("export-nms-comparison")
+    nms_result.add_argument("--output", type=Path, required=True)
+    nms_result.add_argument("--run-id", required=True)
     args = parser.parse_args()
     try:
         adb = PrivateAdb(args.adb, args.serial)
         adb.verify_debug_device()
-        {"export-candidate": export_candidate, "provision-reference": provision_reference, "export-comparison": export_comparison}[args.action](adb, args, repository)
+        {"export-candidate": export_candidate, "provision-reference": provision_reference, "export-comparison": export_comparison,
+         "provision-nms": provision_nms, "export-nms-comparison": export_nms_comparison}[args.action](adb, args, repository)
     except (ValueError, OSError, RuntimeError) as error:
         parser.exit(2, f"Private positive transfer blocked: {error}\n")
 

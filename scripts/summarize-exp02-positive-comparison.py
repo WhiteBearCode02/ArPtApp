@@ -49,7 +49,11 @@ def summarize(reference: dict, android: dict) -> dict:
     if len(set(reference_ids)) != len(reference_ids) or len(set(actual_ids)) != len(actual_ids) or set(reference_ids) != set(actual_ids):
         raise ValueError("Android/Python sample coverage differs; incomplete evidence cannot pass")
     native_executed = android.get("androidNativeInferenceExecuted") is True and android.get("nativeInferenceCount") == len(references)
-    results, positive_pairs = [], 0
+    required_class = android.get("requiredPositiveClass")
+    if required_class is not None and required_class not in transfer.positive.actual.CLASSES:
+        raise ValueError("Unknown required positive class")
+    required_class_id = transfer.positive.actual.CLASSES.get(required_class)
+    results, positive_pairs, required_pairs = [], 0, 0
     for expected in references:
         actual = next(sample for sample in actuals if sample["id"] == expected["id"])
         if any(not isinstance(expected.get(field), str) or not re.fullmatch(r"[a-f0-9]{64}", expected[field]) for field in ("rgbSha256", "sourceImageSha256")):
@@ -87,6 +91,9 @@ def summarize(reference: dict, android: dict) -> dict:
         metrics_ok = all(value <= kotlin_confidence_limit for value in confidence_errors) and all(value <= 2. for value in bbox_errors)
         equivalent = native_executed and count_match and class_match and matched_all and ordering_ok and prep_ok and metrics_ok and comparison.get("passed") is True and actual.get("passed") is True
         positive_pairs += int(positive and equivalent)
+        required_pairs += int(equivalent and required_class_id is not None and
+            any(item.get("classId") == required_class_id for item in expected_detections) and
+            any(item.get("classId") == required_class_id for item in android_detections))
         label = expected.get("exercise")
         if label is not None and label not in transfer.positive.actual.CLASSES:
             raise ValueError("Unexpected semantic label; do not infer or rewrite it")
@@ -101,10 +108,12 @@ def summarize(reference: dict, android: dict) -> dict:
             semanticCorrectness=dict(expectedExercise=label, evaluated=label is not None,
                 pythonTopMatchesExpected=None if label is None else python_top == expected_class,
                 androidTopMatchesExpected=None if label is None else android_top == expected_class)))
-    positive_pass = native_executed and all(sample["runtimeEquivalence"] == "PASS" for sample in results) and positive_pairs > 0 and android.get("allSamplesPassed") is True and android.get("positiveEquivalentPairs") == positive_pairs
+    required_coverage = required_class is None or (required_pairs > 0 and android.get("requiredClassPositivePairs") == required_pairs)
+    positive_pass = native_executed and all(sample["runtimeEquivalence"] == "PASS" for sample in results) and positive_pairs > 0 and android.get("allSamplesPassed") is True and android.get("positiveEquivalentPairs") == positive_pairs and required_coverage
     return dict(schemaVersion=1, validationPurpose="POSITIVE_CANDIDATE_SUMMARY", positiveEquivalentPairs=positive_pairs,
         positiveEquivalenceStatus="PASS" if positive_pass else "NOT_VERIFIED", androidNativeInferenceExecuted=native_executed,
         exportContractVerified=False, productionContract="NOT_VERIFIED", contractPromotionPerformed=False,
+        requiredPositiveClass=required_class, requiredClassPositivePairs=required_pairs, requiredClassCoverageSatisfied=required_coverage,
         policy="Summarizes recorded Kotlin comparison; no new tolerance, no label gate, no automatic VERIFIED promotion.", samples=results)
 
 

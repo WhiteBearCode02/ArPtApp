@@ -23,6 +23,9 @@ import org.junit.runner.RunWith
 /**
  * Opt-in, read-only verification of ONE workout physically saved by the user, never a DB dump.
  * Run each method separately with a unique -e sessionEvidenceRun <safe_run_id> argument.
+ * Restart/report regression may optionally read a prior selected_record.json using
+ * -e sessionSourceEvidenceRun <safe_run_id>; fresh results still use sessionEvidenceRun.
+ * Prior evidence is read-only and is never created, overwritten or copied into a new workout.
  * The baseline observes MAX(id) only; capture fails if zero or multiple new rows exist.
  * No accounts, profiles, tokens, raw analyses, images, landmarks or user IDs leave local memory.
  * Evidence is exclusively created inside the target DEBUG app's private noBackupFilesDir.
@@ -65,7 +68,8 @@ class YoloSessionPersistenceDeviceTest {
 
     @Test fun verifySameRecordAfterRestart() {
         requireDebug()
-        val saved = readEvidence("selected_record.json")
+        val sourceRun = sourceEvidenceRun()
+        val saved = readEvidence("selected_record.json", sourceRun)
         check(saved.getInt("processId") != Process.myPid()) {
             "Use a fresh app process after force-stop; same-process readback is not restart evidence."
         }
@@ -86,12 +90,14 @@ class YoloSessionPersistenceDeviceTest {
         writeEvidence("restart_verification.json", observed
             .put("capturedProcessId", saved.getInt("processId")).put("processId", Process.myPid())
             .put("sameRecord", true).put("freshProcessObserved", true)
+            .put("sourceEvidenceRun", sourceRun)
             .put("historyReportMapperRoundTrip", true))
     }
 
     @Test fun openSelectedReport() {
         requireDebug()
-        val saved = readEvidence("selected_record.json")
+        val sourceRun = sourceEvidenceRun()
+        val saved = readEvidence("selected_record.json", sourceRun)
         val selected = withReadOnlyDatabase { db -> readSelectedRecord(db, saved.getInt("recordId")) }
         assertEquals(saved.getString("diagnosticsSha256"), evidence(selected).getString("diagnosticsSha256"))
         val report = WorkoutReportData.fromRecord(selected)
@@ -128,6 +134,7 @@ class YoloSessionPersistenceDeviceTest {
         }
         writeEvidence("report_render_verification.json", JSONObject().put("schemaVersion", 1)
             .put("source", "SELECTED_PERSISTED_RECORD_HISTORY_REPORT_MAPPER")
+            .put("sourceEvidenceRun", sourceRun)
             .put("recordId", selected.id).put("debugOnly", true).put("initiallyCollapsed", diagnostics != null)
             .put("savedDiagnosticGroupsRendered", diagnostics != null)
             .put("legacyNullHidden", diagnostics == null)
@@ -173,21 +180,35 @@ class YoloSessionPersistenceDeviceTest {
             .put("accountProfileAndAnalysisDataExported", false)
     }
 
-    private fun evidenceDirectory(): File {
-        val run = InstrumentationRegistry.getArguments().getString("sessionEvidenceRun").orEmpty()
-        require(Regex("[a-z0-9][a-z0-9_-]{0,63}").matches(run)) { "Pass a unique safe -e sessionEvidenceRun argument." }
+    private fun validateRun(run: String, argument: String): String {
+        require(Regex("[a-z0-9][a-z0-9_-]{0,63}").matches(run)) { "Pass a safe -e $argument argument." }
+        return run
+    }
+
+    private fun evidenceRun(): String = validateRun(
+        InstrumentationRegistry.getArguments().getString("sessionEvidenceRun").orEmpty(), "sessionEvidenceRun")
+
+    /** Only restart/report readers call this; baseline/capture always address their own run. */
+    private fun sourceEvidenceRun(): String = InstrumentationRegistry.getArguments()
+        .getString("sessionSourceEvidenceRun")?.let { validateRun(it, "sessionSourceEvidenceRun") }
+        ?: evidenceRun()
+
+    private fun evidenceDirectory(run: String = evidenceRun(), create: Boolean = true): File {
+        validateRun(run, "evidence run")
         val root = context.noBackupFilesDir.canonicalFile
         val parent = File(root, "yolo_session_validation")
         val directory = File(parent, run)
         check(parent.canonicalPath == parent.absolutePath && directory.canonicalPath == directory.absolutePath) {
             "Symlink evidence directories are not allowed."
         }
-        check(directory.isDirectory || directory.mkdirs()) { "Could not create private evidence directory." }
+        if (create) check(directory.isDirectory || directory.mkdirs()) { "Could not create private evidence directory." }
+        else check(directory.isDirectory) { "Existing private source evidence directory is absent." }
         return directory
     }
 
-    private fun readEvidence(name: String): JSONObject {
-        val file = File(evidenceDirectory(), name)
+    private fun readEvidence(name: String, run: String = evidenceRun()): JSONObject {
+        // Reading a prior run must not mkdir or otherwise mutate its immutable evidence.
+        val file = File(evidenceDirectory(run, create = false), name)
         check(file.canonicalPath == file.absolutePath && file.isFile && file.length() in 1L..65_536L) {
             "Expected bounded private evidence file is absent or invalid."
         }

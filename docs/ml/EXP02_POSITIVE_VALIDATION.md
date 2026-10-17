@@ -2,6 +2,8 @@
 
 이 문서는 DEBUG 전용 수동 검증 절차입니다. **실시간 prediction은 비활성이고 production contract는 `NOT_VERIFIED`**입니다. 후보가 검출되거나 테스트가 통과해도 상수를 자동 승격하지 않습니다. Landmark Primary, 운동 잠금·횟수·점수·자세 분석, confidence `0.10`, IoU `0.70`, max detections `300`은 유지합니다.
 
+두 운동 실제 양성과 다중 겹침 NMS까지 요구하는 후속 승격 기준·최신 판정은 [EXP02_VERIFIED_REVIEW.md](EXP02_VERIFIED_REVIEW.md)를 따릅니다. 아래 기존 SQUAT 최소 조건의 통과 기록을 class1까지 검증된 것으로 확대하지 않습니다.
+
 ## 검증 경계
 
 - 기존 실제 Golden 4장은 Python/Android 모두 무검출: negative-path 증거이며 positive bbox/confidence/NMS 증거는 아닙니다.
@@ -52,13 +54,15 @@ $adb = 'C:\Users\dlgus\AppData\Local\Android\Sdk\platform-tools\adb.exe'
 ```powershell
 & $python scripts/generate-exp02-positive-reference.py --manifest local_validation/exp02_positive/manifest.json --output local_validation/exp02_positive/bundle
 # 다음 명령은 검증 앱을 force-stop하므로 운동 중 실행하지 않습니다.
-& $python scripts/transfer-exp02-positive.py --adb $adb --serial <serial> provision-reference --bundle local_validation/exp02_positive/bundle
-& $adb -s <serial> shell am instrument -w -r -e class com.example.arptapp.ui.camera.yolo.Exp02PositiveModelGoldenTest#actualCandidateMatchesPythonReference com.example.arptapp.test/androidx.test.runner.AndroidJUnitRunner
-& $python scripts/transfer-exp02-positive.py --adb $adb --serial <serial> export-comparison
+& $python scripts/transfer-exp02-positive.py --adb $adb --serial <serial> provision-reference --bundle local_validation/exp02_positive/bundle --run-id <새_run_id>
+& $adb -s <serial> shell am instrument -w -r -e positiveEvidenceRun <새_run_id> -e class com.example.arptapp.ui.camera.yolo.Exp02PositiveModelGoldenTest#actualCandidateMatchesPythonReference com.example.arptapp.test/androidx.test.runner.AndroidJUnitRunner
+& $python scripts/transfer-exp02-positive.py --adb $adb --serial <serial> export-comparison --run-id <새_run_id>
 & $python scripts/summarize-exp02-positive-comparison.py --reference local_validation/exp02_positive/bundle/reference.json --android local_validation/exp02_positive/bundle/android-positive-result.json --output local_validation/exp02_positive/comparison_summary.json
 ```
 
 Android 입력/결과는 private `no_backup/yolo/positive-golden/`에만 둡니다. harness는 Python과 동일 RGB raster를 복원해 production 컴포넌트를 사용합니다. 저장 시 native 결과와 같은 PNG의 decode hash를 함께 확인하여 입력 차이를 숨기지 않습니다. 모든 결과가 무검출이면 positive 테스트는 실패합니다. 실패나 미실행을 PASS로 표시하지 않습니다.
+
+새 도구는 PC 출력과 기기 run의 기존 자료 덮어쓰기를 거부합니다. 기존 폴더가 비어 있지 않으면 삭제하지 말고 새로운 ignored PC 출력 폴더 및 고유 run id를 사용하세요. `--run-id` 사용 시 실제 기기 위치는 `no_backup/yolo/positive-golden/runs/<run>/`입니다.
 
 ## 실제 운동 세션 저장/재시작 검증
 
@@ -108,7 +112,7 @@ Android 입력/결과는 private `no_backup/yolo/positive-golden/`에만 둡니�
 
 이 표의 대기 항목은 사용자 수동 촬영/실제 운동을 받은 뒤 실제 증거로만 갱신합니다.
 
-요청한 최소 A(실제 양성 확보)·B(동일 입력 runtime 동등성)·C(실제 세션 영속성/Report/History 확인)가 충족되어 **VERIFIED 승격 코드 리뷰가 가능한 상태**입니다. 사용자의 별도 승인 없이 상수는 변경하지 않았습니다.
+당시 SQUAT 단계의 최소 A(실제 양성 확보)·B(동일 입력 runtime 동등성)·C(실제 세션 영속성/Report/History 확인)는 충족했습니다. 이는 두 운동 전체 승격 판정이 아닙니다. 후속 기준의 현재 최종 판정은 **NOT_READY_FOR_VERIFIED**이며 [최신 리뷰](EXP02_VERIFIED_REVIEW.md)를 따릅니다. 사용자의 별도 승인 없이 상수는 변경하지 않았습니다.
 
 현재 실제 양성 검출은 class 0(SQUAT) 범위입니다. class 1 실제 양성, 다중 overlapping bbox suppression 및 다른 구도/해상도 전체를 이번 소수 입력으로 보장하지 않습니다. 사진 정답은 별도로 사용자가 명시해야 하며, 미지정 상태에서 운동 종류를 추측하거나 전체 accuracy를 산출하지 않습니다. 후보 SHA/이미지별 bbox/confidence, 실제 운동 record 식별자·횟수·시간 및 세션 증거는 ignored 로컬 자료/기기 private 파일에만 남깁니다.
 

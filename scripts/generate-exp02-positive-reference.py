@@ -136,9 +136,37 @@ def candidate_summary(samples: list[dict]) -> dict:
                 positiveEquivalenceStatus="ANDROID_COMPARISON_PENDING", productionContract="NOT_VERIFIED")
 
 
+def require_empty_output(output: Path):
+    """A new run may create evidence; it must never replace an earlier run or partial evidence."""
+    if output.exists() and (not output.is_dir() or any(output.iterdir())):
+        raise ValueError("Output already contains evidence; select a new empty run directory")
+
+
+def claim_output_directory(output: Path):
+    require_empty_output(output)
+    output.mkdir(parents=True, exist_ok=True)
+    # Exclusive persistent claim also rejects two simultaneous writers that both saw empty.
+    # Failed/partial runs stay immutable; use a new run id instead of clearing the claim.
+    with (output / ".validation-run.claim").open("x", encoding="ascii") as claim:
+        claim.write("LOCAL_ONLY_IMMUTABLE_VALIDATION_RUN\n")
+
+
+def normalized_native_snapshot(interpreter, outputs, np):
+    # LiteRT2.2.0 get_tensor() explicitly returns a COPY. Ultralytics8.4.176.forward
+    # denormalizes its copy only, so this reads untouched normalized native output,
+    # not a guessed inverse of the denormalized prediction used by Python NMS.
+    snapshot = interpreter.get_tensor(outputs[0]["index"])
+    if snapshot.shape != (1, 6, 8400) or snapshot.dtype != np.float32 or not np.isfinite(snapshot).all():
+        raise ValueError("Native NMS snapshot violates finite FLOAT32 [1,6,8400]")
+    if (snapshot[:, 4:] < 0).any() or (snapshot[:, 4:] > 1).any():
+        raise ValueError("Native class scores violate the existing decoder contract")
+    return np.ascontiguousarray(snapshot, dtype=np.dtype("<f4")).tobytes()
+
+
 def generate(args, repository: Path):
     samples = read_manifest(args.manifest, repository)
     output = require_private_path(args.output, repository, directory=True)
+    claim_output_directory(output)
     model = args.model.resolve()
     if model.name != actual.MODEL_NAME or model.stat().st_size != actual.MODEL_BYTES or actual.sha256(model.read_bytes()) != actual.MODEL_SHA256:
         raise ValueError("Canonical EXP02 model filename/size/SHA256 mismatch")
@@ -197,6 +225,13 @@ def generate(args, repository: Path):
             raw = reference["forward"](backend, tensor)[0]
             if raw.shape != (1, 6, 8400) or raw.dtype != np.float32 or not np.isfinite(raw).all():
                 raise ValueError("Actual native output violates canonical finite FLOAT32 shape")
+            raw_metadata = {}
+            if getattr(args, "export_nms_raw", False):
+                native_bytes = normalized_native_snapshot(interpreter, outputs, np)
+                raw_name = f"{sample['id']}.output.f32"
+                actual.private_child(stage, raw_name).write_bytes(native_bytes)
+                raw_metadata = dict(rawOutputFile=raw_name, rawOutputSha256=actual.sha256(native_bytes),
+                    rawOutputByteOrder="LITTLE_ENDIAN", rawOutputProvenance="ACTUAL_NATIVE_NORMALIZED_GET_TENSOR_COPY_AFTER_REFERENCE_FORWARD")
             processed = reference["non_max_suppression"](
                 torch.from_numpy(raw), conf_thres=.10, iou_thres=.70, nc=2, multi_label=False,
                 agnostic=False, max_det=300, rotated=False, end2end=False)[0]
@@ -212,7 +247,7 @@ def generate(args, repository: Path):
                 rgbFile=rgb_name, rgbSha256=actual.sha256(rgb), width=width, height=height,
                 inputTensorFile=tensor_name, inputTensorSha256=actual.sha256(tensor_bytes), inputTensorByteOrder="LITTLE_ENDIAN",
                 nmsOutputCount=len(processed), droppedFullyClippedCount=clipped, detections=detections,
-                positiveCandidate=bool(detections), **semantic_observation(sample.get("exercise"), detections)))
+                positiveCandidate=bool(detections), **raw_metadata, **semantic_observation(sample.get("exercise"), detections)))
         document = dict(schemaVersion=1, validationPurpose=PURPOSE,
             model=dict(id="yolo26n_exp02_fp32", filename=actual.MODEL_NAME, bytes=actual.MODEL_BYTES, sha256=actual.MODEL_SHA256),
             ultralyticsVersion=loader.VERSION, wheelSha256=loader.WHEEL_SHA256, sourceSha256=source_hashes,
@@ -232,7 +267,7 @@ def generate(args, repository: Path):
             candidateSummary=candidate_summary(result_samples), samples=result_samples,
             privacy="Private explicitly saved candidate PNGs/rasters/tensors only; never uploaded, committed, or packaged.")
         for sample in result_samples:
-            for filename in (sample["rgbFile"], sample["inputTensorFile"]):
+            for filename in (sample["rgbFile"], sample["inputTensorFile"], *([sample["rawOutputFile"]] if "rawOutputFile" in sample else [])):
                 actual.private_child(stage, filename).replace(actual.private_child(output, filename))
         pending = actual.private_child(output, "reference.json.pending")
         pending.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
@@ -250,6 +285,7 @@ def main():
     parser.add_argument("--source-root", type=Path, default=repository / "build/yolo-contract-reference/extracted")
     parser.add_argument("--wheel", type=Path, default=repository / "build/yolo-contract-reference/ultralytics-8.4.176-py3-none-any.whl")
     parser.add_argument("--output", type=Path, default=repository / "local_validation/exp02_positive/bundle")
+    parser.add_argument("--export-nms-raw", action="store_true", help="Private actual normalized native output copy for NMS evidence; no extra inference")
     args = parser.parse_args()
     try:
         generate(args, repository)

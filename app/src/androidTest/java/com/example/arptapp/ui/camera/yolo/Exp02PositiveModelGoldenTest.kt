@@ -47,11 +47,21 @@ class Exp02PositiveModelGoldenTest {
     @Test fun actualCandidateMatchesPythonReference() {
         assertTrue("Harness must never execute against a release target", BuildConfig.DEBUG)
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val directory = File(context.noBackupFilesDir.canonicalFile, "yolo/positive-golden")
+        val arguments = InstrumentationRegistry.getArguments()
+        val runId = arguments.getString("positiveEvidenceRun")
+        require(runId == null || runId.matches(Regex("[a-z0-9][a-z0-9_-]{0,63}")))
+        val base = File(context.noBackupFilesDir.canonicalFile, "yolo/positive-golden")
+        val directory = if (runId == null) base else File(base, "runs/$runId")
         validateDirectory(directory)
+        val target = File(directory, "android-positive-result.json")
+        require(!target.exists()) { "Previous evidence exists; choose a new run instead of overwriting" }
+        val requiredClass = arguments.getString("requiredPositiveClass")
+        require(requiredClass == null || requiredClass in setOf("SQUAT", "SHOULDER_PRESS"))
+        val requiredClassId = requiredClass?.let { label -> YoloModelPolicy.classMapping.entries.single { it.value.name == label }.key }
         val results = mutableListOf<Map<String, Any?>>()
         var nativeCount = 0
         var positivePairs = 0
+        var requiredClassPairs = 0
         var passed = false
         var failure = "NONE"
         var metadata: YoloTensorMetadata? = null
@@ -88,6 +98,8 @@ class Exp02PositiveModelGoldenTest {
                         val comparison = YoloActualGoldenComparator.compare(expected, actual)
                         val positive = expected.isNotEmpty() && actual.isNotEmpty()
                         if (positive && preprocessing.passed && comparison.passed) positivePairs++
+                        if (positive && preprocessing.passed && comparison.passed && requiredClassId != null &&
+                            expected.any { it.classId == requiredClassId } && actual.any { it.classId == requiredClassId }) requiredClassPairs++
                         val expectedId = sample.exercise?.let { label -> YoloModelPolicy.classMapping.entries.single { it.value.name == label }.key }
                         results += mapOf("id" to sample.id, "exercise" to sample.exercise, "cameraView" to sample.cameraView,
                             "sourceImageSha256" to sample.sourceImageSha256, "rgbSha256" to sample.rgbSha256,
@@ -105,8 +117,10 @@ class Exp02PositiveModelGoldenTest {
                     } finally { bitmap.recycle() }
                 }
             }
-            passed = results.isNotEmpty() && results.all { it["passed"] == true } && positivePairs > 0
+            passed = results.isNotEmpty() && results.all { it["passed"] == true } && positivePairs > 0 &&
+                (requiredClassId == null || requiredClassPairs > 0)
             if (positivePairs == 0) failure = "NO_POSITIVE_EQUIVALENCE_EVIDENCE"
+            else if (requiredClassId != null && requiredClassPairs == 0) failure = "REQUIRED_CLASS_POSITIVE_NOT_OBSERVED"
             assertTrue("Positive Golden needs >=1 actual positive equivalent detection; do not lower thresholds/widen tolerances", passed)
         } catch (error: Throwable) {
             if (failure == "NONE") failure = when (error) {
@@ -118,12 +132,12 @@ class Exp02PositiveModelGoldenTest {
             throw error
         } finally {
             validateDirectory(directory)
-            val target = File(directory, "android-positive-result.json")
-            require(!target.exists() || (OsConstants.S_ISREG(Os.lstat(target.absolutePath).st_mode) &&
-                target.canonicalFile == target.absoluteFile))
+            require(target.canonicalFile == target.absoluteFile && target.createNewFile())
+            Os.chmod(target.absolutePath, 384)
             val json = gson.toJson(mapOf("schemaVersion" to 1, "validationPurpose" to "POSITIVE_CANDIDATE",
                 "androidNativeInferenceExecuted" to (nativeCount > 0), "nativeInferenceCount" to nativeCount,
                 "positiveEquivalentPairs" to positivePairs, "allSamplesPassed" to passed, "failure" to failure,
+                "evidenceRun" to runId, "requiredPositiveClass" to requiredClass, "requiredClassPositivePairs" to requiredClassPairs,
                 "modelId" to YoloModelPolicy.MODEL_ID, "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
                 "tensorMetadata" to metadata, "productionContract" to Exp02YoloContract.verification.name,
                 "contractPromotionPerformed" to false, "predictionUsedForSession" to false,
