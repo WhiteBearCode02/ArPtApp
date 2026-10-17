@@ -1,6 +1,6 @@
 # EXP02 두 운동·NMS 계약 승격 리뷰
 
-현재 판정: **NOT_READY_FOR_VERIFIED**. 현재 production 상수는 `NOT_VERIFIED`이며 Landmark Primary / YOLO Shadow / 실시간 prediction 비활성 상태를 유지합니다. 이 문서의 최신 실제 결과 표를 충족하기 전까지 승격 가능으로 표시하지 않습니다.
+현재 판정: **READY_FOR_VERIFIED_REVIEW**. 추가 수동 숄더 프레스 후보에서 실제 class1 양성의 Python/Android 동등성을 확보했습니다. 이는 정의된 contract의 승격 리뷰 근거가 갖춰졌다는 뜻이지 자동 승격이나 실시간 사용 승인이 아닙니다. 현재 production 상수는 `NOT_VERIFIED`이며 Landmark Primary / YOLO Shadow / 실시간 prediction 비활성 상태를 유지합니다. 사용자 승인 후 별도 변경에서 activation 게이트 분리까지 검토해야 합니다.
 
 ## 판정 기준
 
@@ -10,13 +10,13 @@
 
 | 근거 | SQUAT | SHOULDER_PRESS |
 |---|---|---|
-| canonical model/tensor | PASS(기존 실제 native) | PASS(새 실제 native2회) |
-| preprocessing | PASS(기존 actual) | PASS(실제2장 BYTE_IDENTICAL) |
-| class decode / confidence / bbox / ordering | PASS(실제 양성2) | PARTIAL(무검출 결과·순서 동등, 실제 class1 양성 없음) |
+| canonical model/tensor | PASS(기존 실제 native) | PASS(기존2회 + 재시도1회 실제 native) |
+| preprocessing | PASS(기존 actual) | PASS(실제3장 BYTE_IDENTICAL) |
+| class decode / confidence / bbox / ordering | PASS(실제 양성2) | PASS(재시도 실제 class1 양성1) |
 | negative actual | 기존4장 + 수동후보1 무검출 동등성 PASS | 원본 무검출 결과 보존 |
 | NMS 다중 겹침 | PASS(실제 raw2종 및 controlled) | PASS(controlled class-aware), actual class1 overlap 미확보 |
-| Android native | 기존 실제 모델 로드/추론 PASS | PASS(실제2회, positive gate는 미달) |
-| semantic sanity | 사용자 정답5장 중4검출·1무검출 | 실제2장 모두 무검출 |
+| Android native | 기존 실제 모델 로드/추론 PASS | PASS(기존2회 + 재시도1회, class1 positive gate 통과) |
+| semantic sanity | 사용자 정답5장 중4검출·1무검출 | 실제3장 중 class1 검출1·무검출2, 전체 accuracy 아님 |
 
 confidence threshold `.10`, IoU `.70`, max detections300 및 기존 confidence `.001`/bbox2px actual 비교 한계는 바꾸지 않습니다. 동일 frozen raw의 NMS 비교는 기존 synthetic 한계 confidence `1e-6`/bbox `1e-4px`로 더 엄격하게 검사합니다. 실패를 맞추기 위해 tolerance/order를 넓히지 않습니다.
 
@@ -64,34 +64,57 @@ confidence threshold `.10`, IoU `.70`, max detections300 및 기존 confidence `
 
 ## 최신 실행 결과
 
+### 추가 숄더 프레스 재시도 (2026-10-17)
+
+사용자가 다시 숄더 프레스를 수행했다고 명시한 새 수동 후보1장을 별도 private run에서 비교했습니다. 촬영 방향은 별도 확인되지 않아 `cameraView=null`로 두었습니다. 이미지480×640/412,957bytes와 reference/raw/결과는 ignored 로컬 폴더 및 기기 private noBackup에만 보존하며, 이전 실패 결과와 라벨 정정을 덮어쓰지 않았습니다.
+
+| 비교 항목 | Python | Android | 결과 |
+|---|---|---|---|
+| class / NMS 후 수 / 순서 | SHOULDER_PRESS / 1 / [1] | SHOULDER_PRESS / 1 / [1] | exact PASS |
+| confidence | 0.10814288258552551 | 0.10814303 | 절대 차이 1.4901161e-7, PASS |
+| bbox [x1,y1,x2,y2] | [94.805496,207.075531,346.130676,629.463745] | [94.8055,207.07556,346.13068,629.46375] | 최대 차이 3.0517578e-5px, PASS |
+| preprocessing tensor | 1,228,800 float | 전 영역 오차0 | BYTE_IDENTICAL |
+
+Python 실제 모델 invoke1회와 Android instrumentation 실제 모델 load/metadata/invoke1회가 새로 성공했습니다. `requiredPositiveClass=SHOULDER_PRESS`의 실제 양성 pair1, `allSamplesPassed=true`, failure=NONE이며 device test1개 PASS입니다. confidence `.10`/IoU `.70` 및 기존 tolerance를 바꾸지 않았습니다.
+
+**Runtime equivalence=PASS / 해당 사진 semantic sanity=PASS**입니다. 그러나 confidence 약10.8%는 모델이 확신한다는 의미가 아니며 기존 temporal stabilizer의 minimumConfidence `.60`보다 낮습니다. 이 한 프레임을 안정된 인식으로 보고하거나 stabilizer를 낮추지 않습니다. 누적 사용자 확인 SHOULDER_PRESS3장 중 검출1·무검출2이며, 이는 선택된 소수 입력의 sanity check이지 전체 모델 accuracy가 아닙니다. SQUAT5장 중 검출4·무검출1 근거는 그대로 보존합니다.
+
+기존 actual/controlled NMS9종 및 세션 영속성 회귀 근거와 이번 class1 actual 양성을 함께 검토하여 **READY_FOR_VERIFIED_REVIEW**로 문서상 판정만 갱신합니다. 실제 class1 다중 overlap 및 모든 방향/해상도의 일반화까지 확인한 것은 아닙니다. production verification은 여전히 `NOT_VERIFIED`, 일반 Dashboard prediction은 비활성입니다. 실제 운동·rep/score/session lock 코드는 변경하지 않았습니다.
+
+이번 재시도는 데이터/문서만 변경했습니다. 이전 build/JVM/NMS/persistence 결과는 아래 과거 실행 근거이며 이번에 재실행한 것으로 표시하지 않습니다. 후보는 현재8/8장이며 추가 촬영을 위해 기존 자료를 자동 삭제하지 않습니다.
+
+### 이전 실행 근거 (재시도 전, 실패도 보존)
+
 새 기기에 연결해 추가 스쿼트2장과, 사용자가 별도로 실제 숄더 프레스라고 확인한 새2장을 확보했습니다. 앞의 추가2장은 사용자가 스쿼트라고 명시적으로 정정했습니다. 최초 manifest에서 촬영 완료 답변을 숄더 프레스 정답으로 해석한 것은 잘못이므로 원본을 덮어쓰지 않고 private 라벨 정정 sidecar를 기록했습니다. 폴더/샘플 ID에 shoulder라는 이름이 있어도 ground truth로 쓰지 않습니다.
 
 - SQUAT: 기존 실제 양성2 + 무검출1, 사용자 정정한 추가2장도 Python/Android 저장 시 native 모두 SQUAT 검출. 전체 accuracy 아님.
 - SHOULDER_PRESS: 실제 candidate2 / class1 positive0 / no detection2 / wrongclass0. Python·Android 모두 무검출이며 두 입력의 전처리 tensor는 BYTE_IDENTICAL, 각 sample runtime equivalence PASS. 하지만 양성 최소1이 없어 positive gate는 FAIL(`NO_POSITIVE_EQUIVALENCE_EVIDENCE`). 이 실패를 구현 회귀나 PASS로 바꾸지 않습니다.
 - NMS: 정확한 reference로 controlled6종 + 기존 실제 이미지 raw3종을 실행하고 Android 기존 decoder/NMS로9종 모두 PASS. 실제 raw2종에서 threshold 초과10개 → 최종1개, 각9개 same-class suppression witness 확인. 9종의 confidence/bbox 오차 모두0, class/order exact. 실제 무검출 raw1종은 overlap 증거로 세지 않습니다.
 - Persistence regression: 기존 실제 사용자 저장 행을 force-stop 후 새 PID에서 재조회하고 동일 집계/SHA 및 Report 접힘·펼침·저장 metric 표시 PASS. in-memory save/legacy 및 private storage8개도 이번 기기에서 새로 PASS. 새 사용자 운동을 생성/삽입한 것은 아닙니다.
-- VERIFIED Review: NOT_READY_FOR_VERIFIED.
+- 당시 VERIFIED Review: NOT_READY_FOR_VERIFIED. 위 추가 재시도 전의 판정입니다.
 
 DEBUG/release/test APK 빌드는 성공했습니다. JVM522 결과는 main/test 소스 변경이 없어 Gradle UP-TO-DATE로 유지됐으며, 새로 추가한 검증은 Python/Node 및 별도 Android instrumentation으로 구분해 기록합니다.
 
 Fresh Node91 / Python80(기존46 + next-stage11 + NMS23) 통과. 기기에서는 storage/Room8개 + NMS1개(9종) + 기존 실제 행 restart/Report2개가 통과했습니다. 실제 숄더 프레스 positive gate1개는 양성 부재로 실패했으며 전체 device 검사가 모두 PASS라고 표시하지 않습니다. APK3개 private packaging/release 경계 및 변경 public text12개 보안 패턴 검사도 통과했습니다.
+
+## 현재 Contract Evidence (추가 재시도 반영)
 
 | Contract Evidence | 최종 판정 | 범위 |
 |---|---|---|
 | Model identity | PASS | filename/9,894,030bytes/canonical SHA256 유지 |
 | Tensor | PASS | input FLOAT32[1,3,640,640], output FLOAT32[1,6,8400] |
 | Preprocess | PASS | pinned RGB/BCHW/FLOAT32/255/center letterbox114, 실제 비교 |
-| Decode | PARTIAL | class0 actual 및 class1 controlled 통과, class1 actual positive 없음 |
-| BBox / Confidence | PARTIAL | class0 actual 및 frozen raw 동등, class1 실제 양성값 없음 |
+| Decode | PASS | class0 actual 및 class1 actual positive 동등 |
+| BBox / Confidence | PASS | class0 actual + 추가 class1 actual 및 frozen raw 동등 |
 | NMS | PASS | ACTUAL_IMAGE_NMS2 overlap + CONTROLLED_MODEL_FORMAT_NMS6 |
 | Synthetic Golden | PASS | 기존 JVM 결과 + 이번 fresh controlled Python/Android |
 | Negative Actual | PASS | 기존4장 보존, 이번 숄더 프레스2장 무검출 동등 |
 | SQUAT Positive | PASS | 기존 실제 양성 근거 보존 |
-| SHOULDER_PRESS Positive | FAIL | 실제2장 모두 무검출, 목표class1 양성 미확보 |
-| Android Native | PASS | 새 실제 모델 로드/metadata/추론2회 성공 |
+| SHOULDER_PRESS Positive | PASS | 추가 재시도 class1 양성1, 기존 무검출2장도 보존 |
+| Android Native | PASS | 기존2회 및 추가1회 실제 모델 로드/metadata/추론 성공 |
 | Persistence | PASS | in-memory save/legacy + 기존 실제 행 restart/Report 회귀 |
 
-현재 관측은 동일 이미지에서 양측 무검출이므로 Android만의 prediction 불일치 증거는 아닙니다. 그렇다고 class1 양성 계약 검증이나 전체 모델 성능을 통과한 것은 아닙니다. 새로운 class1 실제 양성 자료 확보 또는 모델/입력 도메인의 별도 성능 검토가 필요하며, 재학습·threshold 변경은 이번 범위에 포함하지 않았습니다.
+이전 두 무검출과 추가 class1 양성 모두 Python/Android가 동등했습니다. 정의된 contract의 최소 실제 양성 근거는 두 class에서 확보했지만 모델 성능·촬영 방향별 정확도·안전성 보장은 아닙니다. 낮은 confidence와 무검출은 별도 모델/입력 도메인 성능 검토 항목이며, 재학습·threshold 변경은 이번 범위에 포함하지 않았습니다.
 
 ## NMS 결과 요약
 
@@ -108,7 +131,7 @@ Fresh Node91 / Python80(기존46 + next-stage11 + NMS23) 통과. 기기에서는
 
 NMS harness 자체는 모델을 로드하거나 native inference하지 않습니다. 실제 raw는 별도 actual Python invoke에서 얻었고, Android NMS 검사는 같은 frozen raw를 사용합니다. 기존 실제 Android native 모델 검증과 혼동하지 않습니다.
 
-## 변경 파일(이번 단계 전체12개)
+## 변경 파일(이전 단계 전체12개)
 
 ```text
 app/src/androidTest/java/com/example/arptapp/data/YoloSessionPersistenceDeviceTest.kt
@@ -126,3 +149,12 @@ docs/ml/EXP02_VERIFIED_REVIEW.md
 ```
 
 main/release 앱 코드·리소스·의존성은 변경하지 않았습니다. private 보고서·새 candidate/reference/raw/bundle·라벨 정정은 ignored 로컬 자료이며 공개 source 목록에 넣지 않습니다. 자동 commit/push하지 않았습니다.
+
+### 추가 재시도 변경 파일
+
+- `docs/ml/EXP02_VERIFIED_REVIEW.md`: class1 actual 양성 실측값, 누적 sanity, 승격 리뷰 상태 및 활성화 금지 구분.
+- `docs/ml/EXP02_POSITIVE_VALIDATION.md`: 최신 리뷰 상태 연결 갱신.
+
+새 원본 PNG/Android JSON/manifest/reference/raw/tensor/comparison 및 재시도 보고서는 `local_validation/exp02_positive/shoulder_press_20261017_03/` 아래 ignored 자료입니다. 모델·사진·venv의 Git 미추적을 재확인했으며 새 의존성·API·원격 업로드·과금 설정 변경은 없습니다. 이번 재시도는 새 APK를 만들거나 설치하지 않았습니다.
+
+이번 fresh 검사는 Android actual positive instrumentation1개, Node16개(`exp02-next-stage`/`exp02-positive`), Python21개(comparison10/next-stage11) 모두 PASS입니다. `git diff --check`도 통과했습니다. 이번 변경은 위 문서2개와 ignored 검증 자료뿐이며 build/JVM은 다시 실행하지 않았습니다.
