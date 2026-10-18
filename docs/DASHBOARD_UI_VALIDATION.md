@@ -1,5 +1,7 @@
 # Dashboard 운동 화면 UI 정리
 
+2026-10-18: 두 손가락 CameraX 줌과 작은 배율·초기화 버튼을 추가했다. 제스처 경계, 실제 줌 범위, 분석 영향 및 자동/실기기 검증 구분은 [CAMERA_ZOOM_VALIDATION.md](CAMERA_ZOOM_VALIDATION.md)를 참조한다.
+
 ## 현재: 고정 헤더·준비/운동 상태 분리 (2026-10-16 2차 UX)
 
 **현재 화면의 기준은 이 절입니다.** 아래 1차 구현 기록은 이전 APK/구조의 이력이며 현재 구조와 구별합니다. Compose/새 디자인 라이브러리로 이동하지 않고 기존 XML·ViewBinding·Material UI를 유지했습니다.
@@ -7,7 +9,7 @@
 ### 구성 요소 트리
 
 ```text
-FrameLayout
+CameraZoomGestureLayout (FrameLayout 확장)
 ├─ 전체 화면 CameraX Preview + 관절 Overlay (기존 좌표계 유지)
 └─ dashboardChrome (시스템 바/cutout safe-area padding)
    ├─ 고정 헤더: 뒤로가기 | 제목 + 작은 렌즈 상태 | 전후면 전환
@@ -15,6 +17,7 @@ FrameLayout
    │  ├─ 현재 인식 상태 칩
    │  ├─ 준비/기준 기록 중: 설정 카드 [촬영 방향 > / 내 기준 기록 >]
    │  ├─ 운동 중: 방향/개인 기준 요약 (설정 카드와 상호 배타적)
+   │  ├─ 작은 카메라 배율·초기화 버튼
    │  ├─ 빈 가변 공간 (중앙 프리뷰 확보)
    │  ├─ YOLO 진단 패널 (DEBUG, 기본 GONE, 펼친 경우 144dp 내부 스크롤)
    │  └─ 하단 정보: 횟수 카드 + 작은 진단 버튼 → 안내 배너

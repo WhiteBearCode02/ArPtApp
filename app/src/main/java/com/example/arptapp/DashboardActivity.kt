@@ -46,6 +46,7 @@ import com.example.arptapp.ui.camera.LandmarkExerciseDetector
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.example.arptapp.ui.dashboard.DashboardUiPolicy
+import com.example.arptapp.ui.dashboard.CameraZoomUi
 import com.example.arptapp.ui.dashboard.PersonalReferenceDialog
 import com.example.arptapp.ui.dashboard.DebugValidationControls
 import com.example.arptapp.ui.dashboard.DebugPositiveValidationControls
@@ -70,6 +71,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var cameraController: PoseCameraController
+    private var cameraZoomUi: CameraZoomUi? = null
     private val mainViewModel: MainViewModel by viewModels()
     private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
@@ -155,6 +157,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 }
             },
             yoloShadowObserver = yoloSessionDiagnostics ?: NoYoloShadowObserver,
+            onZoomChanged = { cameraZoomUi?.render(it) },
             onLensChanged = { front, canSwitch ->
                 cameraCanSwitch = canSwitch
                 val text = getString(if (front) R.string.camera_lens_front else R.string.camera_lens_back)
@@ -165,6 +168,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 lensSwitchRequested = false
             }
         )
+        cameraZoomUi = CameraZoomUi(binding.root, binding.btnZoomReset, cameraController,
+            listOf(binding.layoutCameraHeader, binding.layoutDetectedExercise, binding.layoutSetupOptions,
+                binding.layoutWorkoutSummary, binding.yoloDiagnosticsPanel, binding.layoutWorkoutFooter,
+                binding.layoutCameraActions, binding.btnZoomReset))
         debugValidationControls = DebugPositiveValidationControls.attach(this, binding.yoloDiagnosticsPanel,
             cameraController::requestValidationFrame, cameraController::cancelValidationFrame)
         binding.btnSwitchCamera.isEnabled = false
@@ -748,6 +755,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     override fun onDestroy() {
+        cameraZoomUi?.close()
+        cameraZoomUi = null
         debugValidationControls?.close()
         debugValidationControls = null
         referenceChoiceDialog?.dismiss()
@@ -769,6 +778,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     }
 
     override fun onPause() {
+        cameraZoomUi?.cancelGesture()
         debugValidationControls?.onHostPaused()
         if (::cameraController.isInitialized) cameraController.cancelValidationFrame()
         sensorManager.unregisterListener(this)

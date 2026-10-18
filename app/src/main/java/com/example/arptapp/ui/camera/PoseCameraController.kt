@@ -52,8 +52,9 @@ class PoseCameraController(
     private val onError: (CameraPipelineStage, Throwable) -> Unit,
     private val onLensChanged: (isFrontFacing: Boolean, canSwitch: Boolean) -> Unit = { _, _ -> },
     private val onYoloShadowSnapshot: (YoloShadowSnapshot) -> Unit = {},
-    yoloShadowObserver: YoloShadowObserver = NoYoloShadowObserver
-) : AutoCloseable {
+    yoloShadowObserver: YoloShadowObserver = NoYoloShadowObserver,
+    onZoomChanged: (CameraZoomState) -> Unit = {}
+) : AutoCloseable, CameraZoomControl {
     companion object {
         private const val TAG = "PoseCameraController"
 
@@ -68,6 +69,7 @@ class PoseCameraController(
 
     private val appContext = context.applicationContext
     private val mainExecutor = ContextCompat.getMainExecutor(appContext)
+    private val zoomController = CameraXZoomController(lifecycleOwner, mainExecutor, onZoomChanged)
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val submissionPolicy = FrameSubmissionPolicy()
     private val frameTracker = CameraFrameTracker()
@@ -99,6 +101,11 @@ class PoseCameraController(
 
     val isFrontFacing: Boolean
         get() = lensFacing == CameraSelector.LENS_FACING_FRONT
+
+    override val zoomState: CameraZoomState get() = zoomController.zoomState
+    override fun setZoomRatio(ratio: Float): Boolean = zoomController.setZoomRatio(ratio)
+    override fun scaleZoom(factor: Float): Boolean = zoomController.scaleZoom(factor)
+    override fun resetZoom(): Boolean = zoomController.resetZoom()
 
     /** 기존 lite 모델과 LIVE_STREAM 설정을 유지한다. YOLO 분류 결과에 종속되지 않는다. */
     fun initialize() {
@@ -188,14 +195,17 @@ class PoseCameraController(
             .also { it.setAnalyzer(analysisExecutor) { image -> analyzeImage(image, generation, front) } }
         try {
             imageAnalyzer?.clearAnalyzer()
+            zoomController.unbind()
             provider.unbindAll()
             preview = nextPreview
             imageAnalyzer = nextAnalyzer
-            provider.bindToLifecycle(lifecycleOwner, selector, nextPreview, nextAnalyzer)
+            val boundCamera = provider.bindToLifecycle(lifecycleOwner, selector, nextPreview, nextAnalyzer)
+            zoomController.bind(boundCamera)
             // Publish actual bound lens, not requested lens, so front-only fallback matches the UI/mirror.
             lensFacing = selectedFacing
             onLensChanged(front, hasBack && hasFront)
         } catch (error: Exception) {
+            zoomController.unbind()
             nextAnalyzer.clearAnalyzer()
             dispatchError(CameraPipelineStage.CAMERA_BINDING, error)
         }
@@ -249,6 +259,7 @@ class PoseCameraController(
     override fun close() {
         if (closed) return
         closed = true
+        zoomController.close()
         cancelValidationFrame()
         yoloShadow?.close()
         frameTracker.advance()

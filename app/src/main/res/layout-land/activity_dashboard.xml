@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.arptapp.ui.camera.CameraZoomGestureLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cameraZoomGestures"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black">
@@ -222,6 +223,17 @@
                         android:layout_marginTop="2dp" />
                 </LinearLayout>
 
+                <!-- Compact reset chip stays in-flow, outside header, clear preview spacer and footer. -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnZoomReset"
+                    style="@style/Widget.AIRPTCoach.Dashboard.ZoomChip"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="4dp"
+                    android:contentDescription="@string/camera_zoom_connecting_description"
+                    android:enabled="false"
+                    android:text="@string/camera_zoom_connecting" />
+
                 <!-- This empty weighted region reserves the camera center, not an overlay guide. -->
                 <Space
                     android:id="@+id/layoutCameraClearSpace"
@@ -363,4 +375,4 @@
                 android:visibility="gone" />
         </FrameLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
-</FrameLayout>
+</com.example.arptapp.ui.camera.CameraZoomGestureLayout>

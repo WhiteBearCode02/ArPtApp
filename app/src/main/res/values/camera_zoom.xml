@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="camera_zoom_connecting">—x</string>
+    <string name="camera_zoom_connecting_description">카메라 배율 확인 중</string>
+    <string name="camera_zoom_ratio">%1$sx</string>
+    <string name="camera_zoom_reset_description">카메라 배율 %1$s배, 탭하여 기본 배율로 초기화</string>
+    <string name="camera_zoom_fixed_description">카메라 배율 %1$s배, 이 카메라는 확대·축소를 지원하지 않습니다</string>
+    <style name="Widget.AIRPTCoach.Dashboard.ZoomChip" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:maxWidth">112dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:background">@drawable/bg_camera_status_chip</item>
+        <item name="android:backgroundTint">@null</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/aurora_ice</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+</resources>
