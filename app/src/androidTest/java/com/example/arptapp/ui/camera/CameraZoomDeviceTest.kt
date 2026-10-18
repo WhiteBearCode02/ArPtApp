@@ -17,7 +17,11 @@ import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.swipeUp
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.arptapp.R
 import com.example.arptapp.ui.dashboard.CameraZoomUi
 import com.example.arptapp.domain.detection.ExerciseDetectionResult
 import com.example.arptapp.domain.detection.DetectorStatus
@@ -54,7 +58,11 @@ class CameraZoomDeviceTest {
                 }
                 button = Button(activity).apply { setOnClickListener { clicks++ } }
                 scroll = NestedScrollView(activity).apply {
-                    addView(FrameLayout(activity), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6000))
+                    id = R.id.scrollDashboardContent
+                    // Empty FrameLayout has no intrinsic height under ScrollView's UNSPECIFIED
+                    // measurement. Give this fixture real minimum content, not only LayoutParams.
+                    addView(FrameLayout(activity).apply { minimumHeight = 6000 },
+                        ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6000))
                 }
                 root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply { topMargin = 200 })
                 root.addView(button, FrameLayout.LayoutParams(400, 180))
@@ -66,11 +74,17 @@ class CameraZoomDeviceTest {
             await("gesture host layout") { scenario.onActivity { laidOut.set(root.height > 600) }; laidOut.get() }
             scenario.onActivity {
                 assertTrue(root.height > 600)
+                assertTrue("fixture must actually be scrollable", scroll.getChildAt(0).height > scroll.height)
                 val x = root.width / 2f
                 val y = root.height / 2f
                 stream(root, x, y, pinch = false)
                 assertEquals("one finger must never scale", 0, scales)
-                drag(root, x, y)
+            }
+            // Inject a real one-finger swipe through the Window, including normal event timing.
+            onView(withId(R.id.scrollDashboardContent)).perform(swipeUp())
+            scenario.onActivity {
+                val x = root.width / 2f
+                val y = root.height / 2f
                 assertTrue("one-finger vertical scroll still works beneath chrome", scroll.scrollY > 0)
                 assertEquals(0, scales)
                 scroll.scrollTo(0, 0)
@@ -99,6 +113,7 @@ class CameraZoomDeviceTest {
         ActivityScenario.launch(CameraZoomVerificationActivity::class.java).use { scenario ->
             val zoom = AtomicReference(CameraZoomState())
             val poseFrames = AtomicInteger()
+            val frontPoseFrames = AtomicInteger()
             val shadowFrames = AtomicInteger()
             val shadowState = AtomicReference<ExerciseDetectionResult?>()
             val failures = CopyOnWriteArrayList<String>()
@@ -108,7 +123,10 @@ class CameraZoomDeviceTest {
             scenario.onActivity { activity ->
                 val b = activity.binding
                 controller = PoseCameraController(activity, activity, b.viewFinder,
-                    onResult = { poseFrames.incrementAndGet() },
+                    onResult = { frame ->
+                        poseFrames.incrementAndGet()
+                        if (frame.isFrontFacing) frontPoseFrames.incrementAndGet()
+                    },
                     onError = { stage, _ -> failures.add(stage.name) },
                     onLensChanged = { _, switch -> canSwitch.set(switch) },
                     onYoloShadowSnapshot = { snapshot ->
@@ -139,13 +157,17 @@ class CameraZoomDeviceTest {
                     scenario.onActivity { controller.switchCamera() }
                     await("front bind") { zoom.get().available && controller.isFrontFacing }
                     exerciseZoom(scenario, controller, zoom, "front")
+                    val frontBefore = frontPoseFrames.get()
+                    scenario.onActivity { controller.setZoomRatio(1.3f) }
+                    await("zoomed front MediaPipe callbacks") { frontPoseFrames.get() >= frontBefore + 3 }
                     scenario.onActivity { controller.switchCamera() }
                     await("rear rebind default") { zoom.get().available && !controller.isFrontFacing && zoom.get().currentZoomRatio == 1f }
                 }
                 scenario.moveToState(Lifecycle.State.CREATED)
                 scenario.onActivity { assertFalse("paused camera rejects zoom", controller.scaleZoom(1.1f)) }
+                val beforeResume = poseFrames.get()
                 scenario.moveToState(Lifecycle.State.RESUMED)
-                await("resume callbacks") { poseFrames.get() > poseBefore + 3 }
+                await("new callbacks after resume") { poseFrames.get() >= beforeResume + 3 }
                 assertTrue("pipeline errors: $failures", failures.isEmpty())
             } finally {
                 scenario.onActivity { ui?.close(); controller.close(); assertFalse(controller.scaleZoom(2f)) }
@@ -207,17 +229,6 @@ class CameraZoomDeviceTest {
 
     private fun receipt(message: String) {
         instrumentation.sendStatus(2, Bundle().apply { putString("stream", "ZOOM: $message\n") })
-    }
-
-    private fun drag(root: CameraZoomGestureLayout, x: Float, y: Float) {
-        val down = SystemClock.uptimeMillis()
-        fun send(action: Int, step: Int) {
-            val event = MotionEvent.obtain(down, down + step * 32L, action, x, y - step * 30f, 0)
-            try { root.dispatchTouchEvent(event) } finally { event.recycle() }
-        }
-        send(MotionEvent.ACTION_DOWN, 0)
-        for (step in 1..8) send(MotionEvent.ACTION_MOVE, step)
-        send(MotionEvent.ACTION_CANCEL, 9) // No fling or asynchronous scrolling contaminates next case.
     }
 
     /** Real Android dispatch through attached views. Motion events never leave this test process. */

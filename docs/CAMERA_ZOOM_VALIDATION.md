@@ -64,8 +64,14 @@ Landmark Primary, SessionExerciseLock, 운동 분류, squat/shoulder analyzer, r
 | 변경 파일 비밀값 검사 | 변경된 공개 텍스트의 secret 패턴 검사 PASS; 저장소 전체/이력 보안 감사 아님 |
 | 첫 실기기 제어 확인 | 연결된 SM-S908N 후면 0.6–10.0x / 전면 1.0–8.0x, 확대·min/max clamp·reset, rear 재바인딩 PASS |
 | 첫 실기기 MediaPipe | 1.3x 요청 후 pose result 콜백 수신 PASS (사람 검출/정답/overlay 시각 검증과 다름) |
-| 전체 기기 회귀 | 재검증 중. 중간 실행은 자동 잠금(Dozing)으로 유효하지 않음. 최종 결과는 아래에 별도 기록 |
+| 세로/가로 실제 layout | 배율 버튼의 표시·48dp 터치 높이·접근성 설명 및 헤더/하단 정보/CTA 비중첩 PASS |
+| YOLO Shadow native | 기존 private 모델로 READY 및 1.3x 요청 후 timings 포함 실제 추론 콜백 수신 PASS. 종목 정답·stable lock·운동 결과 검증과 다름 |
+| 전체 기기 회귀 | SM-S908N instrumentation **3개 PASS, 0 failure, skip 없음** (잠금 해제 후 최종 실행) |
+| 제스처·스크롤 | 두 손가락 scale 수신, 한 손가락 Window swipe/스크롤, 보호 버튼 탭, 보호 영역 pinch 제외, 제스처 취소 PASS. 미지원 상태는 검증용 flag/JVM으로 확인했으며 실제 고정 줌 기기 검증은 아님 |
+| 전면 분석·수명주기 | 전면 1.3x 요청 후 새 MediaPipe callback 3개, rear→front→rear 기본 배율 복귀, pause 중 명령 거부, resume 이후 새 MediaPipe callback 3개, close 후 명령 거부 PASS |
 | 실제 운동 / 시각적 관절 정합성 | 사용자 확인 대기 |
+
+중간 테스트의 실패도 최종 통과와 구분한다. 자동 잠금(Dozing) 상태 실행은 최종 근거에서 제외했다. 이후 스크롤 테스트의 빈 FrameLayout은 ScrollView 측정에서 자체 콘텐츠 높이가 없었으므로 테스트 fixture에 명시적인 최소 높이를 주고 실제 scroll range를 사전 assert했다. 버튼 클릭은 UP와 같은 main-thread turn이 아니라 posted click 처리 이후에 검사한다. 한 손가락 스크롤은 Espresso Window swipe로 확인한다. 이 보완은 androidTest만 변경했고 실제 앱의 제스처·분석 코드를 통과시키기 위해 우회하거나 바꾸지 않았다.
 
 DEBUG 전용·unexported `CameraZoomVerificationActivity`는 실제 layout을 inflate하는 instrumentation host다. 계정/DB를 읽거나 기록하지 않고 자체 카메라도 시작하지 않는다. 테스트가 명시적으로 controller를 만들고 닫는다. 테스트가 보이는 동안만 KEEP_SCREEN_ON을 사용하며 시스템 잠금 설정을 바꾸지 않는다. release manifest에는 포함되지 않는다.
 
