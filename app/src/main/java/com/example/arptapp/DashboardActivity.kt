@@ -272,9 +272,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 else -> com.example.arptapp.domain.analyzer.CameraView.UNKNOWN
             }
             binding.btnCameraView.text = when (cameraView) {
-                com.example.arptapp.domain.analyzer.CameraView.FRONT -> getString(R.string.personal_reference_camera_view_value,
+                com.example.arptapp.domain.analyzer.CameraView.FRONT -> getString(R.string.dashboard_camera_view_compact_value,
                     getString(R.string.personal_reference_front))
-                com.example.arptapp.domain.analyzer.CameraView.SIDE -> getString(R.string.personal_reference_camera_view_value,
+                com.example.arptapp.domain.analyzer.CameraView.SIDE -> getString(R.string.dashboard_camera_view_compact_value,
                     getString(R.string.personal_reference_side))
                 else -> getString(R.string.dashboard_camera_view)
             }

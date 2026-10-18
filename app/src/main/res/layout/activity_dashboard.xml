@@ -168,34 +168,6 @@
                         android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Preparation only. Runtime swaps this card for the compact summary below. -->
-                <LinearLayout
-                    android:id="@+id/layoutSetupOptions"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_dashboard_glass_panel"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCameraView"
-                        style="@style/Widget.AIRPTCoach.Dashboard.SetupRow"
-                        android:text="@string/dashboard_camera_view" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="#4079C9D0"
-                        android:importantForAccessibility="no" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnPersonalReference"
-                        style="@style/Widget.AIRPTCoach.Dashboard.SetupRow"
-                        android:text="@string/dashboard_personal_reference" />
-                </LinearLayout>
-
                 <LinearLayout
                     android:id="@+id/layoutWorkoutSummary"
                     android:layout_width="match_parent"
@@ -249,6 +221,28 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
+
+                    <!-- Preparation-only secondary controls; GONE as a unit while exercising.
+                         Content-aware layout wraps vertically on narrow panes / large fonts. -->
+                    <com.example.arptapp.ui.dashboard.CompactSetupLayout
+                        android:id="@+id/layoutSetupOptions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="6dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCameraView"
+                            style="@style/Widget.AIRPTCoach.Dashboard.SetupChip"
+                            android:text="@string/dashboard_camera_view" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPersonalReference"
+                            style="@style/Widget.AIRPTCoach.Dashboard.SetupChip"
+                            android:text="@string/dashboard_personal_reference" />
+                    </com.example.arptapp.ui.dashboard.CompactSetupLayout>
 
                     <LinearLayout
                         android:id="@+id/layoutCountAndDiagnostics"

@@ -125,20 +125,22 @@ for (const configuration of ["layout", "layout-land"]) {
     assert.ok(actionChildren.includes(ui.byId("btnEndExercise")))
     const setup = ui.descendants(ui.byId("layoutSetupOptions"))
     assert.ok(setup.indexOf(ui.byId("btnCameraView")) < setup.indexOf(ui.byId("btnPersonalReference")))
-    assert.equal(ui.byId("layoutSetupOptions").attrs["android:orientation"], "vertical")
+    assert.equal(ui.byId("layoutSetupOptions").name, "com.example.arptapp.ui.dashboard.CompactSetupLayout")
+    assert.equal(ui.byId("layoutSetupOptions").attrs["android:orientation"], "horizontal")
     for (const id of ["btnCameraView", "btnPersonalReference"]) {
       const attrs = resolvedAttributes(ui.byId(id))
-      assert.equal(attrs["android:maxLines"], "1", `${id} is a one-line list menu`)
-      assert.equal(attrs.icon, "@drawable/ic_dashboard_chevron_right")
-      assert.equal(attrs.iconGravity, "end")
+      assert.equal(attrs["android:layout_width"], "wrap_content", `${id} is not a full-width list row`)
+      assert.equal(attrs["android:singleLine"], "false", `${id} can wrap large/long text`)
+      assert.equal(attrs["android:textSize"], "12sp")
+      assert.equal(attrs.icon, undefined, "secondary chips have no large navigation chevron")
     }
   })
 
-  test(`${configuration}: setup/summary precede clear camera space and lower count-feedback-CTA stack`, () => {
+  test(`${configuration}: compact setup directly precedes count in lower footer, not camera center`, () => {
     const ui = layout(path)
     const body = ui.byId("layoutDashboardContent")
     assert.equal(body.attrs["android:orientation"], "vertical")
-    const ordered = ["layoutDetectedExercise", "layoutSetupOptions", "layoutWorkoutSummary",
+    const ordered = ["layoutDetectedExercise", "layoutWorkoutSummary",
       "layoutCameraClearSpace", "yoloDiagnosticsPanel", "layoutWorkoutFooter"].map(id => body.children.indexOf(ui.byId(id)))
     assert.ok(ordered.every(index => index >= 0), "all sections are direct, stacked body children")
     assert.deepEqual([...ordered].sort((a, b) => a - b), ordered)
@@ -150,6 +152,12 @@ for (const configuration of ["layout", "layout-land"]) {
     const footer = ui.byId("layoutWorkoutFooter")
     assert.equal(footer.attrs["android:orientation"], "vertical")
     const row = ui.byId("layoutCountAndDiagnostics")
+    const setup = ui.byId("layoutSetupOptions")
+    assert.deepEqual(footer.children.slice(0, 2), [setup, row], "no spacer/debug/card between settings and count")
+    assert.ok(!body.children.includes(setup), "large upper setup card is removed")
+    assert.equal(setup.attrs["android:background"], undefined, "no large enclosing card background")
+    assert.ok(parseFloat(setup.attrs["android:layout_marginBottom"]) <= 8)
+    assert.ok(parseFloat(setup.attrs["android:layout_marginTop"]) <= 8)
     assert.ok(footer.children.indexOf(row) < footer.children.indexOf(ui.byId("tvPoseFeedback")),
       "count comes before guidance; the fixed CTA is below this bounded footer")
     assert.ok(ui.descendants(row).includes(ui.byId("layoutCount")))
@@ -269,8 +277,24 @@ test("opt-in allocated diagnostic panel stays DEBUG-only without feeding the pri
 
 test("new dashboard presentation modules add no API calls, credentials or billable providers", () => {
   for (const file of ["ui/dashboard/DashboardUiPolicy.kt", "ui/dashboard/PersonalReferenceDialog.kt",
-    "ui/dashboard/YoloDiagnosticsPanel.kt"]) {
+    "ui/dashboard/YoloDiagnosticsPanel.kt", "ui/dashboard/CompactSetupLayout.kt"]) {
     assert.doesNotMatch(read(javaRoot + file),
       /https?:\/\/|HttpClient|OkHttp|Retrofit|SUPABASE|LLM_API_KEY|accessToken|FileOutputStream|writeBytes/)
   }
+})
+
+test("compact settings choose a row or content-height column without changing domain actions", () => {
+  const source = read(javaRoot + "ui/dashboard/CompactSetupLayout.kt")
+  assert.match(source, /measureChildWithMargins/)
+  assert.match(source, /rowWidth > available/)
+  assert.match(source, /VERTICAL else HORIZONTAL/)
+  assert.match(source, /child.visibility == View.GONE/)
+  assert.doesNotMatch(source, /setOnClickListener|CameraView|ExerciseType|CameraControl|save\(|reset\(/)
+  const activity = dashboard()
+  assert.match(activity, /dashboard_camera_view_compact_value/)
+  assert.match(activity, /btnCameraView\.setOnClickListener/)
+  assert.match(activity, /btnPersonalReference\.setOnClickListener \{ togglePersonalReference\(\) \}/)
+  const dialog = read(javaRoot + "ui/dashboard/PersonalReferenceDialog.kt")
+  assert.match(dialog, /R.string.personal_reference_camera_view_value/,
+    "compact label does not shorten the full context inside reference dialog")
 })

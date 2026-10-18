@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dashboard_back">뒤로가기</string>
-    <string name="dashboard_camera_view">촬영 방향 선택</string>
+    <string name="dashboard_camera_view">방향 · 선택</string>
+    <string name="dashboard_camera_view_compact_value">방향 · %1$s</string>
     <string name="dashboard_personal_reference">내 기준 기록</string>
     <string name="dashboard_pose_guide">측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요</string>
     <string name="dashboard_count_unit">회</string>
@@ -12,32 +13,30 @@
     <string name="dashboard_yolo_expanded_state">펼쳐짐</string>
     <string name="dashboard_yolo_collapsed_state">접힘</string>
 
-    <!-- Shared setup rows keep typography, hit area and navigation affordances consistent. -->
-    <style name="Widget.AIRPTCoach.Dashboard.SetupRow" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:layout_width">match_parent</item>
+    <!-- Small visual surface (8dp vertical insets) inside an accessible >=48dp touch target. -->
+    <style name="Widget.AIRPTCoach.Dashboard.SetupChip" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">48dp</item>
-        <item name="android:minWidth">0dp</item>
-        <item name="android:paddingStart">16dp</item>
-        <item name="android:paddingEnd">16dp</item>
-        <item name="android:paddingTop">12dp</item>
-        <item name="android:paddingBottom">12dp</item>
-        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:gravity">center</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textColor">@color/aurora_ice</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:ellipsize">end</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="backgroundTint">@android:color/transparent</item>
-        <item name="cornerRadius">14dp</item>
-        <item name="icon">@drawable/ic_dashboard_chevron_right</item>
-        <item name="iconGravity">end</item>
-        <item name="iconSize">20dp</item>
-        <item name="iconPadding">12dp</item>
-        <item name="iconTint">@color/aurora_mint</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:singleLine">false</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:insetTop">8dp</item>
+        <item name="android:insetBottom">8dp</item>
+        <item name="backgroundTint">#20283F55</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">#406A9C9B</item>
+        <item name="cornerRadius">12dp</item>
         <item name="rippleColor">#3381E8D3</item>
     </style>
 
