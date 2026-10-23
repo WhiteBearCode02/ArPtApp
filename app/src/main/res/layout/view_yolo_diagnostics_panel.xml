@@ -11,14 +11,41 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:padding="12dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/dashboard_diagnostics_title" android:textSize="12sp"
+            android:text="@string/dashboard_diagnostics_title" android:textSize="14sp" android:accessibilityHeading="true"
             android:textColor="@color/aurora_mint" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="@string/yolo_role_explanation" android:textSize="12sp"
+            android:lineSpacingExtra="3dp" android:textColor="@color/aurora_ice" />
+        <TextView android:id="@+id/tvYoloStatus" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textSize="14sp"
+            android:text="@string/yolo_live_waiting" android:textColor="@color/white" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:text="@string/yolo_live_recognition_title" android:textSize="13sp"
+            android:accessibilityHeading="true" android:textColor="@color/aurora_mint" />
+        <TextView android:id="@+id/tvYoloRecognition" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="6dp" android:lineSpacingExtra="4dp"
+            android:textSize="13sp" android:textColor="@color/white" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="@string/yolo_recognition_note" android:textSize="12sp"
+            android:lineSpacingExtra="3dp" android:textColor="@color/aurora_ice" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:text="@string/yolo_live_performance_title" android:textSize="13sp"
+            android:accessibilityHeading="true" android:textColor="@color/aurora_mint" />
+        <TextView android:id="@+id/tvYoloSpeed" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="6dp" android:lineSpacingExtra="4dp"
+            android:textSize="13sp" android:textColor="@color/white" />
         <TextView android:id="@+id/tvPerformance" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="6dp"
-            android:textSize="11sp" android:textColor="@color/aurora_ice" />
+            android:textSize="12sp" android:textColor="@color/aurora_ice" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="@string/yolo_performance_note" android:textSize="12sp"
+            android:lineSpacingExtra="3dp" android:textColor="@color/aurora_ice" />
+        <include android:id="@+id/yoloHelp" layout="@layout/view_yolo_diagnostics_help" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnYoloTechnical"
+            style="@style/Widget.AIRPTCoach.Yolo.HelpButton" android:text="@string/yolo_technical_show" />
         <TextView android:id="@+id/tvYoloDiagnostics" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="6dp"
-            android:fontFamily="monospace" android:textSize="10sp"
-            android:textColor="@color/aurora_ice" android:importantForAccessibility="no" />
+            android:fontFamily="monospace" android:textSize="11sp" android:visibility="gone"
+            android:textIsSelectable="true" android:textColor="@color/aurora_ice" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

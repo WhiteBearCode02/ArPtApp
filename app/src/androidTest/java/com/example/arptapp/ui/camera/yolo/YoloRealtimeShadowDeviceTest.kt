@@ -123,7 +123,7 @@ class YoloRealtimeShadowDeviceTest {
                 database.exerciseDao().insertRecord(report.toRecord("in-memory-shadow-fixture"))
                 val loaded = database.exerciseDao().getAllRecords("in-memory-shadow-fixture").single()
                 assertEquals(report, WorkoutReportData.fromRecord(loaded))
-                val rows = YoloSessionDiagnosticsPresentation.groups(requireNotNull(YoloSessionDiagnosticsCodec.decode(loaded.yoloDiagnosticsJson)))
+                val rows = YoloSessionDiagnosticsPresentation.technicalGroups(requireNotNull(YoloSessionDiagnosticsCodec.decode(loaded.yoloDiagnosticsJson)))
                     .flatMap { it.rows }.associate { it.label to it.value }
                 assertEquals("VERIFIED", rows["Export 계약"]); assertEquals("ENABLED", rows["Shadow Runtime"])
                 assertTrue(rows["Primary"]!!.startsWith("LANDMARK"))

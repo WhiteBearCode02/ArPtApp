@@ -276,6 +276,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="vertical" />
+                    <include android:id="@+id/yoloShadowHelp" layout="@layout/view_yolo_diagnostics_help" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnYoloReportTechnical"
+                        style="@style/Widget.AIRPTCoach.Yolo.HelpButton"
+                        android:text="@string/yolo_technical_show" />
+                    <LinearLayout android:id="@+id/yoloShadowTechnicalGroups"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

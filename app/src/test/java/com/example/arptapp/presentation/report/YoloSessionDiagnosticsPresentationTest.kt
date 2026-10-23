@@ -11,7 +11,7 @@ class YoloSessionDiagnosticsPresentationTest {
         startedAt = 1000, endedAt = 2000
     )
 
-    private fun rows(value: YoloSessionDiagnostics) = YoloSessionDiagnosticsPresentation.groups(value)
+    private fun rows(value: YoloSessionDiagnostics) = YoloSessionDiagnosticsPresentation.technicalGroups(value)
         .flatMap { it.rows }.associate { it.label to it.value }
 
     @Test fun `release hides even valid local diagnostics`() {
@@ -26,7 +26,7 @@ class YoloSessionDiagnosticsPresentationTest {
     }
 
     @Test fun `model missing and unverified state do not imply predictions exist`() {
-        val groups = YoloSessionDiagnosticsPresentation.groups(missing())
+        val groups = YoloSessionDiagnosticsPresentation.technicalGroups(missing())
         assertEquals("MODEL_MISSING", rows(missing())["모델 상태"])
         assertEquals("NOT_VERIFIED", rows(missing())["Export 계약"])
         assertEquals("0", rows(missing())["실제 처리 프레임"])

@@ -49,7 +49,7 @@ test("live YOLO FPS is separate from existing landmark performance", () => {
   const source = read(base + "domain/detection/DetectorComparison.kt")
   assert.match(source, /YOLO processedFPS=/)
   assert.match(source, /data.processedFps/)
-  assert.match(read(base + "DashboardActivity.kt"), /관절 처리 %.1f FPS/)
+  assert.match(read(base + "DashboardActivity.kt"), /관절 분석: 초당 %.1f회/)
   const collector = read(base + "domain/detection/YoloSessionDiagnostics.kt")
   assert.match(collector, /state.processed.toDouble\(\) \* 1000 \/ duration/)
 })

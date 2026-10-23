@@ -526,10 +526,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             shadowThermalStatus = thermal
             binding.yoloDiagnosticsPanel.updatePerformance(String.format(
                 Locale.KOREA,
-                "관절 처리 %.1f FPS · %.0f ms · 발열 단계 %s",
+                "관절 분석: 초당 %.1f회 · 평균 %.0f ms\n기기 발열: %s",
                 stats.processedFps,
                 stats.averageLatencyMs,
-                if (thermal < 0) "미지원" else thermal.toString()
+                com.example.arptapp.presentation.diagnostics.YoloDiagnosticGuide.thermal(thermal)
             ))
         }
         val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
@@ -563,8 +563,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private fun renderYoloShadowDiagnostic() {
         if (!BuildConfig.DEBUG) return
         val liveStats = yoloSessionDiagnostics?.current(System.currentTimeMillis(), SystemClock.uptimeMillis())
-        val text = DetectorComparisonFormatter.format(DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
-            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps))
+        val comparison = DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
+            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps)
+        val text = DetectorComparisonFormatter.format(comparison)
+        binding.yoloDiagnosticsPanel.updateComparison(comparison)
         binding.yoloDiagnosticsPanel.updateDiagnostics(text)
         val now = SystemClock.uptimeMillis()
         if (now - lastShadowLogAt >= 1000L) {

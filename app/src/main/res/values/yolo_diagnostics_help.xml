@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="yolo_guide_show">각 항목은 무슨 뜻인가요? ▾</string>
+    <string name="yolo_guide_hide">항목 설명 접기 ▴</string>
+    <string name="yolo_technical_show">개발자용 기술 정보 보기 ▾</string>
+    <string name="yolo_technical_hide">개발자용 기술 정보 접기 ▴</string>
+    <string name="yolo_role_explanation">YOLO는 운동 종류를 시험 인식하는 보조 AI입니다. 현재 운동 점수와 자세 분석 판정에는 사용되지 않습니다. 실제 운동 판정은 관절 분석이 담당합니다.</string>
+    <string name="yolo_live_waiting">모델 상태 확인 중 · 첫 결과를 기다려요</string>
+    <string name="yolo_live_recognition_title">무슨 운동으로 보았나요?</string>
+    <string name="yolo_live_performance_title">얼마나 빠르게 처리하나요?</string>
+    <string name="yolo_recognition_note">‘이번 화면’은 한 장의 결과, ‘연속 화면’은 여러 결과를 모은 판단입니다. 확신도는 모델의 판단 강도이며 자세 점수나 정답률이 아닙니다.</string>
+    <string name="yolo_performance_note">처리 속도와 시간은 인식 정확도가 아닙니다. 1,000 ms는 1초입니다. 발열은 기기의 제한 단계이며 체온이나 섭씨 온도가 아닙니다.</string>
+    <string name="yolo_guide_text" formatted="false">이 섹션의 목적 (Shadow = 관찰 전용)\n운동 종류를 인식하는 YOLO가 잘 동작하는지 개발·검증할 때 비교하는 정보입니다. 운동 자세와 횟수 판정을 대신하지 않습니다.\n\n이번 화면 (raw)\n현재 한 장의 화면에서 YOLO가 고른 운동입니다. 순간적으로 바뀔 수 있습니다.\n\n연속 화면의 판단 (stable)\n여러 화면에서 비슷한 결과가 이어질 때 남기는 판단입니다. ‘아직 판단하지 못함’은 오답이 아니라 판단 보류입니다.\n\n관절 기반 감지 (fallback)\n관절 위치를 이용한 기존 운동 감지 결과입니다. 현재 앱의 주 판정 방식이며 YOLO 결과로 바꾸지 않습니다.\n\n기록 중인 운동 (session)\n현재 기록에 확정된 운동입니다. YOLO의 순간 결과와 다를 수 있습니다.\n\n모델 확신도 (confidence)\n모델이 자신의 판단을 얼마나 강하게 내놓았는지 보여줍니다. 90%라고 실제 정답률이나 자세 정확도가 90점이라는 뜻은 아닙니다. 검출이 없으면 0%가 아니라 미측정입니다.\n\n처리 화면 수 (frame)\nAI가 처리한 화면 장수입니다. 스쿼트를 몇 회 했는지 나타내는 운동 횟수가 아닙니다. 입력 후보 → 처리 허용 → 분석 완료 순서이며, 대기열을 쌓지 않기 때문에 수가 다를 수 있습니다.\n\n초당 처리 화면 (FPS)\n세션 시간 동안 YOLO가 실제 분석을 마친 화면 수를 초 단위로 환산한 값입니다. 카메라나 관절 분석의 FPS와 다릅니다.\n\n처리 시간 (latency)\n준비 → AI 추론 → 결과 정리에 걸린 시간입니다. ms는 1초의 1,000분의 1입니다.\n\n판정 일치 비율\nYOLO와 앱이 확정한 운동이 같은 비율입니다. 실제 정답과 비교한 정확도가 아닙니다. 판단 보류를 제외한 비율과 포함한 비율은 분모가 다릅니다.\n\n모델 검증 / 실행 허용\n입출력 처리 규칙의 검증과 실제 실행 허용은 별개입니다. 검증 완료도 모델 정확도나 배포 권리의 보증은 아닙니다.\n\n기기 발열\nAndroid가 알리는 기기 성능 제한 단계입니다. 미지원·미측정은 ‘문제없음’으로 간주하지 않습니다.\n\n여러 사람이 보일 때\nYOLO 검출과 관절 분석 대상을 같은 사람으로 자동 연결했다고 볼 수 없습니다. 한 명만 화면에 들어오면 비교하기 쉽습니다.</string>
+    <style name="Widget.AIRPTCoach.Yolo.HelpButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:singleLine">false</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:textColor">@color/aurora_mint</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+</resources>

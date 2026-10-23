@@ -41,7 +41,8 @@ function layout(path) {
 }
 
 function attributes(node) {
-  const styles = new Map([...read("app/src/main/res/values/report_ui.xml")
+  const styleSource = ["report_ui.xml", "yolo_diagnostics_help.xml"].map(file => read("app/src/main/res/values/" + file)).join("\n")
+  const styles = new Map([...styleSource
     .matchAll(/<style\s+name="([^"]+)"(?:\s+parent="([^"]*)")?\s*>([\s\S]*?)<\/style>/g)]
     .map(m => [m[1], { parent: m[2], attrs: Object.fromEntries([...m[3]
       .matchAll(/<item\s+name="([^"]+)">([^<]*)<\/item>/g)].map(i => [i[1], i[2].trim()])) }]))
