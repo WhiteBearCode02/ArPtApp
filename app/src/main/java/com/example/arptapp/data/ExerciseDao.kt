@@ -4,6 +4,9 @@ package com.example.arptapp.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.OnConflictStrategy
+import androidx.room.Transaction
+import androidx.room.Update
 
 /**
  * [AIRPTCoach - 운동 기록 데이터 접근 객체 (DAO)]
@@ -30,8 +33,47 @@ interface ExerciseDao {
      * - "SELECT * FROM exercise_records ORDER BY id DESC"
      * -> 'exercise_records' 테이블의 모든 열을 가져오되, id 번호가 큰 것(최신순)부터 정렬하라는 뜻입니다.
      */
-    @Query("SELECT * FROM exercise_records WHERE userId = :userId ORDER BY id DESC")
+    @Query("SELECT * FROM exercise_records WHERE userId = :userId ORDER BY date DESC, id DESC")
     suspend fun getAllRecords(userId: String): List<ExerciseRecord>
+
+    @Query("SELECT * FROM exercise_records WHERE userId = :userId AND sessionId = :sessionId LIMIT 1")
+    suspend fun findSession(userId: String, sessionId: String): ExerciseRecord?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSession(record: ExerciseRecord): Long
+
+    @Update
+    suspend fun updateSession(record: ExerciseRecord)
+
+    /** INSERT IGNORE + owner-scoped read is idempotent and never REPLACE-deletes local diagnostics. */
+    @Transaction
+    suspend fun saveSession(record: ExerciseRecord): ExerciseRecord {
+        require(!record.sessionId.isNullOrBlank() && record.userId.isNotBlank())
+        insertSession(record)
+        return checkNotNull(findSession(record.userId, record.sessionId))
+    }
+
+    @Transaction
+    suspend fun mergeSummary(summary: ExerciseRecord) {
+        val existing = findSession(summary.userId, requireNotNull(summary.sessionId))
+        if (existing == null) {
+            saveSession(summary)
+        } else if (existing.syncState == "SYNCED") {
+            // A summary never downgrades cached detailed analyses or the device-only envelope.
+            updateSession(summary.copy(id = existing.id, scoresJson = existing.scoresJson,
+                detailsCached = existing.detailsCached, repRecordsJson = existing.repRecordsJson,
+                yoloDiagnosticsJson = existing.yoloDiagnosticsJson))
+        }
+    }
+
+    @Query("UPDATE exercise_records SET syncState = :state WHERE userId = :userId AND sessionId = :sessionId AND cloudEligible = 1")
+    suspend fun setSyncState(userId: String, sessionId: String, state: String)
+
+    @Query("UPDATE exercise_records SET scoresJson = :analyses, repRecordsJson = :reps, detailsCached = 1 WHERE userId = :userId AND sessionId = :sessionId AND syncState = 'SYNCED'")
+    suspend fun cacheDetails(userId: String, sessionId: String, analyses: String, reps: String)
+
+    @Query("SELECT * FROM exercise_records WHERE userId = :userId AND cloudEligible = 1 AND sessionId IS NOT NULL AND syncState IN ('PENDING', 'FAILED') ORDER BY id LIMIT :limit")
+    suspend fun pendingSessions(userId: String, limit: Int): List<ExerciseRecord>
 
     /**
      * [특정 기간 기록 삭제하기 (선택 사항)]

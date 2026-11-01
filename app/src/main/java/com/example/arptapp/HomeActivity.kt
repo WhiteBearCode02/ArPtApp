@@ -40,6 +40,10 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // Bounded, cache-only-on-failure sync; never block home or start a repeating background job.
+        lifecycleScope.launch {
+            com.example.arptapp.data.history.WorkoutHistoryProvider.get(applicationContext).syncCurrentUser()
+        }
         nearbyGymController = NearbyGymController(
             this,
             binding.btnFindNearbyGym,

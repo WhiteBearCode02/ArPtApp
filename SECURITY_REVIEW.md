@@ -79,6 +79,17 @@ Supabase 지침의 최소 권한 원칙에 따라 quota definer는 private schem
 
 ## 공식 근거
 
+### 2026-11-01 운동 기록 동기화 보강
+
+- 계정 UUID + 로그인 epoch 검사, Room owner 조건, explicit Remote DTO allowlist 적용.
+- PENDING/FAILED를 보존하고 동일 session UUID로 재시도. 서버 원자적 SECURITY INVOKER RPC SQL 준비.
+- 기존 관리자 SELECT는 유지하되 개인 기록 API에서는 현재 계정만 조회.
+- YOLO 진단과 DEBUG local-only 세션은 후속 동기화에서도 서버/LLM 전송 대상에서 제외.
+- 새 원격 SQL/RPC는 미적용, 실제 A/B/anon RLS·동시성·기기간 복원은 미검증.
+- 기존 Supabase 사용 허용을 받았으며 billing/키/요금제/LLM/배포 변경 없음. 0원 보장은 아님.
+
+전체 경계·파일·검증은 [운동 기록 동기화](docs/WORKOUT_HISTORY_SYNC.md)를 참조하세요.
+
 - [Android Auto Backup](https://developer.android.com/identity/data/autobackup)
 - [Supabase JWT claims: recovery AMR](https://supabase.com/docs/guides/auth/jwt-fields)
 - [Supabase Edge Function 인증](https://supabase.com/docs/guides/functions/auth)

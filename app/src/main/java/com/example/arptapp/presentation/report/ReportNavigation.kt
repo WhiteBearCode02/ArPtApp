@@ -32,7 +32,12 @@ object ReportNavigation {
         durationSeconds = intent.getLongExtra(EXERCISE_TIME, 0L),
         burnedCalories = if (intent.hasExtra(BURNED_CALORIES)) intent.getDoubleExtra(BURNED_CALORIES, 0.0) else null,
         feedbackMessage = intent.getStringExtra(FEEDBACK_MESSAGE).orEmpty(),
-        yoloDiagnosticsJson = intent.getStringExtra(YOLO_DIAGNOSTICS_JSON)
+        yoloDiagnosticsJson = intent.getStringExtra(YOLO_DIAGNOSTICS_JSON),
+        sessionId = intent.getStringExtra("WORKOUT_SESSION_ID"),
+        ownerUserId = intent.getStringExtra("WORKOUT_OWNER_ID").orEmpty(),
+        cloudEligible = intent.getBooleanExtra("WORKOUT_CLOUD_ELIGIBLE", true),
+        repRecordsJson = intent.getStringExtra("WORKOUT_REP_RECORDS") ?: "[]",
+        createdAt = intent.getStringExtra("WORKOUT_CREATED_AT").orEmpty()
     )
 
     fun intent(context: Context, report: WorkoutReportData): Intent =
@@ -53,6 +58,11 @@ object ReportNavigation {
             putExtra(FEEDBACK_MESSAGE, report.feedbackMessage)
             // Never merge developer comparison aggregates into REP_ANALYSES_JSON/LLM analyses.
             report.yoloDiagnosticsJson?.let { putExtra(YOLO_DIAGNOSTICS_JSON, it) }
+            putExtra("WORKOUT_SESSION_ID", report.sessionId)
+            putExtra("WORKOUT_OWNER_ID", report.ownerUserId)
+            putExtra("WORKOUT_CLOUD_ELIGIBLE", report.cloudEligible)
+            putExtra("WORKOUT_REP_RECORDS", report.repRecordsJson)
+            putExtra("WORKOUT_CREATED_AT", report.createdAt)
         }
 
     /** Codec는 구버전 숫자 배열과 현재 회차 객체 배열을 모두 지원하고 손상된 기록은 빈 목록으로 처리한다. */

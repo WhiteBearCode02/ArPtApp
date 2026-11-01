@@ -29,6 +29,7 @@ class ResultActivity : AppCompatActivity() {
         ReportWindowInsets.apply(this, binding.root)
 
         val report = resultViewModel.resolveReport(ReportNavigation.read(intent))
+        if (!com.example.arptapp.presentation.report.WorkoutReportAccess.bind(this, binding.root, report.ownerUserId)) return
         // 저장을 시작한 계정에 귀속한다. 나중에 계정이 바뀌어도 다른 계정으로 재귀속하지 않는다.
         val ownerId = AuthSessionStore.current?.userId.orEmpty()
         displayExerciseSummary(report.totalCount)

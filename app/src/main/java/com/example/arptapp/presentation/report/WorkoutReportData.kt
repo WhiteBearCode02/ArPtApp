@@ -20,13 +20,24 @@ data class WorkoutReportData private constructor(
     val burnedCalories: Double?,
     val feedbackMessage: String,
     /** Separate bounded local-only envelope; analysis/score/remote payloads must not consume it. */
-    val yoloDiagnosticsJson: String?
+    val yoloDiagnosticsJson: String?,
+    val sessionId: String? = null,
+    val ownerUserId: String = "",
+    val cloudEligible: Boolean = true,
+    val repRecordsJson: String = "[]",
+    val createdAt: String = ""
 ) {
     /** 완료 일시는 한 번 확정한다. 칼로리의 0.5 kcal/회는 기존 공학적 추정값이며 실측값이 아니다. */
     fun completedAt(date: String): WorkoutReportData = copy(
         workoutDate = workoutDate.ifBlank { date },
         burnedCalories = burnedCalories ?: totalCount * 0.5,
         feedbackMessage = feedbackMessage.ifBlank { WorkoutReportPresentation.feedback(averageScore) }
+    )
+
+    fun forSaving(sessionId: String, ownerUserId: String, createdAt: String): WorkoutReportData = copy(
+        sessionId = this.sessionId ?: sessionId,
+        ownerUserId = this.ownerUserId.ifBlank { ownerUserId },
+        createdAt = this.createdAt.ifBlank { createdAt }
     )
 
     /** 인증된 계정 소유자만 로컬 행에 연결한다. 비밀번호/토큰은 보고서에 포함하지 않는다. */
@@ -42,7 +53,12 @@ data class WorkoutReportData private constructor(
             averageScore = averageScore,
             scoresJson = analysesJson,
             feedbackMessage = feedbackMessage,
-            yoloDiagnosticsJson = yoloDiagnosticsJson
+            yoloDiagnosticsJson = yoloDiagnosticsJson,
+            sessionId = sessionId,
+            syncState = if (sessionId != null && cloudEligible) "PENDING" else "LOCAL_ONLY",
+            cloudEligible = sessionId != null && cloudEligible,
+            repRecordsJson = repRecordsJson,
+            createdAt = createdAt
         )
     }
 
@@ -58,7 +74,12 @@ data class WorkoutReportData private constructor(
             durationSeconds: Long = 0L,
             burnedCalories: Double? = null,
             feedbackMessage: String = "",
-            yoloDiagnosticsJson: String? = null
+            yoloDiagnosticsJson: String? = null,
+            sessionId: String? = null,
+            ownerUserId: String = "",
+            cloudEligible: Boolean = true,
+            repRecordsJson: String = "[]",
+            createdAt: String = ""
         ): WorkoutReportData = WorkoutReportData(
             exerciseType = exerciseType?.takeIf { it.isNotBlank() } ?: "운동 기록",
             totalCount = totalCount.coerceAtLeast(0),
@@ -73,7 +94,12 @@ data class WorkoutReportData private constructor(
             feedbackMessage = feedbackMessage,
             // Strict decoder rejects malformed/oversized/unexpected data before local navigation.
             yoloDiagnosticsJson = YoloSessionDiagnosticsCodec.decode(yoloDiagnosticsJson)
-                ?.let(YoloSessionDiagnosticsCodec::encode)
+                ?.let(YoloSessionDiagnosticsCodec::encode),
+            sessionId = sessionId,
+            ownerUserId = ownerUserId,
+            cloudEligible = cloudEligible,
+            repRecordsJson = repRecordsJson,
+            createdAt = createdAt
         )
 
         fun fromRecord(record: ExerciseRecord): WorkoutReportData = create(
@@ -85,7 +111,12 @@ data class WorkoutReportData private constructor(
             durationSeconds = record.duration,
             burnedCalories = record.burnedCalories,
             feedbackMessage = record.feedbackMessage,
-            yoloDiagnosticsJson = record.yoloDiagnosticsJson
+            yoloDiagnosticsJson = record.yoloDiagnosticsJson,
+            sessionId = record.sessionId,
+            ownerUserId = record.userId,
+            cloudEligible = record.cloudEligible,
+            repRecordsJson = record.repRecordsJson,
+            createdAt = record.createdAt
         )
     }
 }

@@ -27,11 +27,12 @@ class YoloDiagnosticsMigrationTest {
     @Test fun version5PreservesExistingRowAndSupportsDiagnosticsRoundTrip() = verifyUpgrade(5)
     @Test fun version4RetainsItsExistingUpgradePath() = verifyUpgrade(4)
     @Test fun version3RetainsItsExistingUpgradePath() = verifyUpgrade(3)
+    @Test fun version6PreservesDiagnosticsAndMarksLegacyLocalOnly() = verifyUpgrade(6)
 
     private fun verifyUpgrade(version: Int) = runBlocking {
         val name = createFixture(version)
         val database = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
+            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
             .build()
         try {
                 // Opening triggers the actual Room upgrade and complete generated TableInfo validation.
@@ -43,7 +44,12 @@ class YoloDiagnosticsMigrationTest {
                 assertEquals(4, before.totalCount)
                 assertEquals(80L, before.duration)
                 assertEquals(2.0, before.burnedCalories, 0.0)
-                assertNull(before.yoloDiagnosticsJson)
+                if (version >= 6) assertEquals("private-legacy-diagnostics", before.yoloDiagnosticsJson)
+                else assertNull(before.yoloDiagnosticsJson)
+                assertNull(before.sessionId)
+                assertEquals("LOCAL_ONLY", before.syncState)
+                assertFalse(before.cloudEligible)
+                assertTrue(before.detailsCached)
                 assertEquals(if (version >= 4) "[80,90]" else "[]", before.scoresJson)
 
                 val diagnostics = YoloSessionDiagnosticsCodec.encode(YoloSessionDiagnostics(
@@ -65,7 +71,7 @@ class YoloDiagnosticsMigrationTest {
     @Test fun unsupportedVersionFailsWithoutDeletingTheWorkoutRow() {
         val name = createFixture(2)
         val database = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6).build()
+            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7).build()
         try {
             assertTrue(runCatching { database.openHelper.writableDatabase }.isFailure)
         } finally {
@@ -102,6 +108,7 @@ class YoloDiagnosticsMigrationTest {
         if (version >= 4) columns += listOf("exerciseType TEXT NOT NULL", "averageScore REAL NOT NULL",
             "scoresJson TEXT NOT NULL", "feedbackMessage TEXT NOT NULL")
         if (version >= 5) columns += "userId TEXT NOT NULL"
+        if (version >= 6) columns += "yoloDiagnosticsJson TEXT"
         context.openOrCreateDatabase(name, 0, null).use { db ->
             db.execSQL("CREATE TABLE exercise_records (${columns.joinToString()})")
             val row = ContentValues().apply {
@@ -112,6 +119,7 @@ class YoloDiagnosticsMigrationTest {
                     put("scoresJson", "[80,90]"); put("feedbackMessage", "기존 기록 보존")
                 }
                 if (version >= 5) put("userId", "migration-owner")
+                if (version >= 6) put("yoloDiagnosticsJson", "private-legacy-diagnostics")
             }
             assertEquals(7L, db.insertOrThrow("exercise_records", null, row))
             db.version = version

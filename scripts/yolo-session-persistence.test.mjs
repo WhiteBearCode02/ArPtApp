@@ -7,8 +7,8 @@ const read = path => readFileSync(path, "utf8")
 
 test("YOLO persistence is an additive nullable v6 column without destructive fallback", () => {
   const database = read(base + "data/AppDatabase.kt")
-  assert.match(database, /version = 6/)
-  assert.match(database, /addMigrations\(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6\)/)
+  assert.match(database, /version = 7/)
+  assert.match(database, /addMigrations\(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7\)/)
   assert.match(database, /Migration\(5, 6\)/)
   assert.match(database, /ALTER TABLE exercise_records ADD COLUMN yoloDiagnosticsJson TEXT"/)
   assert.doesNotMatch(database, /fallbackToDestructiveMigration/)

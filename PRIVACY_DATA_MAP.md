@@ -12,7 +12,9 @@
 | 가입 신체정보 | `noBackupFilesDir/pending_signup_profiles/<Auth UUID>.json`; 비밀번호/이메일/토큰 없음 | 인증 후 해당 UUID의 `user_profiles`에만 upsert | 성공 후 draft 삭제, 24시간 만료. 만료 정리는 다음 draft 접근 시 수행(백그라운드 삭제 타이머 아님) |
 | 신체정보·알림 설정 | 계정별 DataStore | Supabase `user_profiles`, `body_measurements`, `user_preferences` | 기존 저장/이력 기능 유지. 자동 영구삭제/회원탈퇴 미구현 |
 | 영상·33개 관절 좌표 | CameraX/MediaPipe 메모리에서 로컬 분석 | 신규 영상/원본 landmark 업로드 없음 | 프레임 처리 후 해제. 신체 비율의 일시적 분석 상태는 DTO로 보내지 않음 |
-| 운동·회차 리포트 | 계정별 Room 기록 | Supabase 세션/회차/관절 요약 테이블 | 기존 기록 동기화 유지. 로컬 DB도 백업·전송 제외 |
+| 운동·회차 리포트 | 계정별 Room 캐시/미전송 outbox | Supabase 세션/회차 + typed 구조화 리포트 요약(새 SQL 미적용) | UUID 계정 sync, 요약 우선/상세 지연 조회. 과거 로컬 행 자동 재업로드 안 함. 로컬 DB 백업·전송 제외 |
+| YOLO Shadow 진단 | Room의 별도 yoloDiagnosticsJson | 외부/LLM 전송 없음 | 요약 merge 시 기존 진단 보존. 다른 기기에 복원하지 않음 |
+| DEBUG 로컬 검증 운동 | cloudEligible=false/LOCAL_ONLY로 Room 저장 | 재시도 포함 서버 전송 없음 | 원본 사진/모델/검증 자료의 기존 local-only 정책 유지 |
 | 개인 동작 기준 | 계정/종목/촬영방향별 앱 전용 SharedPreferences | 외부 전송 없음 | 앱의 기준 삭제 기능. 백업 제외 |
 | 현재 위치 | 버튼 클릭 시 foreground 일회 획득 | 앱 서버 저장/전송 없음. 현재 지도 URI는 좌표 없이 검색어/appname만 전달 | 추적/서버 이력 없음. 지도 앱 자체의 처리 정책은 해당 앱 기준 |
 | 운동 영상 순위 | 운동 category, 공개 영상 목록 | 앱→인증된 YouTube Edge→캐시/공식 YouTube API | 개인 YouTube 검색·시청 이력을 읽지 않음 |
@@ -21,6 +23,11 @@
 | 진단 로그 | 회차 요약은 DEBUG만; 토큰·이름·이메일·원본 좌표 기록 금지 | 별도 분석/광고 SDK 추가 없음 | 사용자가 공유하는 Logcat도 개인정보 확인 필요 |
 
 ## 가입·이메일 인증 시 신체정보를 보존하는 방법
+
+2026-11-01 운동 기록 동기화 변경: Auth UUID/epoch 경계로 계정을 분리하며 원본 영상·landmark·
+YOLO 진단은 계정 운동 리포트에 넣지 않습니다. 사용자 승인 아래 기존 Supabase를 사용하지만
+서버 SQL 적용·기기간 복원·운영 보유/삭제 정책은 별도 검증이 필요합니다.
+[상세 데이터 경로](docs/WORKOUT_HISTORY_SYNC.md).
 
 1. Auth에는 이메일·비밀번호·이름만 보냅니다. body 수치는 Auth metadata/JWT에 넣지 않습니다.
 2. 가입 응답의 UUID에만 신체정보 draft를 연결합니다. 이메일을 검색/계정 매칭 키로 쓰지 않습니다.

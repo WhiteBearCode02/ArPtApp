@@ -38,7 +38,8 @@ test("unreportable sessions return before upload and result navigation", () => {
   const guard = end.slice(end.indexOf("if (report == null)"), end.indexOf("val elapsedTime"))
   assert.match(guard, /return/)
   assert.doesNotMatch(guard, /uploadSession|openResultActivity|WorkoutReportData/)
-  assert.ok(end.indexOf("uploadSession(") > end.indexOf("val elapsedTime"))
+  assert.doesNotMatch(end, /supabaseRepository\.uploadSession/)
+  assert.ok(end.indexOf("openResultActivity(report, elapsedTime)") > end.indexOf("val elapsedTime"))
 })
 
 test("live scoring follows structured completion, and diagnostics remain debug guarded", () => {

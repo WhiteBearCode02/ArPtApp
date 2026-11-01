@@ -41,11 +41,24 @@ data class AppSession(
 object AuthSessionStore {
     private val mutableSession = MutableStateFlow<AppSession?>(null)
     val session: StateFlow<AppSession?> = mutableSession.asStateFlow()
+    private var accountEpoch = 0L
+    private val mutableWorkoutAccount = MutableStateFlow<com.example.arptapp.data.history.WorkoutAccount?>(null)
+    val workoutAccount = mutableWorkoutAccount.asStateFlow()
 
     // 기존 current API도 같은 상태를 읽고 써서 저장소 인스턴스 사이의 세션 불일치를 막는다.
     var current: AppSession?
         get() = mutableSession.value
-        set(value) { mutableSession.value = value }
+        set(value) {
+            synchronized(this) {
+                if (mutableSession.value != value) {
+                    accountEpoch++
+                    mutableWorkoutAccount.value = value?.let {
+                        com.example.arptapp.data.history.WorkoutAccount(it.userId, accountEpoch)
+                    }
+                }
+                mutableSession.value = value
+            }
+        }
 }
 
 internal fun hasAdminRole(appMetadata: JsonObject?): Boolean = appMetadata

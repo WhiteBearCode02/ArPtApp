@@ -31,6 +31,7 @@ class ReportActivity : AppCompatActivity() {
 
         // Read the same saved envelope as before; malformed/legacy structured data stays optional.
         val report = ReportNavigation.read(intent)
+        if (!WorkoutReportAccess.bind(this, binding.root, report.ownerUserId)) return
         val analyses = ReportNavigation.analyses(report)
         val structured = StructuredReportCodec.decode(report.analysesJson)
         setupSummary(report, analyses, structured)

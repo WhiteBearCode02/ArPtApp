@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         ExerciseRecord::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -51,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 // Explicit upgrade paths preserve existing workout rows. Unsupported old versions
                 // fail closed instead of silently deleting a user's database.
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 
                 INSTANCE = instance
@@ -81,6 +81,19 @@ abstract class AppDatabase : RoomDatabase() {
         internal val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE exercise_records ADD COLUMN yoloDiagnosticsJson TEXT")
+            }
+        }
+
+        /** Old rows cannot be linked to the old random remote IDs. Preserve, do not re-upload. */
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN sessionId TEXT")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN syncState TEXT NOT NULL DEFAULT 'LOCAL_ONLY'")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN cloudEligible INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN detailsCached INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN createdAt TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE exercise_records ADD COLUMN repRecordsJson TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_exercise_records_sessionId ON exercise_records(sessionId)")
             }
         }
     }

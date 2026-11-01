@@ -23,7 +23,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.arptapp.databinding.ActivityDashboardBinding
-import com.example.arptapp.data.remote.SupabaseRepository
 import com.example.arptapp.domain.analyzer.DTWCalculator
 import com.example.arptapp.domain.analyzer.FormErrorAnalyzer
 import com.example.arptapp.domain.analyzer.PoseAngleExtractor
@@ -73,7 +72,6 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private lateinit var cameraController: PoseCameraController
     private var cameraZoomUi: CameraZoomUi? = null
     private val mainViewModel: MainViewModel by viewModels()
-    private val supabaseRepository = SupabaseRepository()
     private val poseAngleExtractor = PoseAngleExtractor
     private val exerciseCounter = ExerciseCounter()
     private val repAnalysisEngine = com.example.arptapp.domain.report.RepAnalysisEngine()
@@ -115,6 +113,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var yoloDiagnosticsExpanded = false
     private var debugValidationControls: DebugValidationControls? = null
     private var sessionLocalOnlyValidation = false
+    private var sessionOwnerId: String = ""
     private val performanceMonitor = com.example.arptapp.domain.analyzer.FramePerformanceMonitor()
     private var lastDiagnosticsAt = 0L
     private var personalSequence: List<FloatArray> = emptyList()
@@ -391,6 +390,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             return
         }
         sessionLocalOnlyValidation = debugValidationControls?.freezeLocalOnlyForSession() == true
+        sessionOwnerId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
         isExercising = true
         setYoloDiagnosticsExpanded(false) // Start with the camera and workout information, not debug details.
         mainViewModel.resetSession()
@@ -440,22 +440,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             return
         }
         val elapsedTime = if (startTime > 0L) (System.currentTimeMillis() - startTime) / 1000 else 0L
-        val records = mainViewModel.getRepRecords()
-        val analyses = mainViewModel.getRepAnalyses(report.exerciseType)
-        val burnedCalories = report.totalReps * 0.5
-
-        // Explicit DEBUG local-validation consent only. Release and normal sessions retain upload.
-        if (DebugLocalSessionUploadPolicy.shouldUpload(BuildConfig.DEBUG, sessionLocalOnlyValidation)) lifecycleScope.launch {
-            supabaseRepository.uploadSession(
-                report = report,
-                records = records,
-                analyses = analyses,
-                durationSeconds = elapsedTime,
-                burnedCalories = burnedCalories
-            )
-                // 서버 예외 본문에는 계정/리포트 정보가 포함될 수 있어 원문을 로그에 남기지 않는다.
-                .onFailure { Log.w(TAG, "Supabase 리포트 업로드 실패") }
-        }
+        // A single Result -> repository path now owns Room-first save and idempotent remote sync.
+        // Persist the local-validation gate with the row, not just this transient Activity.
 
         // Closing the report with Back/outside must not strand an idle screen on a disabled End
         // action. Restore only UI; the completed report and session data remain unchanged.
@@ -497,7 +483,15 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             ),
             averageScore = report.averageScore.toFloat(),
             feedbackMessage = report.feedbackMessage,
-            yoloDiagnosticsJson = completedYoloDiagnosticsJson
+            yoloDiagnosticsJson = completedYoloDiagnosticsJson,
+            sessionId = java.util.UUID.randomUUID().toString(),
+            ownerUserId = sessionOwnerId,
+            cloudEligible = DebugLocalSessionUploadPolicy.shouldUpload(BuildConfig.DEBUG, sessionLocalOnlyValidation),
+            // Malformed raw reps must not crash result navigation or discard the local report.
+            // An invalid marker fails closed at the remote mapper and leaves the row retryable.
+            repRecordsJson = runCatching {
+                com.example.arptapp.data.history.WorkoutPayloadCodec.reps(mainViewModel.getRepRecords())
+            }.getOrDefault("{}")
         )
         startActivity(ReportNavigation.resultIntent(this, data))
         finish()

@@ -6,6 +6,10 @@
 
 ## 이번 변경
 
+2026-11-01 추가: [계정 운동 기록 동기화](docs/WORKOUT_HISTORY_SYNC.md)의 Room 7/저장소/DTO/
+화면 연동/SQL을 준비했습니다. **SQL 미적용·실제 서버 저장/기기간 복원 미검증**이며
+이전 날짜의 표와 APK 경로를 이번 검증 결과로 간주하지 마세요.
+
 - [x] Android 백업/데이터 추출 방어, strict password recovery, 신규 신체 Auth metadata 금지.
 - [x] 이메일 인증 후 신체 프로필 저장 경로 유지(no-backup 임시 draft).
 - [x] YouTube 사용자 JWT 인증·DB 기반 분/일 호출 제한 코드·SQL 준비.

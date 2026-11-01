@@ -3,6 +3,8 @@ package com.example.arptapp.data // 이 파일이 위치한 주소(패키지 경
 // [Room Library: 데이터베이스 설계를 위한 도구들을 불러옵니다]
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
+import androidx.room.ColumnInfo
 
 /**
  * [AIRPTCoach - 운동 기록 데이터 엔티티]
@@ -11,7 +13,7 @@ import androidx.room.PrimaryKey
  * - 사용자가 운동을 마칠 때마다 [날짜, 횟수, 시간, 칼로리] 데이터를 하나의 행(Row)으로 묶어 저장합니다.
  * - @Entity: 이 클래스가 DB의 테이블임을 AI 컴파일러에게 알려주는 표식입니다.
  */
-@Entity(tableName = "exercise_records") 
+@Entity(tableName = "exercise_records", indices = [Index(value = ["sessionId"], unique = true)])
 data class ExerciseRecord(
 
     /**
@@ -57,5 +59,12 @@ data class ExerciseRecord(
     val feedbackMessage: String = "",
 
     /** Local-only aggregate developer diagnostics; never part of scoresJson or a remote/LLM DTO. */
-    val yoloDiagnosticsJson: String? = null
+    val yoloDiagnosticsJson: String? = null,
+    /** Null means pre-sync legacy data: never automatically upload an uncorrelated old row. */
+    val sessionId: String? = null,
+    @ColumnInfo(defaultValue = "'LOCAL_ONLY'") val syncState: String = "LOCAL_ONLY",
+    @ColumnInfo(defaultValue = "0") val cloudEligible: Boolean = false,
+    @ColumnInfo(defaultValue = "1") val detailsCached: Boolean = true,
+    @ColumnInfo(defaultValue = "''") val createdAt: String = "",
+    @ColumnInfo(defaultValue = "'[]'") val repRecordsJson: String = "[]"
 )
