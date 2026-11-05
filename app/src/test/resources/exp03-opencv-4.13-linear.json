@@ -1,0 +1,3859 @@
+{
+  "schemaVersion": 1,
+  "purpose": "SYNTHETIC_INTERPOLATION_ONLY_NOT_ACTUAL_MODEL_GOLDEN",
+  "environment": {
+    "pythonVersion": "3.11.9",
+    "opencvVersion": "4.13.0",
+    "opencvDistribution": "4.13.0.92",
+    "numpyVersion": "2.4.6",
+    "litertVersion": "2.2.0",
+    "optimized": true,
+    "ippEnabled": true,
+    "ippNotExact": false,
+    "cpuFeatures": "SSE SSE2 SSE3 *SSE4.1 *SSE4.2 *AVX *FP16 *AVX2 *AVX512-SKX",
+    "buildInformationSha256": "fc048a2b6c657a1e163e8591b98100d585d65bacf1d1f1a6e28659cae3b531f1"
+  },
+  "reference": "OpenCV 4.13.0 uint8 RGB INTER_LINEAR default path; no user media/model",
+  "cases": [
+    {
+      "id": "1x1_gradient",
+      "width": 1,
+      "height": 1,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "404d0b5c53fcb64ca102e6ef15e70b2606990add2cd9dfa1fd12a7e8e8d19ec7",
+      "inputTensorSha256": "3faade15d7153b5e53dc210872ef1ca00762c1e129f7d03876ab7fb4fb8e9f03",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          64
+        ],
+        [
+          15855,
+          11
+        ],
+        [
+          23774,
+          117
+        ],
+        [
+          31693,
+          64
+        ],
+        [
+          39612,
+          11
+        ],
+        [
+          47531,
+          117
+        ],
+        [
+          55450,
+          64
+        ],
+        [
+          614400,
+          11
+        ],
+        [
+          1228799,
+          117
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x1_checkerboard",
+      "width": 1,
+      "height": 1,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "b9d145daa723645d896a407d5c252c1201710dfd6c242a1c2c634ab765ca29c6",
+      "inputTensorSha256": "620001b3925b3157f91b6a6eb858f62053fdc11bdfac58e12120a31659f55cc4",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          255
+        ],
+        [
+          15855,
+          0
+        ],
+        [
+          23774,
+          0
+        ],
+        [
+          31693,
+          255
+        ],
+        [
+          39612,
+          0
+        ],
+        [
+          47531,
+          0
+        ],
+        [
+          55450,
+          255
+        ],
+        [
+          614400,
+          0
+        ],
+        [
+          1228799,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x1_edge",
+      "width": 1,
+      "height": 1,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "3c65d7407e5064ac19ec2c3b2fb0a0f39bcad6b5e38b5084e5f8424e888dc671",
+      "inputTensorSha256": "30564bce7cbdb9f440f691c8b97063654f8bd37a518d0cbd41fd29ccc2fa7e3f",
+      "probes": [
+        [
+          0,
+          241
+        ],
+        [
+          17,
+          167
+        ],
+        [
+          7936,
+          204
+        ],
+        [
+          15855,
+          241
+        ],
+        [
+          23774,
+          167
+        ],
+        [
+          31693,
+          204
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          614400,
+          241
+        ],
+        [
+          1228799,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x1_counter_random",
+      "width": 1,
+      "height": 1,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "db4632f820427699a2e9c82d59ceaf6f789a0a259ac4631afba1f7560896ebaa",
+      "inputTensorSha256": "736ac611f6a129dbf9b400037a99fc4cc59d4afa53e6a70585ff41c380dc5bbf",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          115
+        ],
+        [
+          15855,
+          150
+        ],
+        [
+          23774,
+          40
+        ],
+        [
+          31693,
+          115
+        ],
+        [
+          39612,
+          150
+        ],
+        [
+          47531,
+          40
+        ],
+        [
+          55450,
+          115
+        ],
+        [
+          614400,
+          150
+        ],
+        [
+          1228799,
+          40
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x2_gradient",
+      "width": 2,
+      "height": 2,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "6ce92b32cb903a72391915751899bc1b27faa31232f3df9152b4f63134a49ded",
+      "inputTensorSha256": "769fcb370042b61c4d893ecae759d1f67dfef7ff0df4947f6eb046427ef1167c",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          64
+        ],
+        [
+          15855,
+          12
+        ],
+        [
+          23774,
+          127
+        ],
+        [
+          31693,
+          83
+        ],
+        [
+          39612,
+          39
+        ],
+        [
+          47531,
+          154
+        ],
+        [
+          55450,
+          101
+        ],
+        [
+          614400,
+          19
+        ],
+        [
+          1228799,
+          171
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x2_checkerboard",
+      "width": 2,
+      "height": 2,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "f78c89b0fa6e18d2eaf6b957315687304ff480f4b50786448596ad59f5347071",
+      "inputTensorSha256": "a066cc228924fce9c6893334f602209cae28f869b3d9518b58c0f637ecff5032",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          255
+        ],
+        [
+          15855,
+          4
+        ],
+        [
+          23774,
+          67
+        ],
+        [
+          31693,
+          124
+        ],
+        [
+          39612,
+          195
+        ],
+        [
+          47531,
+          255
+        ],
+        [
+          55450,
+          0
+        ],
+        [
+          614400,
+          128
+        ],
+        [
+          1228799,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x2_edge",
+      "width": 2,
+      "height": 2,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "7625934d5be8bcabc372f07ea22dae684393f161fddf7250349ddaad24147f7e",
+      "inputTensorSha256": "3b110fab2583f68b4d211bd613c73afe1895880fa4fb85e575696ccdc5ba5ca2",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          21
+        ],
+        [
+          23774,
+          117
+        ],
+        [
+          31693,
+          133
+        ],
+        [
+          39612,
+          188
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          614400,
+          17
+        ],
+        [
+          1228799,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x2_counter_random",
+      "width": 2,
+      "height": 2,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "f52ed5373e350d262e3a5b43ee31291c1877cec9b49cc789891585975cef9407",
+      "inputTensorSha256": "83bb7ab88ca2923286065b349b4a6e8324e4ac5a358633edfc7f97ec94cd6b84",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          115
+        ],
+        [
+          15855,
+          148
+        ],
+        [
+          23774,
+          34
+        ],
+        [
+          31693,
+          80
+        ],
+        [
+          39612,
+          73
+        ],
+        [
+          47531,
+          20
+        ],
+        [
+          55450,
+          47
+        ],
+        [
+          614400,
+          157
+        ],
+        [
+          1228799,
+          136
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "3x2_gradient",
+      "width": 3,
+      "height": 2,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 427,
+      "padX": 0,
+      "padY": 106,
+      "seed": 305419896,
+      "resizedRgbSha256": "42f481ab7df23f4c7dd6b67ed8714778eb8f1a71af11894b1119c7a01bc8c3bd",
+      "inputTensorSha256": "d303cf87fe2bc03555f4561ceb04f9fa342799b30142898e25c0bd6b4dddaceb",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          64
+        ],
+        [
+          15855,
+          21
+        ],
+        [
+          23774,
+          141
+        ],
+        [
+          31693,
+          102
+        ],
+        [
+          39612,
+          63
+        ],
+        [
+          47531,
+          182
+        ],
+        [
+          55450,
+          138
+        ],
+        [
+          409920,
+          57
+        ],
+        [
+          819839,
+          208
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "3x2_checkerboard",
+      "width": 3,
+      "height": 2,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 427,
+      "padX": 0,
+      "padY": 106,
+      "seed": 305419896,
+      "resizedRgbSha256": "fe87727e9a251ae58c6e9193f3b113b311bc9eaf7f5b54304ec3417fd992d5ad",
+      "inputTensorSha256": "b727ea8c5c31b16f06d9a75313ccaa62e170b7eee6606e6eabc81929f94c8502",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          255
+        ],
+        [
+          15855,
+          70
+        ],
+        [
+          23774,
+          165
+        ],
+        [
+          31693,
+          5
+        ],
+        [
+          39612,
+          154
+        ],
+        [
+          47531,
+          59
+        ],
+        [
+          55450,
+          255
+        ],
+        [
+          409920,
+          127
+        ],
+        [
+          819839,
+          255
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "3x2_edge",
+      "width": 3,
+      "height": 2,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 427,
+      "padX": 0,
+      "padY": 106,
+      "seed": 305419896,
+      "resizedRgbSha256": "5efb99cdc936749b8f6606622fea27fc4cf1fc4fafa03e1b9fc0b7c1851c1e51",
+      "inputTensorSha256": "b6bbebf4ff2f81966153294935ee94883ae840d5b39141ccea826b1b1eb251aa",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          79
+        ],
+        [
+          23774,
+          143
+        ],
+        [
+          31693,
+          204
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          409920,
+          242
+        ],
+        [
+          819839,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "3x2_counter_random",
+      "width": 3,
+      "height": 2,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 427,
+      "padX": 0,
+      "padY": 106,
+      "seed": 305419896,
+      "resizedRgbSha256": "4cfe78f59d169c9198df038cd11a76764690f50c3aa65206c0d42796b9b9f5d1",
+      "inputTensorSha256": "ab422b9d5e1dd08f38b150c05e228b37c25c696551f8f29986145c3a8608e50b",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          115
+        ],
+        [
+          15855,
+          122
+        ],
+        [
+          23774,
+          27
+        ],
+        [
+          31693,
+          50
+        ],
+        [
+          39612,
+          95
+        ],
+        [
+          47531,
+          149
+        ],
+        [
+          55450,
+          184
+        ],
+        [
+          409920,
+          47
+        ],
+        [
+          819839,
+          183
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x3_gradient",
+      "width": 2,
+      "height": 3,
+      "pattern": "gradient",
+      "resizedWidth": 427,
+      "resizedHeight": 640,
+      "padX": 106,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "a3cfb2fd44e395abf92f6d5ccf04b9f54f197021c387703015c965c93fdd4012",
+      "inputTensorSha256": "5b100cb9ddd06acd615430735d466678eec8b1763acadf3ccb377231900eb551",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          64
+        ],
+        [
+          15855,
+          20
+        ],
+        [
+          23774,
+          140
+        ],
+        [
+          31693,
+          100
+        ],
+        [
+          39612,
+          48
+        ],
+        [
+          47531,
+          117
+        ],
+        [
+          55450,
+          66
+        ],
+        [
+          409920,
+          28
+        ],
+        [
+          819839,
+          188
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x3_checkerboard",
+      "width": 2,
+      "height": 3,
+      "pattern": "checkerboard",
+      "resizedWidth": 427,
+      "resizedHeight": 640,
+      "padX": 106,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "8e0fd7b65de5b478948ef1a8a9e03435738664c8fa2f07283c5cc76ad23ca158",
+      "inputTensorSha256": "47dd8e207426f821bc99f5a030cf9ceb42253707a8643f9586f1fb65f608d316",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          255
+        ],
+        [
+          15855,
+          65
+        ],
+        [
+          23774,
+          157
+        ],
+        [
+          31693,
+          4
+        ],
+        [
+          39612,
+          255
+        ],
+        [
+          47531,
+          0
+        ],
+        [
+          55450,
+          236
+        ],
+        [
+          409920,
+          254
+        ],
+        [
+          819839,
+          255
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x3_edge",
+      "width": 2,
+      "height": 3,
+      "pattern": "edge",
+      "resizedWidth": 427,
+      "resizedHeight": 640,
+      "padX": 106,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "22eeb744140893de183d28c8fd7f6e5f17a928fcff4d5a16f724701ad8be6fe7",
+      "inputTensorSha256": "07bc1af479ceb48a1ffb4f14a20288e217df6128fd5f91cb40dd7b88a9dfca70",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          74
+        ],
+        [
+          23774,
+          141
+        ],
+        [
+          31693,
+          201
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          99
+        ],
+        [
+          55450,
+          69
+        ],
+        [
+          409920,
+          18
+        ],
+        [
+          819839,
+          169
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "2x3_counter_random",
+      "width": 2,
+      "height": 3,
+      "pattern": "counter_random",
+      "resizedWidth": 427,
+      "resizedHeight": 640,
+      "padX": 106,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "2de885659d40fd71e5d6d1078bd90f24849e12349a5dc83d5baec02e5c247a08",
+      "inputTensorSha256": "cd1de83556a64bb3ddf21b64fa8212566b70f32ec2a2d1bcf5f4bd32f191fc5f",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          115
+        ],
+        [
+          15855,
+          124
+        ],
+        [
+          23774,
+          27
+        ],
+        [
+          31693,
+          48
+        ],
+        [
+          39612,
+          50
+        ],
+        [
+          47531,
+          40
+        ],
+        [
+          55450,
+          110
+        ],
+        [
+          409920,
+          164
+        ],
+        [
+          819839,
+          183
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "5x7_gradient",
+      "width": 5,
+      "height": 7,
+      "pattern": "gradient",
+      "resizedWidth": 457,
+      "resizedHeight": 640,
+      "padX": 91,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "490fb8cef0157cc105d891aaa0e1f7ca9b6f9b1f86d53d18cab70819a23de98b",
+      "inputTensorSha256": "ca6841cd8b0d3e6b7d15d22634906bdecb87f8cc45b4bcf3dcd3b8c07e0df1eb",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          191
+        ],
+        [
+          15855,
+          97
+        ],
+        [
+          23774,
+          161
+        ],
+        [
+          31693,
+          67
+        ],
+        [
+          39612,
+          158
+        ],
+        [
+          47531,
+          222
+        ],
+        [
+          55450,
+          128
+        ],
+        [
+          438720,
+          62
+        ],
+        [
+          877439,
+          111
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "5x7_checkerboard",
+      "width": 5,
+      "height": 7,
+      "pattern": "checkerboard",
+      "resizedWidth": 457,
+      "resizedHeight": 640,
+      "padX": 91,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "1dd6a8bd34348d7fd9ea529ff660157e42f01ae1e44fc58bddafb4476a9c8e43",
+      "inputTensorSha256": "b27228e6fe1ced74a0e010c4902920ea5bf86deb7691d8c231fa23001ccaeb48",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          113
+        ],
+        [
+          15855,
+          84
+        ],
+        [
+          23774,
+          204
+        ],
+        [
+          31693,
+          233
+        ],
+        [
+          39612,
+          8
+        ],
+        [
+          47531,
+          215
+        ],
+        [
+          55450,
+          185
+        ],
+        [
+          438720,
+          254
+        ],
+        [
+          877439,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "5x7_edge",
+      "width": 5,
+      "height": 7,
+      "pattern": "edge",
+      "resizedWidth": 457,
+      "resizedHeight": 640,
+      "padX": 91,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "b88e02ef43f51d2fc83fcc2c119af2cc33058a6adfda5789d5bddf88ef6111f9",
+      "inputTensorSha256": "55edb08e358efb1fb86452eada0577e28ada588b8c928252845b81df47dee357",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          204
+        ],
+        [
+          15855,
+          241
+        ],
+        [
+          23774,
+          113
+        ],
+        [
+          31693,
+          58
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          164
+        ],
+        [
+          438720,
+          17
+        ],
+        [
+          877439,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "5x7_counter_random",
+      "width": 5,
+      "height": 7,
+      "pattern": "counter_random",
+      "resizedWidth": 457,
+      "resizedHeight": 640,
+      "padX": 91,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "1a126bafa65854f124d632a43b1079a9d812edf4354875b848b4c3ed3abb6f0e",
+      "inputTensorSha256": "2f51c4eea4d9550ddf4dcefe032ead4be104d3364ac738b4a8e74e8ea1769656",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          168
+        ],
+        [
+          15855,
+          163
+        ],
+        [
+          23774,
+          54
+        ],
+        [
+          31693,
+          109
+        ],
+        [
+          39612,
+          47
+        ],
+        [
+          47531,
+          144
+        ],
+        [
+          55450,
+          146
+        ],
+        [
+          438720,
+          68
+        ],
+        [
+          877439,
+          154
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "7x5_gradient",
+      "width": 7,
+      "height": 5,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 457,
+      "padX": 0,
+      "padY": 91,
+      "seed": 305419896,
+      "resizedRgbSha256": "461577b61c1cbf8b80acca2efbe11aae2ef52813c673d2f5d92c382ca2023fdd",
+      "inputTensorSha256": "90ebd118e5f220ca0cec05e0a42ccaa583a35710934fc427e57dc925f9cb8067",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          80
+        ],
+        [
+          15855,
+          59
+        ],
+        [
+          23774,
+          197
+        ],
+        [
+          31693,
+          177
+        ],
+        [
+          39612,
+          156
+        ],
+        [
+          47531,
+          38
+        ],
+        [
+          55450,
+          104
+        ],
+        [
+          438720,
+          156
+        ],
+        [
+          877439,
+          151
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "7x5_checkerboard",
+      "width": 7,
+      "height": 5,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 457,
+      "padX": 0,
+      "padY": 91,
+      "seed": 305419896,
+      "resizedRgbSha256": "148d1578eb7e811fea3d0c5df4dd83a813ec00c386294c34a4e8d5db89ab1e27",
+      "inputTensorSha256": "f8f5ff96892316d88fa03c501fb2924924ad71d05e7794ec9f193348dba4719f",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          144
+        ],
+        [
+          15855,
+          176
+        ],
+        [
+          23774,
+          44
+        ],
+        [
+          31693,
+          13
+        ],
+        [
+          39612,
+          19
+        ],
+        [
+          47531,
+          201
+        ],
+        [
+          55450,
+          169
+        ],
+        [
+          438720,
+          254
+        ],
+        [
+          877439,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "7x5_edge",
+      "width": 7,
+      "height": 5,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 457,
+      "padX": 0,
+      "padY": 91,
+      "seed": 305419896,
+      "resizedRgbSha256": "37a216245963f4ee039de834f3be5b8cab5f05717f2d8e4e4507198bee6c15ab",
+      "inputTensorSha256": "4537144681c859677b91ed8b2a6d19b186e6aa463d054858ae96a38a3ce4c504",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          17
+        ],
+        [
+          23774,
+          111
+        ],
+        [
+          31693,
+          204
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          438720,
+          243
+        ],
+        [
+          877439,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "7x5_counter_random",
+      "width": 7,
+      "height": 5,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 457,
+      "padX": 0,
+      "padY": 91,
+      "seed": 305419896,
+      "resizedRgbSha256": "8245bc91db34a7c6b05cdf244ceb704609daef9e4bdbbec27b802b193d3e5242",
+      "inputTensorSha256": "b2345aa63d9c76a1449e5d2fb73730c49a4a3da6a54e16ae0abad2b335596f7f",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          85
+        ],
+        [
+          15855,
+          85
+        ],
+        [
+          23774,
+          179
+        ],
+        [
+          31693,
+          241
+        ],
+        [
+          39612,
+          53
+        ],
+        [
+          47531,
+          164
+        ],
+        [
+          55450,
+          115
+        ],
+        [
+          438720,
+          93
+        ],
+        [
+          877439,
+          154
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "17x13_gradient",
+      "width": 17,
+      "height": 13,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 489,
+      "padX": 0,
+      "padY": 75,
+      "seed": 305419896,
+      "resizedRgbSha256": "d46787b10374e154ec2ebf88b586b5ba5ada7ed95ed3b63b0b3332f6e3e92f3e",
+      "inputTensorSha256": "1f3b55e345bad4294fa0b1f15caed20cdb41e635046cecfeaf803417a02ec39f",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          130
+        ],
+        [
+          15855,
+          155
+        ],
+        [
+          23774,
+          83
+        ],
+        [
+          31693,
+          108
+        ],
+        [
+          39612,
+          135
+        ],
+        [
+          47531,
+          64
+        ],
+        [
+          55450,
+          92
+        ],
+        [
+          469440,
+          153
+        ],
+        [
+          938879,
+          145
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "17x13_checkerboard",
+      "width": 17,
+      "height": 13,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 489,
+      "padX": 0,
+      "padY": 75,
+      "seed": 305419896,
+      "resizedRgbSha256": "d74771c2e8798071e445d34018438acf129d1b17275ea85d2c0e3fbb5e8a99de",
+      "inputTensorSha256": "4f1510a816a41b7c775560ab80e81c0739cd81d5c631a2728c8c5488915c7353",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          197
+        ],
+        [
+          15855,
+          27
+        ],
+        [
+          23774,
+          1
+        ],
+        [
+          31693,
+          224
+        ],
+        [
+          39612,
+          68
+        ],
+        [
+          47531,
+          99
+        ],
+        [
+          55450,
+          131
+        ],
+        [
+          469440,
+          3
+        ],
+        [
+          938879,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "17x13_edge",
+      "width": 17,
+      "height": 13,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 489,
+      "padX": 0,
+      "padY": 75,
+      "seed": 305419896,
+      "resizedRgbSha256": "181027d51097f9fb53ab018e95fd142fef3d5da3adbc8c339d8527d4a0c9afda",
+      "inputTensorSha256": "14a5831d5e4f942ba51d259b8993c2eb693ee799542c2df17d9a5ce2c4af9a24",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          17
+        ],
+        [
+          23774,
+          99
+        ],
+        [
+          31693,
+          204
+        ],
+        [
+          39612,
+          241
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          469440,
+          241
+        ],
+        [
+          938879,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "17x13_counter_random",
+      "width": 17,
+      "height": 13,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 489,
+      "padX": 0,
+      "padY": 75,
+      "seed": 305419896,
+      "resizedRgbSha256": "dcb963dd9de85fb9a02ff23b7218621b5094825e8b65e27d5b907d307193885c",
+      "inputTensorSha256": "269a5c927b202d1d1d93e4bf8b91e1f12240b6ccee470805807efdfb1e8c981c",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          153
+        ],
+        [
+          15855,
+          56
+        ],
+        [
+          23774,
+          78
+        ],
+        [
+          31693,
+          112
+        ],
+        [
+          39612,
+          61
+        ],
+        [
+          47531,
+          74
+        ],
+        [
+          55450,
+          176
+        ],
+        [
+          469440,
+          136
+        ],
+        [
+          938879,
+          116
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "13x17_gradient",
+      "width": 13,
+      "height": 17,
+      "pattern": "gradient",
+      "resizedWidth": 489,
+      "resizedHeight": 640,
+      "padX": 75,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "df8836d532e52ed9c0c5e712f23602adc0cf683a29bc8a62ca1f7cd00f84b666",
+      "inputTensorSha256": "c5e1f03ee3b77b731c7e107eb6d5f1530b2a444fc518979d82e6678a1f006d29",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          117
+        ],
+        [
+          7936,
+          243
+        ],
+        [
+          15855,
+          126
+        ],
+        [
+          23774,
+          197
+        ],
+        [
+          31693,
+          81
+        ],
+        [
+          39612,
+          15
+        ],
+        [
+          47531,
+          41
+        ],
+        [
+          55450,
+          182
+        ],
+        [
+          469440,
+          147
+        ],
+        [
+          938879,
+          65
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "13x17_checkerboard",
+      "width": 13,
+      "height": 17,
+      "pattern": "checkerboard",
+      "resizedWidth": 489,
+      "resizedHeight": 640,
+      "padX": 75,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "1b348734ecac22c83540e9eb4ff4dae10de1a0dcf9ed285abf8cb613221fd855",
+      "inputTensorSha256": "4ec643e6b4380bdd769b42d8bae400dec15ae77e383f00fcc28a0e1a7fc5839e",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          7936,
+          43
+        ],
+        [
+          15855,
+          4
+        ],
+        [
+          23774,
+          44
+        ],
+        [
+          31693,
+          96
+        ],
+        [
+          39612,
+          59
+        ],
+        [
+          47531,
+          141
+        ],
+        [
+          55450,
+          128
+        ],
+        [
+          469440,
+          3
+        ],
+        [
+          938879,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "13x17_edge",
+      "width": 13,
+      "height": 17,
+      "pattern": "edge",
+      "resizedWidth": 489,
+      "resizedHeight": 640,
+      "padX": 75,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "e636e29ae7b768f2ca35077428e1a394ffef10ebaeb7025c6626557aaed0640b",
+      "inputTensorSha256": "52845a5bc8a4d2ebfee7d5807186a47d54b91b26add49a888803669826eed0e9",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          58
+        ],
+        [
+          15855,
+          241
+        ],
+        [
+          23774,
+          99
+        ],
+        [
+          31693,
+          204
+        ],
+        [
+          39612,
+          17
+        ],
+        [
+          47531,
+          99
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          469440,
+          19
+        ],
+        [
+          938879,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "13x17_counter_random",
+      "width": 13,
+      "height": 17,
+      "pattern": "counter_random",
+      "resizedWidth": 489,
+      "resizedHeight": 640,
+      "padX": 75,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "6e54f566acc6f3c518ff358da80b62c947fa0fd92e5df86f118a4bed081c5aec",
+      "inputTensorSha256": "fec995bce69d05e67248383e2dcef72bcc2bf5d6c0d10c0538aba5e5c01c2cec",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          40
+        ],
+        [
+          7936,
+          219
+        ],
+        [
+          15855,
+          12
+        ],
+        [
+          23774,
+          179
+        ],
+        [
+          31693,
+          86
+        ],
+        [
+          39612,
+          151
+        ],
+        [
+          47531,
+          112
+        ],
+        [
+          55450,
+          143
+        ],
+        [
+          469440,
+          147
+        ],
+        [
+          938879,
+          116
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "320x240_gradient",
+      "width": 320,
+      "height": 240,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "6c02d9efbb95b4d0bfef6fe82583b37181458df8c027bdffcf293ba05097b633",
+      "inputTensorSha256": "769fac0be7c0344db765dd1643ebd0e61d326ffdee053c4612f5e63c99579727",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          200
+        ],
+        [
+          7936,
+          121
+        ],
+        [
+          15855,
+          46
+        ],
+        [
+          23774,
+          111
+        ],
+        [
+          31693,
+          52
+        ],
+        [
+          39612,
+          217
+        ],
+        [
+          47531,
+          27
+        ],
+        [
+          55450,
+          208
+        ],
+        [
+          460800,
+          63
+        ],
+        [
+          921599,
+          111
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "320x240_checkerboard",
+      "width": 320,
+      "height": 240,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "93acbcaf242a6fd34bde65f3f9ade4b91584a393589a099fe35715e6253d4448",
+      "inputTensorSha256": "4c6fb3e6fee362d7161d108f29532c0a4adab20eb2ac777d5be1985bada510a8",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          64
+        ],
+        [
+          7936,
+          159
+        ],
+        [
+          15855,
+          96
+        ],
+        [
+          23774,
+          96
+        ],
+        [
+          31693,
+          159
+        ],
+        [
+          39612,
+          96
+        ],
+        [
+          47531,
+          159
+        ],
+        [
+          55450,
+          96
+        ],
+        [
+          460800,
+          64
+        ],
+        [
+          921599,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "320x240_edge",
+      "width": 320,
+      "height": 240,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "0a54c799b2f122848ac41d33e4015a83c4a8c651511f6cf334232ab3bd1bcfd7",
+      "inputTensorSha256": "b8efa3d2d5f7c5f24df0f23a3bacbdab2d591830ae8cf948e2a1c1ef757b00f0",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          60
+        ],
+        [
+          15855,
+          18
+        ],
+        [
+          23774,
+          100
+        ],
+        [
+          31693,
+          206
+        ],
+        [
+          39612,
+          242
+        ],
+        [
+          47531,
+          168
+        ],
+        [
+          55450,
+          206
+        ],
+        [
+          460800,
+          18
+        ],
+        [
+          921599,
+          169
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "320x240_counter_random",
+      "width": 320,
+      "height": 240,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "61b30e0258dab77dcc57293a390b3f9cc03ad287e035d264f04220624417de49",
+      "inputTensorSha256": "ba472e399b0f2969650a5f7da3ee9efad6a530cda5c8073bff4f46e3b08617b4",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          175
+        ],
+        [
+          7936,
+          181
+        ],
+        [
+          15855,
+          98
+        ],
+        [
+          23774,
+          70
+        ],
+        [
+          31693,
+          126
+        ],
+        [
+          39612,
+          220
+        ],
+        [
+          47531,
+          176
+        ],
+        [
+          55450,
+          147
+        ],
+        [
+          460800,
+          59
+        ],
+        [
+          921599,
+          205
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x480_gradient",
+      "width": 640,
+      "height": 480,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "439fb187bf2577843dc7343c248d6ec2934b486881d1e1ba804fbc5886df488b",
+      "inputTensorSha256": "17ac441663be939743d11d28ab48cbf27230ddfd1d5ef0f7c346dbea0664fe1f",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          46
+        ],
+        [
+          7936,
+          205
+        ],
+        [
+          15855,
+          108
+        ],
+        [
+          23774,
+          133
+        ],
+        [
+          31693,
+          36
+        ],
+        [
+          39612,
+          195
+        ],
+        [
+          47531,
+          220
+        ],
+        [
+          55450,
+          123
+        ],
+        [
+          460800,
+          251
+        ],
+        [
+          921599,
+          159
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x480_checkerboard",
+      "width": 640,
+      "height": 480,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "8d17649f5a8c8b6ec2015277ba50e2d467d738bdd1267caead84ee6d1985ad3d",
+      "inputTensorSha256": "ef9223b169c1b4f0fddbd17431bdee6d0b120580a810c95aaada37ee9a894ae6",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          255
+        ],
+        [
+          7936,
+          0
+        ],
+        [
+          15855,
+          255
+        ],
+        [
+          23774,
+          0
+        ],
+        [
+          31693,
+          255
+        ],
+        [
+          39612,
+          0
+        ],
+        [
+          47531,
+          255
+        ],
+        [
+          55450,
+          0
+        ],
+        [
+          460800,
+          0
+        ],
+        [
+          921599,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x480_edge",
+      "width": 640,
+      "height": 480,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "c38d1a5a51466c574c6687c7f41387744ba0f01016d842df4d3f7218d83ed518",
+      "inputTensorSha256": "da8cc35d3dcf0e1e9b8b6dbdccd6c751dc2d09068fcc53c50c7478128c7678bf",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          59
+        ],
+        [
+          15855,
+          19
+        ],
+        [
+          23774,
+          99
+        ],
+        [
+          31693,
+          205
+        ],
+        [
+          39612,
+          243
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          205
+        ],
+        [
+          460800,
+          17
+        ],
+        [
+          921599,
+          169
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x480_counter_random",
+      "width": 640,
+      "height": 480,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 480,
+      "padX": 0,
+      "padY": 80,
+      "seed": 305419896,
+      "resizedRgbSha256": "3eb7be4d06db37282d2eb8c4f6e1741e610baa26bb41a057e7f807acf57d8d64",
+      "inputTensorSha256": "b5c6c45d4823c3febe66c17c7f1e49e69860bc85cbb4abae249c7b600d3403a0",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          183
+        ],
+        [
+          7936,
+          161
+        ],
+        [
+          15855,
+          191
+        ],
+        [
+          23774,
+          87
+        ],
+        [
+          31693,
+          109
+        ],
+        [
+          39612,
+          12
+        ],
+        [
+          47531,
+          237
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          460800,
+          71
+        ],
+        [
+          921599,
+          200
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x720_gradient",
+      "width": 1280,
+      "height": 720,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 360,
+      "padX": 0,
+      "padY": 140,
+      "seed": 305419896,
+      "resizedRgbSha256": "b3f4320628d141f89fd9b9315a5d17eb9a6bdab2b7fcebabbd17f0e88f493096",
+      "inputTensorSha256": "b0af9b573a959e776b3995da58a88cf22e2abc7e43758bd49cc69eb6cd73c2b5",
+      "probes": [
+        [
+          0,
+          38
+        ],
+        [
+          17,
+          130
+        ],
+        [
+          7936,
+          117
+        ],
+        [
+          15855,
+          168
+        ],
+        [
+          23774,
+          176
+        ],
+        [
+          31693,
+          35
+        ],
+        [
+          39612,
+          150
+        ],
+        [
+          47531,
+          94
+        ],
+        [
+          55450,
+          209
+        ],
+        [
+          345600,
+          78
+        ],
+        [
+          691199,
+          180
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x720_checkerboard",
+      "width": 1280,
+      "height": 720,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 360,
+      "padX": 0,
+      "padY": 140,
+      "seed": 305419896,
+      "resizedRgbSha256": "613e3f0571e56264c6febe3e9e4b95220e04c63d240aa2cea37269156717ba4e",
+      "inputTensorSha256": "6dfe271d18d980639a3daf74a2fa88e0d6969d7015b4a40785ffabae17619704",
+      "probes": [
+        [
+          0,
+          128
+        ],
+        [
+          17,
+          128
+        ],
+        [
+          7936,
+          128
+        ],
+        [
+          15855,
+          128
+        ],
+        [
+          23774,
+          128
+        ],
+        [
+          31693,
+          128
+        ],
+        [
+          39612,
+          128
+        ],
+        [
+          47531,
+          128
+        ],
+        [
+          55450,
+          128
+        ],
+        [
+          345600,
+          128
+        ],
+        [
+          691199,
+          128
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x720_edge",
+      "width": 1280,
+      "height": 720,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 360,
+      "padX": 0,
+      "padY": 140,
+      "seed": 305419896,
+      "resizedRgbSha256": "c72c3c4c553feee3e42beb63ffc865f0134093f9a0d13c0f4cbd7d3d8a1cf0dc",
+      "inputTensorSha256": "3cae631e1c44475a44b3c289fef5325f20690be35e50653aa4da7a538fec403f",
+      "probes": [
+        [
+          0,
+          18
+        ],
+        [
+          17,
+          100
+        ],
+        [
+          7936,
+          59
+        ],
+        [
+          15855,
+          19
+        ],
+        [
+          23774,
+          100
+        ],
+        [
+          31693,
+          205
+        ],
+        [
+          39612,
+          243
+        ],
+        [
+          47531,
+          168
+        ],
+        [
+          55450,
+          205
+        ],
+        [
+          345600,
+          18
+        ],
+        [
+          691199,
+          169
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x720_counter_random",
+      "width": 1280,
+      "height": 720,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 360,
+      "padX": 0,
+      "padY": 140,
+      "seed": 305419896,
+      "resizedRgbSha256": "a9a78f8c1f07c9aa40bb2f47fee6d268baf3cde47d444fa9ae486d1d39ca528d",
+      "inputTensorSha256": "c69d73353b25ecf4d1b29d51b93c39fafe185391fbf0ada76b9b04aa30ca3cf8",
+      "probes": [
+        [
+          0,
+          121
+        ],
+        [
+          17,
+          118
+        ],
+        [
+          7936,
+          174
+        ],
+        [
+          15855,
+          61
+        ],
+        [
+          23774,
+          107
+        ],
+        [
+          31693,
+          60
+        ],
+        [
+          39612,
+          118
+        ],
+        [
+          47531,
+          113
+        ],
+        [
+          55450,
+          110
+        ],
+        [
+          345600,
+          135
+        ],
+        [
+          691199,
+          113
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "720x1280_gradient",
+      "width": 720,
+      "height": 1280,
+      "pattern": "gradient",
+      "resizedWidth": 360,
+      "resizedHeight": 640,
+      "padX": 140,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "85ca1e1a49f5026ec3232a0d328be5af84f012d774a62047e0f6670ea20c5ef5",
+      "inputTensorSha256": "f7177f1e1a81aa0eb0f8d0bd48519bec1801d144f63eae59d80568c05c3f11d3",
+      "probes": [
+        [
+          0,
+          38
+        ],
+        [
+          17,
+          130
+        ],
+        [
+          7936,
+          107
+        ],
+        [
+          15855,
+          212
+        ],
+        [
+          23774,
+          164
+        ],
+        [
+          31693,
+          77
+        ],
+        [
+          39612,
+          118
+        ],
+        [
+          47531,
+          70
+        ],
+        [
+          55450,
+          175
+        ],
+        [
+          345600,
+          166
+        ],
+        [
+          691199,
+          52
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "720x1280_checkerboard",
+      "width": 720,
+      "height": 1280,
+      "pattern": "checkerboard",
+      "resizedWidth": 360,
+      "resizedHeight": 640,
+      "padX": 140,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "613e3f0571e56264c6febe3e9e4b95220e04c63d240aa2cea37269156717ba4e",
+      "inputTensorSha256": "55ad601cc49af1f72dd31c6ac3a8a127bcaba489c58602fbd3164e84ebb737e0",
+      "probes": [
+        [
+          0,
+          128
+        ],
+        [
+          17,
+          128
+        ],
+        [
+          7936,
+          128
+        ],
+        [
+          15855,
+          128
+        ],
+        [
+          23774,
+          128
+        ],
+        [
+          31693,
+          128
+        ],
+        [
+          39612,
+          128
+        ],
+        [
+          47531,
+          128
+        ],
+        [
+          55450,
+          128
+        ],
+        [
+          345600,
+          128
+        ],
+        [
+          691199,
+          128
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "720x1280_edge",
+      "width": 720,
+      "height": 1280,
+      "pattern": "edge",
+      "resizedWidth": 360,
+      "resizedHeight": 640,
+      "padX": 140,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "bb898a5ef65e8d43c216a1ca211134bce622f8ae86daa7c648ba7e9182e852d8",
+      "inputTensorSha256": "93509a5a02b0ad80b8c794627074591246a974d0b6185d588edca772351d90c6",
+      "probes": [
+        [
+          0,
+          18
+        ],
+        [
+          17,
+          100
+        ],
+        [
+          7936,
+          59
+        ],
+        [
+          15855,
+          243
+        ],
+        [
+          23774,
+          100
+        ],
+        [
+          31693,
+          60
+        ],
+        [
+          39612,
+          242
+        ],
+        [
+          47531,
+          101
+        ],
+        [
+          55450,
+          59
+        ],
+        [
+          345600,
+          19
+        ],
+        [
+          691199,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "720x1280_counter_random",
+      "width": 720,
+      "height": 1280,
+      "pattern": "counter_random",
+      "resizedWidth": 360,
+      "resizedHeight": 640,
+      "padX": 140,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "f4a4a614382fc7db2e9ad8cebfa9ae6011c18648daa7740ced1a3baba76f0b70",
+      "inputTensorSha256": "adce9d54328f3972fb201e051a977565c62125a9c1d26dff853c591f5c17737a",
+      "probes": [
+        [
+          0,
+          111
+        ],
+        [
+          17,
+          126
+        ],
+        [
+          7936,
+          102
+        ],
+        [
+          15855,
+          161
+        ],
+        [
+          23774,
+          169
+        ],
+        [
+          31693,
+          97
+        ],
+        [
+          39612,
+          82
+        ],
+        [
+          47531,
+          174
+        ],
+        [
+          55450,
+          147
+        ],
+        [
+          345600,
+          142
+        ],
+        [
+          691199,
+          101
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x640_gradient",
+      "width": 640,
+      "height": 640,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "860988ca398ef9d83eebae3fd8f83a82a5af9e2e5efa969ea7c3b84f952a93eb",
+      "inputTensorSha256": "36f28a69e67daca9635fbf1b26c41dae194908cf5ff0145672c2d527849b9ae5",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          46
+        ],
+        [
+          7936,
+          205
+        ],
+        [
+          15855,
+          108
+        ],
+        [
+          23774,
+          133
+        ],
+        [
+          31693,
+          36
+        ],
+        [
+          39612,
+          195
+        ],
+        [
+          47531,
+          220
+        ],
+        [
+          55450,
+          123
+        ],
+        [
+          614400,
+          75
+        ],
+        [
+          1228799,
+          63
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x640_checkerboard",
+      "width": 640,
+      "height": 640,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "036cb879aebb08ec896e33937350975533ba9b430004aab029b6638e7085d8bd",
+      "inputTensorSha256": "5a1e8c45eedd2300b7a6e095569e65acbe40142cb0a04c72bbfbff8d91aae7a4",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          255
+        ],
+        [
+          7936,
+          0
+        ],
+        [
+          15855,
+          255
+        ],
+        [
+          23774,
+          0
+        ],
+        [
+          31693,
+          255
+        ],
+        [
+          39612,
+          0
+        ],
+        [
+          47531,
+          255
+        ],
+        [
+          55450,
+          0
+        ],
+        [
+          614400,
+          0
+        ],
+        [
+          1228799,
+          0
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x640_edge",
+      "width": 640,
+      "height": 640,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "d19782751d60229de98e911c8c482f76097fada87b424ccb33ef9dd4cbf22179",
+      "inputTensorSha256": "bce7bd14e5d06f6d4952bf302347d77bcd6c3f3b93f3619c5f0d6876e62eec42",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          7936,
+          59
+        ],
+        [
+          15855,
+          19
+        ],
+        [
+          23774,
+          99
+        ],
+        [
+          31693,
+          205
+        ],
+        [
+          39612,
+          243
+        ],
+        [
+          47531,
+          167
+        ],
+        [
+          55450,
+          205
+        ],
+        [
+          614400,
+          19
+        ],
+        [
+          1228799,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x640_counter_random",
+      "width": 640,
+      "height": 640,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "c9770fb98ae580eb7567ecdf4a1a65382ff62fcf2acd1a621d2ab9f61845418f",
+      "inputTensorSha256": "06e774e1e9750c2c975d4fcb3bff5e2f002141b769a64096ca7b0e043f19db01",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          183
+        ],
+        [
+          7936,
+          161
+        ],
+        [
+          15855,
+          191
+        ],
+        [
+          23774,
+          87
+        ],
+        [
+          31693,
+          109
+        ],
+        [
+          39612,
+          12
+        ],
+        [
+          47531,
+          237
+        ],
+        [
+          55450,
+          204
+        ],
+        [
+          614400,
+          82
+        ],
+        [
+          1228799,
+          68
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x1280_gradient",
+      "width": 1280,
+      "height": 1280,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "50a83b0476d4a92489f8339df63f027f7ea567d0f56f4bd83316465dec41bd7a",
+      "inputTensorSha256": "8a5bbc17e9b3c394df714f3a9cb8846ac13af6110ca12fb5d2bab835e95c091f",
+      "probes": [
+        [
+          0,
+          38
+        ],
+        [
+          17,
+          130
+        ],
+        [
+          7936,
+          117
+        ],
+        [
+          15855,
+          168
+        ],
+        [
+          23774,
+          176
+        ],
+        [
+          31693,
+          35
+        ],
+        [
+          39612,
+          150
+        ],
+        [
+          47531,
+          94
+        ],
+        [
+          55450,
+          209
+        ],
+        [
+          614400,
+          166
+        ],
+        [
+          1228799,
+          36
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x1280_checkerboard",
+      "width": 1280,
+      "height": 1280,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "7d9c2a89264111d21833f34d93e87b9b745330ffdf5e7ec5c1da57c8631eb0df",
+      "inputTensorSha256": "4b5736030aa08299a627ae7eb556e9d9c6f2a3b8e3ca6c8651d6f14c01b429b7",
+      "probes": [
+        [
+          0,
+          128
+        ],
+        [
+          17,
+          128
+        ],
+        [
+          7936,
+          128
+        ],
+        [
+          15855,
+          128
+        ],
+        [
+          23774,
+          128
+        ],
+        [
+          31693,
+          128
+        ],
+        [
+          39612,
+          128
+        ],
+        [
+          47531,
+          128
+        ],
+        [
+          55450,
+          128
+        ],
+        [
+          614400,
+          128
+        ],
+        [
+          1228799,
+          128
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x1280_edge",
+      "width": 1280,
+      "height": 1280,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "7e962d760ffe2a23d8d87d126a8881bc0fb81d6d5e020b5923da11e5d3f8a20c",
+      "inputTensorSha256": "e4d882ddb8b54156138b632e25d1cea88fefcc55dc292a4b112f84e82ccb2e4f",
+      "probes": [
+        [
+          0,
+          18
+        ],
+        [
+          17,
+          100
+        ],
+        [
+          7936,
+          59
+        ],
+        [
+          15855,
+          19
+        ],
+        [
+          23774,
+          100
+        ],
+        [
+          31693,
+          205
+        ],
+        [
+          39612,
+          243
+        ],
+        [
+          47531,
+          168
+        ],
+        [
+          55450,
+          205
+        ],
+        [
+          614400,
+          19
+        ],
+        [
+          1228799,
+          168
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1280x1280_counter_random",
+      "width": 1280,
+      "height": 1280,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 640,
+      "padX": 0,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "9b496b2d1795c7f7c75a950cf4da8b21f876e93601400933e08cec5a1f63fdb3",
+      "inputTensorSha256": "65ed9328497d7dcb07445e8cf362cb5992c05fe18ce9e8da1068e00c42e30f31",
+      "probes": [
+        [
+          0,
+          121
+        ],
+        [
+          17,
+          118
+        ],
+        [
+          7936,
+          174
+        ],
+        [
+          15855,
+          61
+        ],
+        [
+          23774,
+          107
+        ],
+        [
+          31693,
+          60
+        ],
+        [
+          39612,
+          118
+        ],
+        [
+          47531,
+          113
+        ],
+        [
+          55450,
+          110
+        ],
+        [
+          614400,
+          183
+        ],
+        [
+          1228799,
+          124
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x640_gradient",
+      "width": 1,
+      "height": 640,
+      "pattern": "gradient",
+      "resizedWidth": 1,
+      "resizedHeight": 640,
+      "padX": 319,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "057c286193db266144d7dcdfec8ff778fcd45b78ca923ef153cd871ceb227205",
+      "inputTensorSha256": "4f70fbe191b5e9452e0a2298ba5612fece6722e0b75aa8b5539c9331dc126452",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          202
+        ],
+        [
+          256,
+          229
+        ],
+        [
+          495,
+          0
+        ],
+        [
+          734,
+          169
+        ],
+        [
+          960,
+          75
+        ],
+        [
+          973,
+          196
+        ],
+        [
+          1212,
+          223
+        ],
+        [
+          1451,
+          136
+        ],
+        [
+          1690,
+          163
+        ],
+        [
+          1919,
+          228
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x640_checkerboard",
+      "width": 1,
+      "height": 640,
+      "pattern": "checkerboard",
+      "resizedWidth": 1,
+      "resizedHeight": 640,
+      "padX": 319,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "aceb6edad82e691367590cbba14c50037db2372ff8b1ac380a3799f6ec512240",
+      "inputTensorSha256": "a59af4f488c2e35d3cfb41477d7f567730d780b7dd90afd7d12e0403a8a9b0b7",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          255
+        ],
+        [
+          256,
+          0
+        ],
+        [
+          495,
+          255
+        ],
+        [
+          734,
+          0
+        ],
+        [
+          960,
+          0
+        ],
+        [
+          973,
+          255
+        ],
+        [
+          1212,
+          0
+        ],
+        [
+          1451,
+          255
+        ],
+        [
+          1690,
+          0
+        ],
+        [
+          1919,
+          255
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x640_edge",
+      "width": 1,
+      "height": 640,
+      "pattern": "edge",
+      "resizedWidth": 1,
+      "resizedHeight": 640,
+      "padX": 319,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "a90c5d005a526d2b0114527d2f4b5f081f27bde13e4580fde178c4a185ff76f1",
+      "inputTensorSha256": "f152a65baa72b5a70038ed4a64d988b31c8d23d4ccec5ae552283b25bef17868",
+      "probes": [
+        [
+          0,
+          241
+        ],
+        [
+          17,
+          169
+        ],
+        [
+          256,
+          205
+        ],
+        [
+          495,
+          241
+        ],
+        [
+          734,
+          168
+        ],
+        [
+          960,
+          243
+        ],
+        [
+          973,
+          204
+        ],
+        [
+          1212,
+          243
+        ],
+        [
+          1451,
+          167
+        ],
+        [
+          1690,
+          206
+        ],
+        [
+          1919,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "1x640_counter_random",
+      "width": 1,
+      "height": 640,
+      "pattern": "counter_random",
+      "resizedWidth": 1,
+      "resizedHeight": 640,
+      "padX": 319,
+      "padY": 0,
+      "seed": 305419896,
+      "resizedRgbSha256": "d5c7353cc020fab443d1a4cea5e6f089def2e169057c943c08b98defcb9eddab",
+      "inputTensorSha256": "8b09ada954da761a6669ad4b361a68c04efdbbc99943dbd3e612c8baf988413f",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          183
+        ],
+        [
+          256,
+          157
+        ],
+        [
+          495,
+          118
+        ],
+        [
+          734,
+          190
+        ],
+        [
+          960,
+          54
+        ],
+        [
+          973,
+          91
+        ],
+        [
+          1212,
+          115
+        ],
+        [
+          1451,
+          241
+        ],
+        [
+          1690,
+          55
+        ],
+        [
+          1919,
+          104
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x1_gradient",
+      "width": 640,
+      "height": 1,
+      "pattern": "gradient",
+      "resizedWidth": 640,
+      "resizedHeight": 1,
+      "padX": 0,
+      "padY": 319,
+      "seed": 305419896,
+      "resizedRgbSha256": "ba2bc14f0d9f9ecfd8a0cfa78ad041add86798f27d48ab7a5983e2de24f979fc",
+      "inputTensorSha256": "a1d6280e72afebf604a9200b060c6f2401ff014400e92e93be922b8b644056c1",
+      "probes": [
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          46
+        ],
+        [
+          256,
+          137
+        ],
+        [
+          495,
+          228
+        ],
+        [
+          734,
+          185
+        ],
+        [
+          960,
+          75
+        ],
+        [
+          973,
+          20
+        ],
+        [
+          1212,
+          111
+        ],
+        [
+          1451,
+          68
+        ],
+        [
+          1690,
+          159
+        ],
+        [
+          1919,
+          208
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x1_checkerboard",
+      "width": 640,
+      "height": 1,
+      "pattern": "checkerboard",
+      "resizedWidth": 640,
+      "resizedHeight": 1,
+      "padX": 0,
+      "padY": 319,
+      "seed": 305419896,
+      "resizedRgbSha256": "aceb6edad82e691367590cbba14c50037db2372ff8b1ac380a3799f6ec512240",
+      "inputTensorSha256": "e54f118bb3d82760e2434718444d7ea2e1f20d2878c99d886902dcf4d8e78659",
+      "probes": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          255
+        ],
+        [
+          256,
+          0
+        ],
+        [
+          495,
+          255
+        ],
+        [
+          734,
+          0
+        ],
+        [
+          960,
+          0
+        ],
+        [
+          973,
+          255
+        ],
+        [
+          1212,
+          0
+        ],
+        [
+          1451,
+          255
+        ],
+        [
+          1690,
+          0
+        ],
+        [
+          1919,
+          255
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x1_edge",
+      "width": 640,
+      "height": 1,
+      "pattern": "edge",
+      "resizedWidth": 640,
+      "resizedHeight": 1,
+      "padX": 0,
+      "padY": 319,
+      "seed": 305419896,
+      "resizedRgbSha256": "b87225a61916eebd61ca7693509be494cab65b71b8b2e5cf50ce5414c6bcd015",
+      "inputTensorSha256": "9b505df5e5b32e2921ba85be0c4bc716f8986ca3106859df75244fa5c1b81e2c",
+      "probes": [
+        [
+          0,
+          17
+        ],
+        [
+          17,
+          99
+        ],
+        [
+          256,
+          58
+        ],
+        [
+          495,
+          17
+        ],
+        [
+          734,
+          99
+        ],
+        [
+          960,
+          241
+        ],
+        [
+          973,
+          204
+        ],
+        [
+          1212,
+          241
+        ],
+        [
+          1451,
+          167
+        ],
+        [
+          1690,
+          204
+        ],
+        [
+          1919,
+          167
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    },
+    {
+      "id": "640x1_counter_random",
+      "width": 640,
+      "height": 1,
+      "pattern": "counter_random",
+      "resizedWidth": 640,
+      "resizedHeight": 1,
+      "padX": 0,
+      "padY": 319,
+      "seed": 305419896,
+      "resizedRgbSha256": "d5c7353cc020fab443d1a4cea5e6f089def2e169057c943c08b98defcb9eddab",
+      "inputTensorSha256": "2a53d7f314ca946582b214fb7eabe0b5020c3a318879a46a3d6a3f6cac2c3823",
+      "probes": [
+        [
+          0,
+          150
+        ],
+        [
+          17,
+          183
+        ],
+        [
+          256,
+          157
+        ],
+        [
+          495,
+          118
+        ],
+        [
+          734,
+          190
+        ],
+        [
+          960,
+          54
+        ],
+        [
+          973,
+          91
+        ],
+        [
+          1212,
+          115
+        ],
+        [
+          1451,
+          241
+        ],
+        [
+          1690,
+          55
+        ],
+        [
+          1919,
+          104
+        ]
+      ],
+      "defaultVsUnoptimizedMismatches": 0
+    }
+  ]
+}

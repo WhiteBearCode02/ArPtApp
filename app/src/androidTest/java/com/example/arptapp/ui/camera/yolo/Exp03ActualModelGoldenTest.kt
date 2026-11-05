@@ -42,7 +42,45 @@ class Exp03ActualModelGoldenTest {
     private data class Reference(val schemaVersion: Int, val validationPurpose: String, val model: Model,
         val ultralyticsVersion: String, val wheelSha256: String, val sourceSha256: Map<String, String>,
         val modelInferenceExecuted: Boolean, val nativeInferenceCount: Int, val exportContractVerified: Boolean,
-        val thresholds: Thresholds, val tolerances: Tolerances, val samples: List<Sample>)
+        val thresholds: Thresholds, val tolerances: Tolerances, val preprocessingAcceptance: String, val samples: List<Sample>)
+
+    /** Preflight BEFORE any native inference: exact tensor bits, not the old one-level allowance. */
+    @Test fun preprocessingOnlyMatchesPythonBitForBit() {
+        check(BuildConfig.DEBUG)
+        val args = InstrumentationRegistry.getArguments()
+        val run = requireNotNull(args.getString("exp03GoldenRun"))
+        require(run.matches(Regex("[a-z0-9][a-z0-9_-]{0,63}")))
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = File(context.noBackupFilesDir.canonicalFile, "yolo/exp03-actual-golden/runs/$run")
+        require(directory.canonicalFile == directory.absoluteFile && directory.isDirectory)
+        val referenceFile = File(directory, "reference.json")
+        require(referenceFile.canonicalFile == referenceFile.absoluteFile && referenceFile.length() in 1..2_097_152)
+        val bytes = referenceFile.readBytes()
+        require(hash(ByteBuffer.wrap(bytes)) == args.getString("exp03ReferenceSha256"))
+        val reference = gson.fromJson(bytes.toString(Charsets.UTF_8), Reference::class.java)
+        validateReference(reference)
+        val result = File(directory, "android-preprocessing.json")
+        require(!result.exists() && result.canonicalFile == result.absoluteFile)
+        val rows = reference.samples.map { sample ->
+            val bitmap = identicalRgbBitmap(directory, sample)
+            try {
+                val prepared = YoloBitmapPreprocessor().preprocess(bitmap)
+                requireGeometry(sample, prepared.transform as Exp02FrameTransform)
+                val expected = ByteBuffer.wrap(readFixture(directory, sample.inputTensorFile, 4L * 3 * 640 * 640,
+                    sample.inputTensorSha256)).order(ByteOrder.LITTLE_ENDIAN)
+                val comparison = YoloActualGoldenTensorComparator.compare(expected, prepared.tensor, prepared.transform as Exp02FrameTransform)
+                val actualHash = hash(prepared.tensor)
+                mapOf("id" to sample.id, "byteIdentical" to (actualHash == sample.inputTensorSha256),
+                    "tensorSha256" to actualHash, "referenceSha256" to sample.inputTensorSha256, "comparison" to comparison)
+            } finally { bitmap.recycle() }
+        }
+        require(result.createNewFile())
+        result.setReadable(false, false); result.setWritable(false, false)
+        require(result.setReadable(true, true) && result.setWritable(true, true))
+        result.writeText(gson.toJson(mapOf("modelId" to identity.modelId, "modelInferenceExecuted" to false,
+            "sourceReferenceSha256" to hash(ByteBuffer.wrap(bytes)), "samples" to rows)), Charsets.UTF_8)
+        assertTrue("Preprocessing is not bit identical; native Golden must remain blocked", rows.all { it["byteIdentical"] == true })
+    }
 
     @Test fun actualExp03MatchesExactVersionPythonReference() {
         check(BuildConfig.DEBUG)
@@ -76,13 +114,7 @@ class Exp03ActualModelGoldenTest {
                 assertTrue(metadata!!.matchesExpected())
                 val preprocessor = YoloBitmapPreprocessor()
                 for (sample in reference.samples) {
-                    val rgb = readFixture(directory, sample.rgbFile, sample.width.toLong() * sample.height * 3, sample.rgbSha256)
-                    val pixels = IntArray(sample.width * sample.height) { index ->
-                        val offset = index * 3
-                        (0xff shl 24) or ((rgb[offset].toInt() and 255) shl 16) or
-                            ((rgb[offset + 1].toInt() and 255) shl 8) or (rgb[offset + 2].toInt() and 255)
-                    }
-                    val bitmap = Bitmap.createBitmap(pixels, sample.width, sample.height, Bitmap.Config.ARGB_8888)
+                    val bitmap = identicalRgbBitmap(directory, sample)
                     try {
                         val started = SystemClock.elapsedRealtimeNanos()
                         val prepared = preprocessor.preprocess(bitmap)
@@ -113,7 +145,8 @@ class Exp03ActualModelGoldenTest {
                         val frozenRaw = YoloActualGoldenComparator.compare(expected, decode(referenceRaw, transform),
                             YoloGoldenTolerance(confidence = 1e-6f, bboxPixels = 1e-4f))
                         val rawDifference = maximumRawDifference(referenceRaw, identicalOutput)
-                        val samplePassed = pixelComparison.passed && comparison.passed && nativeOnly.passed && frozenRaw.passed
+                        val inputByteIdentical = inputHash == sample.inputTensorSha256
+                        val samplePassed = inputByteIdentical && pixelComparison.passed && comparison.passed && nativeOnly.passed && frozenRaw.passed
                         rows += mapOf("id" to sample.id, "exercise" to sample.exercise, "cameraView" to sample.cameraView,
                             "passed" to samplePassed, "preprocessingComparison" to pixelComparison,
                             "inputTensorSha256" to inputHash, "inputTensorByteIdenticalToPython" to (inputHash == sample.inputTensorSha256),
@@ -166,6 +199,7 @@ class Exp03ActualModelGoldenTest {
             "ultralytics/utils/ops.py" to "7b15cd980abbd578a8be91661c2399b2cbdea0207f1e61b0fb74cfac659bed77",
             "ultralytics/utils/nms.py" to "386cd0e3e38fddef5d434fbcfd58264bedfa37295534e9a2b7174a3436d4db62"))
         require(value.modelInferenceExecuted && !value.exportContractVerified && value.nativeInferenceCount == value.samples.size)
+        require(value.preprocessingAcceptance == "EXACT_TENSOR_BYTES_SHA256")
         require(value.thresholds == Thresholds(.10f, .70f, 300) && value.tolerances == Tolerances(.001f, 2f, 0, "EXACT"))
         require(value.samples.size in 4..64 && value.samples.map { it.id }.distinct().size == value.samples.size)
         require(value.samples.map { it.exercise to it.cameraView }.toSet() == setOf(
@@ -198,6 +232,15 @@ class Exp03ActualModelGoldenTest {
         val file = File(directory, name)
         require(file.canonicalFile == file.absoluteFile && file.canonicalFile.parentFile == directory && file.isFile && file.length() == bytes)
         return file.readBytes().also { require(hash(ByteBuffer.wrap(it)) == expectedHash) }
+    }
+    private fun identicalRgbBitmap(directory: File, sample: Sample): Bitmap {
+        val rgb = readFixture(directory, sample.rgbFile, sample.width.toLong() * sample.height * 3, sample.rgbSha256)
+        val pixels = IntArray(sample.width * sample.height) { index ->
+            val offset = index * 3
+            (0xff shl 24) or ((rgb[offset].toInt() and 255) shl 16) or
+                ((rgb[offset + 1].toInt() and 255) shl 8) or (rgb[offset + 2].toInt() and 255)
+        }
+        return Bitmap.createBitmap(pixels, sample.width, sample.height, Bitmap.Config.ARGB_8888)
     }
     private fun invoke(runtime: YoloTensorRuntime, input: ByteBuffer): ByteBuffer {
         val output = ByteBuffer.allocateDirect(4 * 6 * 8400).order(ByteOrder.nativeOrder())

@@ -1,11 +1,11 @@
 # EXP03 Android private provisioning 및 실기기 검증
 
-2026-11-05 · 실제 휴대폰 native **PASS (합성 입력 smoke)**, contract **NOT_VERIFIED**, camera **NOT_MEASURED**.
+2026-11-05 · 실제 휴대폰 native / actual-image Golden **PASS (Run 2)**, contract **VERIFIED**, camera **NOT_MEASURED**.
 모델 9,894,032 bytes / SHA256 `3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167`.
 
-후속 actual-image Golden도 실제 실행했습니다. **전체 FAIL (1/4 PASS)**이며 native/reference 입력의
-동등성은 확인됐지만 production 전처리 경로 confidence 오차가 초과했습니다.
-[실제 결과·고유 run 재현 명령](EXP03_ACTUAL_GOLDEN_VALIDATION.md). 실시간 카메라 활성화는 보류합니다.
+Run 1 FAIL(1/4)은 보존했습니다. pure Kotlin OpenCV parity 수정 후 **Run 2 전체 PASS(4/4)**,
+tensor SHA4/4 동일 및 기존 confidence/bbox tolerance를 확인해 VERIFIED로 승격했습니다.
+[실제 결과·원인](EXP03_PREPROCESSING_PARITY.md). 실제 Camera baseline은 이번에 측정하지 않았습니다.
 
 ## 설치·주입·테스트 순서 (기록 보존)
 
@@ -13,7 +13,7 @@
 2. DEBUG 앱과 테스트 APK를 **업데이트 설치**합니다. 삭제·앱 데이터 초기화·`pm clear`는 금지입니다.
 3. 아래 `-ValidateLocalOnly`와 `-WhatIf` 확인 후 EXP03을 private noBackup으로 주입합니다. 실제 주입은 DEBUG 앱만 종료하며 데이터/기존 EXP02 모델은 지우지 않습니다.
 4. `Exp03NativeContractDeviceTest`를 실행합니다. load/metadata/native smoke 성공과 실제 JSON을 확인합니다. 합성 입력이므로 카메라 성능·운동 정답률·Golden PASS가 아닙니다.
-5. 앱의 운동 준비→YOLO 진단에서 새 modelId와 `CONTRACT_NOT_VERIFIED`/prediction 비활성을 확인합니다. EXP03 actual-image Golden 및 별도 코드 리뷰 전에는 실시간 YOLO를 켜지 않습니다. Landmark 운동 기능은 계속 사용합니다.
+5. 후속 Camera baseline 단계에서 앱의 운동 준비→YOLO 진단에 EXP03 / VERIFIED / READY / prediction 활성 표시를 확인합니다. 실제 FPS/latency는 본인 운동으로 별도 측정해야 하며 이번 정지 이미지 결과로 대체하지 않습니다. Landmark Primary는 유지합니다.
 
 ```powershell
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
@@ -47,8 +47,8 @@ PC 원본은 `app/src/main/assets/airptcoach_yolo26n_exp03_final_fp32.tflite`이
 업데이트하고 EXP03을 주입했습니다. 앱 삭제·데이터 초기화·기존 모델 삭제는 하지 않았습니다.
 `Exp03NativeContractDeviceTest` **2/2 PASS**: 실제 모델 load, FLOAT32 tensor shape/dtype,
 합성 입력 native invoke 1회와 finite 출력, 미검증 factory prediction 차단을 확인했습니다.
-위 내용은 이전 synthetic smoke 기록입니다. 후속 actual-image Golden은 RUN/FAIL이며
-실시간 prediction은 여전히 비활성입니다. 앱 화면의 육안 확인이나
+위 내용은 이전 synthetic smoke 기록입니다. 후속 Run 1은 FAIL, 수정 후 Run 2는 PASS이며
+DEBUG + VERIFIED + READY에서만 prediction을 허용합니다. 앱 화면의 육안 확인이나
 카메라 FPS/발열/운동 테스트를 이번 instrumentation 결과로 대신 주장하지 않습니다.
 
 native smoke evidence는 private `no_backup/yolo/exp03-native/runs/<UUID>/native-smoke.json`에 배타 생성합니다.

@@ -84,6 +84,10 @@ runs/
 
 # Training media/archives: reviewed metadata is allowed only by the explicit rules below.
 raw/
+# Permit only the reviewed source-license notice, not model/media raw resources.
+!/app/src/main/res/raw/
+/app/src/main/res/raw/*
+!/app/src/main/res/raw/opencv_resize_notice.txt
 dataset/
 datasets/
 frames/

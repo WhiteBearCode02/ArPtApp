@@ -128,6 +128,8 @@ def generate(args, repository: Path):
     import numpy as np
     import torch
 
+    if cv2.__version__ != "4.13.0":
+        raise ValueError("EXP03 OpenCV reference requires actual cv2 4.13.0; no automatic version substitution")
     torch.set_num_threads(1)
     runtime = Interpreter(model_path=str(model), num_threads=2)
     runtime.allocate_tensors()
@@ -195,13 +197,18 @@ def generate(args, repository: Path):
         sourceSha256=source_hashes, referenceFunctions=functions, pythonVersion=sys.version.split()[0],
         runtime=dict(name="ai_edge_litert", version=importlib.metadata.version("ai-edge-litert"),
                      numpyVersion=np.__version__, opencvVersion=cv2.__version__, torchVersion=torch.__version__,
+                     opencvPackageVersion=importlib.metadata.version("opencv-python-headless"),
+                     opencvOptimized=cv2.useOptimized(), opencvIppEnabled=cv2.ipp.useIPP(),
+                     opencvIppNotExact=cv2.ipp.useIPP_NotExact(), opencvCpuFeatures=cv2.getCPUFeaturesLine(),
+                     opencvBuildInformationSha256=sha256(cv2.getBuildInformation().encode("utf-8")),
                      interpreterThreads=2, torchThreads=1, device="CPU"),
         tensorMetadata=dict(input=dict(shape=[1, 3, 640, 640], dtype="FLOAT32"),
                             output=dict(shape=[1, 6, 8400], dtype="FLOAT32")),
         modelInferenceExecuted=True, nativeInferenceCount=len(rows), androidNativeInferenceExecuted=False,
         exportContractVerified=False, contractPromotionPerformed=False, cameraPerformance="NOT_MEASURED",
         thresholds=THRESHOLDS, tolerances=TOLERANCES,
-        preprocessingTolerances=dict(exact=1e-6, resampled=1/255+1e-6, source="UNCHANGED_EXP02_PIXEL_BOUND"),
+        preprocessingAcceptance="EXACT_TENSOR_BYTES_SHA256",
+        preprocessingTolerances=dict(exact=0, resampled=0, source="EXP03_OPENCV_4_13_UINT8_PARITY"),
         semanticSanityCheck=dict(matched=sum(row["semanticMatch"] for row in rows), total=len(rows),
                                  policy="SANITY_ONLY_NEVER_AN_EQUIVALENCE_GATE_OR_DATASET_ACCURACY"), samples=rows)
     output.mkdir(parents=True, exist_ok=False)

@@ -21,11 +21,12 @@
 대표12장 PT↔TFLite class12/12, confidence 평균 차이0.00853748, bbox 평균 IoU0.99399749도 사용자 제공 값입니다.
 PC LiteRT2.2.0 합성 입력 invoke1회와 **실제 Android TF Lite2.14.0 load/metadata/native smoke PASS**를
 확인했습니다. Android instrumentation 2/2 PASS, 단색 합성 입력 invoke1회이며 image Golden은 아닙니다.
-**contract NOT_VERIFIED / actual device PASS (native smoke만) / camera performance NOT_MEASURED**를
-유지합니다. 후속 EXP03 actual-image Golden은 **RUN / FAIL (1/4 PASS)**이며 prediction은 비활성입니다.
-정확한 Ultralytics8.4.202 source로 새 reference를 생성했고, 같은 Python tensor의 Android native와
-같은 raw의 decoder/NMS는4/4 PASS입니다. 기존 Android resize 경로에서 일부 confidence 오차가
-0.001을 초과해 승격하지 않았습니다([실제 검증 결과](docs/ml/EXP03_ACTUAL_GOLDEN_VALIDATION.md)).
+**contract VERIFIED / actual device PASS (actual-image Golden) / camera performance NOT_MEASURED**입니다.
+Run 1의 FAIL(1/4)은 보존했고, OpenCV4.13.0 uint8 보간을 pure Kotlin으로 재현한 Run 2는
+전체4/4 tensor SHA 동일·실제 inference/decoder/NMS PASS였습니다. confidence 허용치를 넓히지
+않았고 최대 차이3.5762787e-7 / bbox9.1552734e-5px를 확인한 뒤에만 승격했습니다.
+DEBUG gate ON + READY일 때 prediction 허용, release OFF / Landmark Primary는 유지합니다.
+[실제 검증 결과](docs/ml/EXP03_ACTUAL_GOLDEN_VALIDATION.md) · [보간 수정/Run 2](docs/ml/EXP03_PREPROCESSING_PARITY.md).
 기존 EXP02의 VERIFIED를 상속하지 않습니다.
 정확한 EXP03 학습·export 원문과 권리 확인을 기존 EXP02 기록에서 추정하지 않습니다.
 

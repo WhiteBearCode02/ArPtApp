@@ -1,19 +1,19 @@
 # EXP03_FINAL Shadow 전환 기록
 
-2026-11-05 · **구조 전환·native smoke 완료 / actual-image Golden RUN·FAIL / 실제 EXP03 prediction 비활성**
+2026-11-05 · **Run 1 FAIL 보존 → 보간 수정 → Run 2 PASS → VERIFIED / Camera NOT_MEASURED**
 
 | 경계 | 현재 코드 |
 |---|---|
 | canonical identity | EXP03_FINAL FP32, 실제 size/hash 확인 |
-| Exp03 contract | NOT_VERIFIED (EXP02 VERIFIED를 상속하지 않음) |
-| DEBUG build gate | 기존 true 유지. 미검증 contract이므로 prediction=false |
+| Exp03 contract | Run 2 실제 근거 검토 후 VERIFIED (EXP02 VERIFIED를 상속하지 않음) |
+| DEBUG build gate | 기존 true 유지. VERIFIED + READY에서만 prediction=true |
 | release build gate | 기존 false, factory=null, preference/Intent/remote flag 우회 없음 |
 | Primary | LANDMARK. exercise lock / rep / score / calories / coaching / routing 변경 없음 |
 | SDK | 기존 tensorflow-lite 2.14.0/support 0.4.4 유지 |
 | APK / Git | 모델 weight 제외 유지. 로컬 원본만 보존 |
 
 `predictionAllowed = contract VERIFIED && shadowRuntimeEnabled && modelStatus READY`를 유지합니다.
-현재 EXP03 파일/메타데이터가 맞더라도 CONTRACT_NOT_VERIFIED가 정상입니다.
+파일/메타데이터만으로 승격하지 않았고, strict actual Golden이 통과한 코드 리뷰로만 승격했습니다.
 MODEL_MISSING / MODEL_IDENTITY_MISMATCH / TENSOR_MISMATCH / UNSUPPORTED_RUNTIME /
 INITIALIZATION_FAILED 등의 기존 실패 격리는 유지합니다.
 
@@ -25,10 +25,11 @@ KnownYoloModels allowlist는 EXP02+정확한 EXP02 SHA, EXP03+정확한 EXP03 SH
 새 세션 collector는 EXP03 identity를 사용합니다. 과거 EXP02 native harness는 명시적으로 EXP02
 파일/계약/collector에 묶어 두어 새 canonical 모델로 과거 evidence를 오염시키지 않습니다.
 
-공용 YoloRaw640Algorithms와 YoloBitmapPreprocessor는 기존 구현을 재사용합니다.
+공용 YoloRaw640Algorithms는 기존 decoder/NMS를 재사용합니다. EXP03 Bitmap adapter만 별도의
+OpenCV-compatible pure Kotlin 전처리를 사용하며 EXP02 adapter는 기존 연산을 명시적으로 보존합니다.
 raw confidence .10 / stable .60 / NMS IoU .70 / maxDet300 / frame interval250ms /
 최근5회중4회 합의는 변경하지 않았습니다. 공유 알고리즘과 모델별 검증 근거는 별개입니다.
-기존 DEBUG 수동 후보 검증도 새 모델의 NOT_VERIFIED 상태를 보고합니다. 자동 촬영은 추가하지 않았습니다.
+기존 DEBUG 수동 후보 검증도 검증 시점의 contract 상태를 보고합니다. 자동 촬영은 추가하지 않았습니다.
 과거 candidate 폴더·EXP02 docs/scripts/원본 모델/사용자 운동 기록을 삭제하거나 재라벨링하지 않습니다.
 
 ## 이전 모델 전환·synthetic smoke 검증 (이력)
@@ -67,7 +68,7 @@ contractPromotionPerformed=false, cameraPerformance=NOT_MEASURED입니다.
 단색 합성 입력의 nativeMs=128.967395, detectionsAfterNms=0은 단일 smoke 관찰값이지
 운동 정확도·Golden 동등성·카메라 지연/FPS가 아닙니다. 사진·사용자 DB를 읽거나 전송하지 않았습니다.
 
-## 후속 EXP03 actual-image Golden 검증
+## Run 1 actual-image Golden 검증 (FAIL 이력 보존)
 
 이번 단계에서는 권리 확인된 로컬 원본4장만 재사용하고, EXP03 모델로 **새 Python inference4회**,
 새 reference/RGB/input/raw를 생성했습니다. 사용자 DB/EXP02 출력은 읽지 않았습니다.
@@ -90,7 +91,7 @@ contractPromotionPerformed=false, cameraPerformance=NOT_MEASURED입니다.
 confidence·bbox tolerance나 threshold를 넓혀 통과시키지 않았습니다. 실패 run도 로컬/기기에 그대로
 남겼으며, production 전처리와 기존 EXP02 알고리즘은 이 작업에서 바꾸지 않았습니다.
 
-### 이번 최종 회귀 결과
+### Run 1 당시 회귀 결과 (이력)
 
 | 검사 | 실제 결과 |
 |---|---|
@@ -106,6 +107,81 @@ confidence·bbox tolerance나 threshold를 넓혀 통과시키지 않았습니�
 
 검증 대상 production/main source, dependencies, thresholds, Primary는 이 단계에서 변경하지 않았습니다.
 현재 남은 Gradle10 deprecation 경고는 비차단이며 버전 업그레이드는 하지 않았습니다.
+
+## 보간 수정 / Run 2 / VERIFIED
+
+OpenCV4.13.0 원본 uint8 계수/shift arithmetic을 pure Kotlin으로 구현했습니다. geometry나 EXP02
+전처리는 바꾸지 않았습니다. 실제 build commit과 tag의 source hash 일치도 확인했습니다.
+[전체 원인·64개 synthetic·동일4장·Run 2 결과](EXP03_PREPROCESSING_PARITY.md).
+
+| 항목 | Run 2 실제 결과 |
+|---|---|
+| OpenCV synthetic vectors | 16개 크기×4패턴, 전체 RGB/tensor SHA **64/64 exact PASS** |
+| 동일4장 host Kotlin | old mismatch62014/59361/98029/78211(전부 resampled) → corrected **0/0/0/0** |
+| Android preprocessing-only | 모델 invoke 없이 **4/4 tensor SHA 동일 / max error0** |
+| actual Python / Android | 새 Python4회, 실제 Android8회(A/B 각4회) |
+| A end-to-end / B 동일tensor native / C frozen raw decoder·NMS | 모두 **4/4 PASS** |
+| class/count/order | exact |
+| 최대 confidence / bbox 차이 | **3.5762787e-7 / 9.1552734e-5px** (기존0.001/2px 유지) |
+| verification | 실제 증거 검토 후 NOT_VERIFIED → VERIFIED |
+| 실제 Camera | **NOT_MEASURED**, 촬영/카메라 열기/운동 없음 |
+
+Run 1 reference/result의 SHA를 재확인해 보존했습니다. Run 2는 별도 고유 PC/device 경로이며,
+그 결과의 productionContract=NOT_VERIFIED는 당시 상태라 변경하지 않았습니다.
+도구가 상수를 바꾼 것이 아니라 PASS 확인 후 별도 코드 수정으로 승격했습니다.
+
+### 최종 회귀 / 패키징 / gate
+
+| 검사 | 실제 결과 |
+|---|---|
+| JVM | **660/660 PASS**, 64 suites, failure/error/skip0. 기존592 + interpolation64 + bounds3 + gate1 |
+| Node | **136/136 PASS**, 기존131 + parity/notice guards5 |
+| Python | 관련 **75/75 PASS**, 기존71 + synthetic generator guards4. 64개 OpenCV vector `--check`도 PASS |
+| Gradle | testDebugUnitTest / assembleDebug / assembleDebugAndroidTest / assembleRelease 모두 BUILD SUCCESSFUL, 5분51초 |
+| Android 전처리-only | 최초 Run 2와 승격 후 reviewed run 모두4/4 bit identical PASS |
+| Android actual Golden | 최초 Run 2와 승격 후 reviewed run 모두4/4 PASS, 각각 native8회 (이번 단계 실제 image native 총16회) |
+| Android 최종 factory / synthetic native | 2/2 PASS, VERIFIED/READY/prediction=true. 카메라 열기·frame 제출 없음 |
+| APK | debug/release/test 모두 모델/private fixture0. 본 앱 MediaPipe task 유지. BSD notice도 exact bytes SHA 일치 |
+| source notice | release AAPT2가 경로를 `res/gD.txt`로 축약했지만 원본 hash 일치. 검사 도구도 파일명 대신 내용 검증 |
+| Git / 보안 | 수정27개, public text25개 secret-pattern PASS, private 자료 ignored/untracked, 자동commit/push/PR/merge 없음 |
+| 기록 보존 | PC/device의 Run 1 결과 hash, EXP02/03 원본 모델 hash 모두 그대로 |
+
+승격 후 새 device run은 `actual_20261105_02_reviewed`이며 새 결과 hash는
+`e92ffb05e4672ee450a7b0f93b07be49f73da4ad5605489cdf4df858879739d5`입니다.
+기존 Run 2 결과도 덮어쓰지 않았습니다. synthetic invoke1회는 실제 image invoke16회와 구분합니다.
+기존 Gradle10 deprecation 및 테스트 내 Json 생성 비차단 경고는 남아 있으며 dependency upgrade는 없습니다.
+
+### 이번 수정 파일과 이유
+
+| 파일 | 이유 |
+|---|---|
+| .gitignore | 기존 raw 제외를 유지하며 BSD notice 한 파일만 명시적으로 허용 |
+| README.md / MODEL_CARD.md | Run 1 이력과 현재 VERIFIED/Camera 미측정을 구분 |
+| THIRD_PARTY_NOTICES.md / app/src/main/res/raw/opencv_resize_notice.txt | 원본 BSD 저작권·조건·면책 보존, SDK 추가 없음 |
+| main/.../domain/detection/YoloOpenCvLinearRgbPreprocessor.kt | 원본 근거 있는 bounded uint8 INTER_LINEAR pure Kotlin 구현 |
+| main/.../ui/camera/yolo/Exp02BitmapPreprocessor.kt | canonical EXP03과 historical EXP02 delegate를 분리 |
+| main/.../domain/detection/Exp03YoloContract.kt | Run 2 reference SHA와 실제 증거 주석, 조건부 VERIFIED 승격 |
+| androidTest/.../ui/camera/yolo/Exp03ActualModelGoldenTest.kt | 별도 전처리-only preflight, full Golden SHA bit equality 강화 |
+| androidTest/.../ui/camera/yolo/Exp03NativeContractDeviceTest.kt | 승격 후 READY/gate를 카메라·frame 제출 없이 검사 |
+| test/.../domain/detection/YoloOpenCvLinearPreprocessorTest.kt | 64개 full-output synthetic hash 비교 |
+| test/.../domain/detection/YoloOpenCvLinearBoundsTest.kt | bounds·buffer 재사용·EXP02 독립성 회귀 |
+| test/.../domain/detection/Exp03ContractTest.kt | 새 검증 상태와 debug/release/unverified/missing/mismatch gate |
+| app/src/test/resources/exp03-opencv-4.13-linear.json | 실제 OpenCV가 만든 작은 deterministic hash/probe만 공개 |
+| scripts/Exp03PreprocessingAudit.java | 실제 컴파일 Kotlin의 채널/영역/최초20개 mismatch를 private scalar JSON으로만 측정 |
+| scripts/generate-exp03-interpolation-vectors.py | 실제 cv2 synthetic 정답, default/optimization OFF 비교 후 상태 복원 |
+| scripts/test-exp03-interpolation-vectors.py | 버전 pin·패턴·상태 복원 회귀 |
+| scripts/exp03-preprocessing-parity.test.mjs | wire/정수 연산/notice/strict equality 경계 검사 |
+| scripts/exp03-shadow.test.mjs | 증거 SHA 고정과 현재 VERIFIED/no-camera gate 검사 |
+| scripts/generate-exp03-actual-golden.py | 실제 cv2 package/build/optimization provenance와 strict parity 기록 |
+| scripts/verify-coaching-security.mjs | 새 Java 검증 도구도 scoped secret 검사에 포함 |
+| scripts/verify-public-apk.ps1 | private fixture/model 검사 강화, release 경로 축약과 무관하게 원본 BSD notice hash 검증 |
+| EXP03_ACTUAL_GOLDEN_VALIDATION.md | Run 1 원문 보존 + Run 2 결과 연결 |
+| EXP03_ANDROID_INFERENCE_CONTRACT.md / EXP03_ANDROID_DEVICE_SHADOW_CHECKLIST.md | 현재 계약/실기기 재현 경계 갱신 |
+| EXP03_PREPROCESSING_PARITY.md (신규) / 이 문서 | 수치·원인·수정·실제 결과·보안·재현 이력 |
+
+source set 경로는 아래 과거 목록과 동일하게 `app/src/` 기준이며 Kotlin prefix는
+`java/com/example/arptapp/`입니다. `Exp02Preprocessor.kt`, decoder/NMS, app/build.gradle.kts,
+기존 EXP02 generator/docs/model/evidence와 사용자 DB는 이번 수정 대상이 아닙니다.
 
 ## 보안·비용·배포
 

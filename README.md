@@ -109,9 +109,11 @@ flowchart LR
 | `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
 | `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
 | `airptcoach_yolo26n_exp02_fp32.tflite` | 과거 검증 모델·증거 보존, EXP02 contract `VERIFIED`. 현재 canonical runtime 모델로 자동 fallback하지 않음 |
-| `airptcoach_yolo26n_exp03_final_fp32.tflite` | 새 canonical Shadow 모델, 9,894,032 bytes·SHA 확인, Git/APK 제외. EXP03 contract `NOT_VERIFIED`로 실제 prediction 비활성, release OFF |
+| `airptcoach_yolo26n_exp03_final_fp32.tflite` | canonical Shadow 모델, 9,894,032 bytes·SHA 확인, Git/APK 제외. Run 2 actual Golden4/4 및 exact tensor parity 확인 후 contract `VERIFIED`. DEBUG gate+READY에서만 허용, release OFF |
 
-EXP03은 별도 export입니다. EXP02의 근거를 자동 상속하지 않으며 Android native/actual Golden은 아직 미검증입니다.
+EXP03은 별도 export입니다. EXP02의 근거를 상속하지 않았으며 Run 1 FAIL을 보존한 채 보간 수정 후
+Android actual Golden Run 2를 통과했습니다. [전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md).
+실제 카메라 성능은 아직 NOT_MEASURED이고 Primary는 LANDMARK입니다.
 현재 상태와 안전한 private 주입 절차는 [EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다.
 
 RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
@@ -395,12 +397,12 @@ python -m unittest discover -s ai_module/tests -v
 - [x] 랜드마크 기반 fallback classifier
 - [x] 사용자 제공 Dataset A 기반 YOLO26n EXP01/EXP02 학습·test 평가 이력 문서화
 - [x] EXP02 LiteRT FP32 export 및 실제 tensor 구조 검사 이력 기록
-- [x] DEBUG Shadow 기반 구조·tensor 검증·실패 격리·안정화·진단 준비 (실제 prediction 비활성)
+- [x] DEBUG Shadow 구조·실패 격리·안정화·진단 및 EXP03 Run 2 actual Golden/exact tensor parity 통과 (DEBUG 한정 VERIFIED)
 - [x] EXP02 canonical notebook·Ultralytics 8.4.176 exact source·artifact metadata 기반 21개 contract 항목 문서화
 - [x] RGB/letterbox transform·decoder·NMS 후보 구현 및 synthetic Python golden fixture 준비 (활성화·동등성 검증 완료와 구분)
 - [ ] 모델 재배포/자산 고지·라이선스 검토 및 사용자 승인
-- [ ] OpenCV resize 편차 검토·실제 모델 golden 및 Android native Interpreter compatibility 검증
-- [ ] 전체 export contract 검증 완료 후 DEBUG Shadow actual prediction 활성화
+- [x] EXP03 OpenCV uint8 resize parity·동일4장 actual Golden·Android native compatibility 검증 (Run 1 FAIL 보존, Run 2 PASS)
+- [x] EXP03 VERIFIED 후 DEBUG Shadow gate/READY 검증 (실제 Camera baseline은 다음 단계)
 - [ ] FRONT/45°/SIDE 실기기 비교·confidence/stabilizer tuning 후 별도 YOLO Primary 승격 결정
 - [x] 연속 유효 프레임 근거 기반 temporal smoothing 및 세션 종목 고정
 

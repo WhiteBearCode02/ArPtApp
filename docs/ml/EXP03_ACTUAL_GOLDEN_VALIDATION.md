@@ -1,6 +1,13 @@
 # EXP03 actual-image Golden · 2026-11-05
 
-**전체 FAIL / Exp03YoloContract NOT_VERIFIED 유지 / 실제 camera NOT_MEASURED**
+**최신 Run 2 PASS / Exp03YoloContract VERIFIED / 실제 camera NOT_MEASURED**.
+기존 resampled 보간만 수정한 뒤 input tensor4/4 byte identical, 실제 Python4회/Android8회,
+confidence 최대3.5762787e-7 / bbox 최대9.1552734e-5px로 통과했습니다. tolerance는 확대하지 않았습니다.
+[정확한 원인·수정·64개 unit vector·동일4장 상세 결과](EXP03_PREPROCESSING_PARITY.md).
+
+## Run 1 — FAIL 원문 및 근거 보존
+
+**당시 전체 FAIL / 당시 Exp03YoloContract NOT_VERIFIED / 실제 camera NOT_MEASURED**
 
 EXP03 전용 Python reference를 새로 생성하고 실제 휴대폰에서 비교했습니다. 이전 EXP02 출력은
 재사용하지 않았습니다. 실패한 입력/결과도 보존하며 threshold·tolerance·production 전처리를
@@ -142,7 +149,7 @@ instrumentation의 셸 종료 코드만 보지 말고 `FAILURES`/`allSamplesPass
 누락 모델·fixture·권리·version·hash는 실패이며 skip/PASS로 처리하지 않습니다. generator와
 test가 production 검증 상수를 자동으로 수정하는 API는 없습니다.
 
-## 변경 파일 / 검증
+## Run 1 변경 파일 / 검증 (이력)
 
 | 파일 | 이유 |
 |---|---|

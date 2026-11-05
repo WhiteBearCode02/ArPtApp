@@ -12,9 +12,10 @@ test('EXP03 identity stays ignored and cannot be packaged or tracked', () => {
   assert.equal(execFileSync('git', ['ls-files', '--', 'app/src/main/assets/airptcoach_yolo26n_exp03_final_fp32.tflite'], { encoding: 'utf8' }).trim(), '')
   assert.match(read('app/build.gradle.kts'), /ignoreAssetsPattern = "[^"\n]*\*\.tflite:\*\.pt:\*\.pth:\*\.onnx/)
 })
-test('EXP03 is independently unverified and bound to current factory identity', () => {
+test('EXP03 is independently reviewed after its own actual Golden and bound to current factory identity', () => {
   const contract = read(root + 'domain/detection/Exp03YoloContract.kt')
-  assert.match(contract, /get\(\) = ExportContractVerification.NOT_VERIFIED/)
+  assert.match(contract, /get\(\) = ExportContractVerification.VERIFIED/)
+  assert.match(contract, /a9fc32327edfcfaab56b6c7eef27f2eb2c5dc68840f2c7954f4ce97997335e18/)
   assert.doesNotMatch(contract, /Exp02YoloContract\.verification|SharedPreferences|System.getenv|BuildConfig/)
   const factory = read(root + 'ui/camera/yolo/TfliteYoloRuntime.kt')
   assert.match(factory, /Exp03YoloContract.components\(YoloBitmapPreprocessor\(\)\)/)
@@ -40,11 +41,12 @@ test('EXP03 provisioning reuses binary transport and confines writes to private 
   assert.match(ps, /\$online.Count -ne 1/)
   assert.doesNotMatch(ps, /\/sdcard|\/storage\/|Invoke-WebRequest|DownloadFile|uninstall|pm clear|adb root|Remove-Item|Copy-Item|ToBase64String/)
 })
-test('native smoke cannot masquerade as Golden and candidates report current NOT_VERIFIED', () => {
+test('native smoke cannot masquerade as Golden and candidates report current reviewed state', () => {
   const smoke = read('app/src/androidTest/java/com/example/arptapp/ui/camera/yolo/Exp03NativeContractDeviceTest.kt')
   assert.match(smoke, /SYNTHETIC_SOLID_COLOR_NOT_CAMERA_NOT_GOLDEN/)
   assert.match(smoke, /contractPromotionPerformed", false/)
-  assert.match(smoke, /DetectorStatus.CONTRACT_NOT_VERIFIED/)
+  assert.match(smoke, /DetectorStatus.READY/)
+  assert.match(smoke, /submits NO frames/)
   const candidate = read('app/src/debug/java/com/example/arptapp/ui/camera/yolo/validation/DebugPositiveNativeInference.kt')
   assert.match(candidate, /"productionContract" to Exp03YoloContract.verification.name/)
 })

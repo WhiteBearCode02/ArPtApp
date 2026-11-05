@@ -6,10 +6,12 @@ import com.example.arptapp.domain.detection.Exp02RgbFrame
 import com.example.arptapp.domain.detection.Exp02RgbPreprocessor
 import com.example.arptapp.domain.detection.YoloPreparedInput
 import com.example.arptapp.domain.detection.YoloPreprocessor
+import com.example.arptapp.domain.detection.YoloOpenCvLinearRgbPreprocessor
 
 /** Worker-owned adapter. getPixels exposes logical ARGB, independent of Bitmap memory byte order. */
-internal class YoloBitmapPreprocessor : YoloPreprocessor<Bitmap> {
-    private val delegate = Exp02RgbPreprocessor()
+internal class YoloBitmapPreprocessor(
+    private val delegate: YoloPreprocessor<Exp02RgbFrame> = YoloOpenCvLinearRgbPreprocessor()
+) : YoloPreprocessor<Bitmap> {
     private var pixels = IntArray(0)
     override fun preprocess(frame: Bitmap): YoloPreparedInput {
         check(!frame.isRecycled)
@@ -21,5 +23,5 @@ internal class YoloBitmapPreprocessor : YoloPreprocessor<Bitmap> {
     }
 }
 
-/** Source-compatible name for historical EXP02 harnesses, not EXP03 export evidence. */
-internal typealias Exp02BitmapPreprocessor = YoloBitmapPreprocessor
+/** Keep historical EXP02 arithmetic/evidence unchanged; the new canonical adapter is EXP03-only. */
+internal class Exp02BitmapPreprocessor : YoloPreprocessor<Bitmap> by YoloBitmapPreprocessor(Exp02RgbPreprocessor())

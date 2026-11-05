@@ -58,24 +58,22 @@ class Exp03NativeContractDeviceTest {
                     .put("fixture", "SYNTHETIC_SOLID_COLOR_NOT_CAMERA_NOT_GOLDEN").put("detectionsAfterNms", detections.size)
                     .put("contractStatus", Exp03YoloContract.verification.name).put("contractPromotionPerformed", false)
                     .put("cameraPerformance", "NOT_MEASURED").toString(), Charsets.UTF_8)
-                assertEquals(ExportContractVerification.NOT_VERIFIED, Exp03YoloContract.verification)
+                assertEquals(ExportContractVerification.VERIFIED, Exp03YoloContract.verification)
             }
         } finally { bitmap.recycle() }
     }
 
-    @Test fun currentFactoryStaysClosedWithoutExp03GoldenEvidence() {
+    @Test fun reviewedCurrentFactoryInitializesReadyWithoutCapturingFrames() {
         check(BuildConfig.DEBUG)
         val snapshots = LinkedBlockingQueue<YoloShadowSnapshot>()
         val runner = requireNotNull(DebugYoloShadowFactory.create(context, { snapshots.offer(it) }))
         try {
             runner.start()
             val snapshot = requireNotNull(snapshots.poll(10, TimeUnit.SECONDS))
-            assertEquals(DetectorStatus.CONTRACT_NOT_VERIFIED, snapshot.result.status)
-            assertEquals(ExportContractVerification.NOT_VERIFIED, snapshot.result.contractVerification)
-            assertFalse(snapshot.result.predictionAllowed)
-            val bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            try { assertFalse(runner.trySubmit(bitmap, SystemClock.uptimeMillis())) }
-            finally { bitmap.recycle() }
+            assertEquals(DetectorStatus.READY, snapshot.result.status)
+            assertEquals(ExportContractVerification.VERIFIED, snapshot.result.contractVerification)
+            assertTrue(snapshot.result.predictionAllowed)
+            // Admission is true, but this test deliberately submits NO frames and opens NO camera.
         } finally { runner.close() }
     }
 }

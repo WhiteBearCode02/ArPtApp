@@ -9,7 +9,7 @@ import org.junit.Test
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
-/** Pure ports/algorithm tests are NOT actual-model/Android evidence and cannot promote EXP03. */
+/** Pure ports cannot promote a contract; EXP03 was separately reviewed after actual Run 2 PASS. */
 class Exp03ContractTest {
     private val current = KnownYoloModels.EXP03
     private fun diagnostic(model: YoloModelDescriptor = current) = YoloSessionDiagnostics(
@@ -64,10 +64,31 @@ class Exp03ContractTest {
         assertNull(YoloSessionDiagnosticsCodec.decode(raw.replace("\"modelId\":\"${current.modelId}\",", "")))
         assertNull(YoloSessionDiagnosticsCodec.decode(raw.replace("\"modelSha256\":\"${current.sha256}\",", "")))
     }
-    @Test fun exp03CannotInheritExp02Verification() {
+    @Test fun exp03HasItsOwnReviewedVerificationAndIdentity() {
         assertEquals(ExportContractVerification.VERIFIED, Exp02YoloContract.verification)
-        assertEquals(ExportContractVerification.NOT_VERIFIED, Exp03YoloContract.verification)
+        assertEquals(ExportContractVerification.VERIFIED, Exp03YoloContract.verification)
         assertEquals(current.modelId, Exp03YoloContract.components<Int>(YoloPreprocessor { error("blocked") }).modelId)
+    }
+    @Test fun currentContractGateRequiresDebugVerifiedAndReadyButFailuresStayClosed() {
+        val native = object : YoloTensorRuntime {
+            override fun metadata() = YoloTensorMetadata(listOf(TensorSpec(YoloModelPolicy.inputShape, "FLOAT32")),
+                listOf(TensorSpec(YoloModelPolicy.outputShape, "FLOAT32")))
+            override fun run(input: ByteBuffer, output: ByteBuffer) = error("Initialization must not run inference")
+            override fun close() = Unit
+        }
+        val currentContract = Exp03YoloContract.components<Int>(YoloPreprocessor { error("No camera frame") })
+        for (debug in listOf(true, false)) for (gate in listOf(true, false)) {
+            YoloExerciseDetector({ native }, currentContract, runtimePolicy = YoloRuntimePolicy.forBuild(debug, gate)).use {
+                assertEquals(debug && gate, it.initialize().predictionAllowed)
+            }
+        }
+        YoloExerciseDetector({ native }, currentContract.copy(verification = ExportContractVerification.NOT_VERIFIED),
+            runtimePolicy = YoloRuntimePolicy.forBuild(true, true)).use { assertFalse(it.initialize().predictionAllowed) }
+        for (failure in listOf(MissingYoloModel(), YoloModelIdentityMismatch())) {
+            YoloExerciseDetector({ throw failure }, currentContract, runtimePolicy = YoloRuntimePolicy.forBuild(true, true)).use {
+                assertFalse(it.initialize().predictionAllowed)
+            }
+        }
     }
     @Test fun verifiedLegacyContractCannotRunAgainstCurrentNativeIdentity() {
         var calls = 0
