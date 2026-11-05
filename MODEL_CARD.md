@@ -22,7 +22,10 @@
 PC LiteRT2.2.0 합성 입력 invoke1회와 **실제 Android TF Lite2.14.0 load/metadata/native smoke PASS**를
 확인했습니다. Android instrumentation 2/2 PASS, 단색 합성 입력 invoke1회이며 image Golden은 아닙니다.
 **contract NOT_VERIFIED / actual device PASS (native smoke만) / camera performance NOT_MEASURED**를
-유지합니다. EXP03 actual-image Golden은 NOT_RUN이고 prediction은 비활성입니다.
+유지합니다. 후속 EXP03 actual-image Golden은 **RUN / FAIL (1/4 PASS)**이며 prediction은 비활성입니다.
+정확한 Ultralytics8.4.202 source로 새 reference를 생성했고, 같은 Python tensor의 Android native와
+같은 raw의 decoder/NMS는4/4 PASS입니다. 기존 Android resize 경로에서 일부 confidence 오차가
+0.001을 초과해 승격하지 않았습니다([실제 검증 결과](docs/ml/EXP03_ACTUAL_GOLDEN_VALIDATION.md)).
 기존 EXP02의 VERIFIED를 상속하지 않습니다.
 정확한 EXP03 학습·export 원문과 권리 확인을 기존 EXP02 기록에서 추정하지 않습니다.
 

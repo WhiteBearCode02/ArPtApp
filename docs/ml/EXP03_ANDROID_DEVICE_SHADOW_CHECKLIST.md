@@ -3,6 +3,10 @@
 2026-11-05 · 실제 휴대폰 native **PASS (합성 입력 smoke)**, contract **NOT_VERIFIED**, camera **NOT_MEASURED**.
 모델 9,894,032 bytes / SHA256 `3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167`.
 
+후속 actual-image Golden도 실제 실행했습니다. **전체 FAIL (1/4 PASS)**이며 native/reference 입력의
+동등성은 확인됐지만 production 전처리 경로 confidence 오차가 초과했습니다.
+[실제 결과·고유 run 재현 명령](EXP03_ACTUAL_GOLDEN_VALIDATION.md). 실시간 카메라 활성화는 보류합니다.
+
 ## 설치·주입·테스트 순서 (기록 보존)
 
 1. 휴대폰 USB 디버깅을 허용하고 잠금을 풉니다. `adb devices`에 authorized `device`가 **정확히 1대**인지 확인합니다. 운동/저장을 종료한 뒤 진행하세요.
@@ -43,7 +47,8 @@ PC 원본은 `app/src/main/assets/airptcoach_yolo26n_exp03_final_fp32.tflite`이
 업데이트하고 EXP03을 주입했습니다. 앱 삭제·데이터 초기화·기존 모델 삭제는 하지 않았습니다.
 `Exp03NativeContractDeviceTest` **2/2 PASS**: 실제 모델 load, FLOAT32 tensor shape/dtype,
 합성 입력 native invoke 1회와 finite 출력, 미검증 factory prediction 차단을 확인했습니다.
-actual-image Golden은 NOT_RUN이며 실시간 prediction은 비활성입니다. 앱 화면의 육안 확인이나
+위 내용은 이전 synthetic smoke 기록입니다. 후속 actual-image Golden은 RUN/FAIL이며
+실시간 prediction은 여전히 비활성입니다. 앱 화면의 육안 확인이나
 카메라 FPS/발열/운동 테스트를 이번 instrumentation 결과로 대신 주장하지 않습니다.
 
 native smoke evidence는 private `no_backup/yolo/exp03-native/runs/<UUID>/native-smoke.json`에 배타 생성합니다.

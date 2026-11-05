@@ -2,6 +2,10 @@
 
 2026-11-05 · **NOT_VERIFIED / Landmark Primary / release Shadow OFF**
 
+최신 actual-image Golden은 **RUN / FAIL (1/4 PASS)**입니다. 같은 Python tensor의 Android native와
+같은 실제 raw의 decoder/NMS는 4/4 PASS지만, Android 전처리 경로에서 confidence 차이가 기존
+0.001을 넘었습니다. 승격하지 않았습니다. [실제 결과·원인](EXP03_ACTUAL_GOLDEN_VALIDATION.md).
+
 ## 실제 파일 확인
 
 | 항목 | 직접 확인한 값 |
@@ -37,16 +41,19 @@ effective verification도 NOT_VERIFIED로 표시합니다. 모델/flag/fixture �
 |---|---|
 | filename / bytes / SHA | 직접 대조 PASS |
 | tensor shape / dtype | static + PC Interpreter + 실제 Android Interpreter PASS |
-| logical RGB / BCHW / FLOAT32 | 사용자 제공 계약, 공유 후보 구현. Android actual 비교 NOT_VERIFIED |
-| /255 / centered letterbox114 / resize | EXP02에서 검증한 공유 후보. EXP03 actual Golden NOT_VERIFIED |
-| normalized center xywh / class score 해석 | 공유 decoder 후보. EXP03 실제 raw/reference 대조 NOT_VERIFIED |
-| external class-aware NMS / confidence | 공유 후보, EXP03 actual Golden NOT_VERIFIED |
+| logical RGB / BCHW / FLOAT32 | 정확한8.4.202 source 실행 및 Android tensor 비교 확인 |
+| /255 / centered letterbox114 / resize | geometry/padding 일치. resampled 1byte 이내 차이가 최종 confidence에 영향: end-to-end FAIL |
+| normalized center xywh / class score 해석 | 실제 EXP03 frozen raw 대조 4/4 PASS |
+| external class-aware NMS / confidence | frozen raw 4/4 PASS. end-to-end confidence는 3장 FAIL |
 | Android Interpreter load / native inference | 실제 authorized 휴대폰, 기존 TF Lite 2.14.0에서 load 및 합성 입력 invoke 1회 PASS |
-| Android image Golden equivalence | NOT_RUN / NOT_VERIFIED |
+| Android image Golden equivalence | 실제4장 RUN, 1/4 PASS / 전체 FAIL / NOT_VERIFIED |
 | 실제 CameraX·MediaPipe 병행 FPS/latency/thermal | NOT_MEASURED |
 
 Shape나 PC invoke만으로 좌표 channel 의미·정규화·NMS 계약을 역추정하지 않습니다.
-EXP03 정확한 export/preprocess/reference 근거와 실제 Android 비교가 준비될 때 후보를 검증해야 합니다.
+후속 요청에서 export version을8.4.202로 확정했고, 공식 PyPI wheel SHA를 고정해 해당 버전 원본 함수를
+실제로 실행했습니다. 기존 설치된8.4.176 distribution이나 EXP02 source loader를 대신 실행하지 않았습니다.
+Python native4회, 실제 Android native8회(A/B 각4회), frozen raw decoder/NMS4건을 분리했습니다.
+전체 contract는 실제 실패 때문에 미검증을 유지합니다.
 기존 EXP02 reference JSON·raw·이미지 결과를 EXP03 결과로 재라벨링하지 않습니다.
 새 instrumentation은 합성 solid-color를 메모리에서만 사용하며 `/255` channel 위치, 실제 metadata,
 native 실행과 finite 출력·공유 decoder 경로를 점검합니다. 이 smoke 통과도 Golden PASS가 아닙니다.
@@ -75,8 +82,9 @@ Intel Xeon의 141.8ms를 Android 성능으로 가져오지 않습니다.
 
 canonical identity + Android load/metadata/native invoke + EXP03-specific actual-image
 preprocess/decoder/confidence/bbox/classes/NMS 동등성 근거를 모두 확인하고 코드 리뷰해야 합니다.
-Android native smoke는 통과했지만 EXP03 actual-image Golden reference/동등성 검증이 없으므로
+Android native와 EXP03 actual-image reference는 실행했지만 end-to-end Golden이 실패했으므로
 **NOT_VERIFIED 유지**가 정상입니다. 실시간 prediction은 계속 비활성입니다.
+전처리의 OpenCV/Android 보간 차이를 원본 근거로 별도 수정·검증한 뒤 새 run으로 재검사해야 합니다.
 실패를 통과시키기 위한 tolerance/threshold 조정이나 dependency upgrade를 하지 않습니다.
 
 배포/권리 확인은 별개입니다. 모델은 로컬 provisioning 원본이며 공개 binary가 아닙니다.
