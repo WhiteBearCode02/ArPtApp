@@ -11,6 +11,7 @@ class YoloExerciseDetector<F>(
     private val runtimePolicy: YoloRuntimePolicy = YoloRuntimePolicy.DISABLED
 ) : ExerciseDetector<F> {
     private var runtime: YoloTensorRuntime? = null
+    private var effectiveVerification = contract.verification
     private var result = state(DetectorStatus.INITIALIZING)
     private var output: ByteBuffer? = null
     override fun initialize(): ExerciseDetectionResult {
@@ -18,6 +19,10 @@ class YoloExerciseDetector<F>(
         try {
             runtime = runtimeFactory()
             if (runtime?.metadata()?.matchesExpected() != true) return fail(DetectorStatus.TENSOR_MISMATCH)
+            if (runtime?.modelId != contract.modelId) {
+                effectiveVerification = ExportContractVerification.NOT_VERIFIED
+                return fail(DetectorStatus.CONTRACT_NOT_VERIFIED)
+            }
             if (contract.verification != ExportContractVerification.VERIFIED || contract.stabilization.minimumConfidence == null)
                 return fail(DetectorStatus.CONTRACT_NOT_VERIFIED)
             output = ByteBuffer.allocateDirect(YoloModelPolicy.outputShape.fold(4) { a, n -> a * n }).order(ByteOrder.nativeOrder())
@@ -63,7 +68,7 @@ class YoloExerciseDetector<F>(
         catch (_: LinkageError) { fail(DetectorStatus.INFERENCE_FAILED) }
     }
     private fun state(status: DetectorStatus) = ExerciseDetectionResult(status, DetectionSource.YOLO,
-        contractVerification = contract.verification, shadowRuntimeEnabled = runtimePolicy.shadowRuntimeEnabled)
+        contractVerification = effectiveVerification, shadowRuntimeEnabled = runtimePolicy.shadowRuntimeEnabled)
     private fun fail(status: DetectorStatus): ExerciseDetectionResult {
         // Called only on the owner worker, never concurrently with Interpreter.run.
         runCatching { runtime?.close() }; runtime = null; output = null

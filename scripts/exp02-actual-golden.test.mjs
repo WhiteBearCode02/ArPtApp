@@ -89,7 +89,7 @@ test('actual private tensor fixture records runtime provenance and separately me
 
 test('instrumentation compares identical raster hashes and direct native results without verifying production gate', () => {
     assert.match(instrumented, /assertTrue\("Actual-model harness is DEBUG-only", BuildConfig.DEBUG\)/);
-    assert.match(instrumented, /DebugYoloModelSource\.open\(context\)/);
+    assert.match(instrumented, /DebugYoloModelSource\.open\(context, KnownYoloModels.EXP02\)/);
     assert.match(instrumented, /runtime\.run\(prepared\.tensor, output\)/);
     assert.match(instrumented, /YoloActualGoldenComparator\.compare\(expected, actual\)/);
     assert.match(instrumented, /sample\.rgbSha256/);

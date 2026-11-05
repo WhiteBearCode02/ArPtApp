@@ -69,7 +69,7 @@ class Exp02PositiveModelGoldenTest {
             val referenceFile = safeFile(directory, "reference.json", 1L..2_097_152L)
             val reference = gson.fromJson(referenceFile.readText(Charsets.UTF_8), Reference::class.java)
             validateReference(reference)
-            TfliteYoloRuntime(DebugYoloModelSource.open(context)).use { runtime ->
+            TfliteYoloRuntime(DebugYoloModelSource.open(context, KnownYoloModels.EXP02), KnownYoloModels.EXP02).use { runtime ->
                 metadata = runtime.metadata()
                 require(metadata!!.matchesExpected()) { "TENSOR_MISMATCH" }
                 val preprocessor = Exp02BitmapPreprocessor()
@@ -138,7 +138,7 @@ class Exp02PositiveModelGoldenTest {
                 "androidNativeInferenceExecuted" to (nativeCount > 0), "nativeInferenceCount" to nativeCount,
                 "positiveEquivalentPairs" to positivePairs, "allSamplesPassed" to passed, "failure" to failure,
                 "evidenceRun" to runId, "requiredPositiveClass" to requiredClass, "requiredClassPositivePairs" to requiredClassPairs,
-                "modelId" to YoloModelPolicy.MODEL_ID, "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
+                "modelId" to KnownYoloModels.EXP02.modelId, "modelSha256" to KnownYoloModels.EXP02.sha256,
                 "tensorMetadata" to metadata, "productionContract" to Exp02YoloContract.verification.name,
                 "contractPromotionPerformed" to false, "predictionUsedForSession" to false,
                 "orderingPolicy" to "EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS",
@@ -152,8 +152,8 @@ class Exp02PositiveModelGoldenTest {
     private fun validateReference(reference: Reference) {
         require(reference.schemaVersion == 1 && reference.validationPurpose == "POSITIVE_CANDIDATE" &&
             reference.modelInferenceExecuted && !reference.exportContractVerified)
-        require(reference.model == Model(YoloModelPolicy.MODEL_ID, YoloModelPolicy.FILE_NAME,
-            YoloModelPolicy.CANONICAL_MODEL_BYTES, YoloModelPolicy.CANONICAL_SHA256))
+        require(reference.model == Model(KnownYoloModels.EXP02.modelId, KnownYoloModels.EXP02.fileName,
+            KnownYoloModels.EXP02.bytes, KnownYoloModels.EXP02.sha256))
         require(reference.ultralyticsVersion == "8.4.176" && reference.wheelSha256 ==
             "15f4bbac5c69fd9a5a9395f5957a7ce561e3eb4620699a9c2ff11ed38ec7d34c")
         require(reference.thresholds == Thresholds(.10f, .70f, 300))

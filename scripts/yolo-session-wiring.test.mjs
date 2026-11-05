@@ -11,7 +11,7 @@ test("development model source exclusively uses private noBackup storage and pre
   assert.match(source, /context.noBackupFilesDir/)
   assert.match(source, /canonicalFile/)
   assert.doesNotMatch(source, /assets\.open|openFd\(|\.download\(|HttpURLConnection|URL\(/)
-  assert.ok(source.indexOf("YoloModelIdentity.validate(model)") < source.indexOf("Interpreter(model,"))
+  assert.ok(source.indexOf("YoloModelIdentity.validate(model, identity)") < source.indexOf("Interpreter(model,"))
 })
 
 test("runner captures a scalar admission token and retains 250ms single-flight policy", () => {

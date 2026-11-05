@@ -65,7 +65,8 @@ data class YoloSessionDiagnostics(
  * that token, never look up the current session on completion. finish() freezes and closes a token.
  * Initialization, invalidation and watchdog/status notifications must pass isFrame=false.
  */
-class YoloSessionDiagnosticsCollector {
+class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescriptor = YoloModelPolicy.identity) {
+    init { require(KnownYoloModels.contains(modelIdentity)) }
     private var nextToken = 0L
     private var active: State? = null
 
@@ -140,6 +141,7 @@ class YoloSessionDiagnosticsCollector {
         state.observeThermal(thermalStatus)
         val duration = observedAtMonotonicMs.coerceAtLeast(state.monotonicStart) - state.monotonicStart
         val result = YoloSessionDiagnostics(
+            modelId = modelIdentity.modelId, modelSha256 = modelIdentity.sha256,
             modelStatus = state.status.name, contractStatus = state.contract.name,
             predictionEnabled = state.shadowEnabled && state.status == DetectorStatus.READY && state.contract == ExportContractVerification.VERIFIED,
             shadowRuntimeEnabled = state.shadowEnabled,

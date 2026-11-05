@@ -1,5 +1,16 @@
 # 주요 외부 구성요소 고지
 
+## OpenCV-compatible EXP03 interpolation (2026-11-05)
+
+`YoloOpenCvLinearRgbPreprocessor`는 [OpenCV 4.13.0 resize.cpp](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/resize.cpp)의
+uint8 INTER_LINEAR 고정소수점 동작을 재현하는 bounded pure Kotlin 구현입니다. OpenCV Android SDK,
+새 Maven repository나 native binary dependency를 추가하지 않았습니다.
+해당 원본 파일의 BSD-3-Clause 저작권·조건·면책 전문을
+`app/src/main/res/raw/opencv_resize_notice.txt`에 보존하며 APK에도 포함합니다.
+이 고지는 모델/학습 데이터의 재배포 권리를 부여하거나 프로젝트 전체 라이선스 검토를 대체하지 않습니다.
+
+## 기존 구성요소 목록
+
 2026-10-13 로컬 Gradle 선언/캐시 POM 및 공식 출처 기준의 1차 목록입니다. 라이선스 전문을 수정·대체하지 않으며, 이 목록 자체가 모든 전이 dependency/native 구성요소의 고지를 충족하거나 호환성을 보증하지 않습니다. 공개 APK에는 적용되는 원본 license/NOTICE와 대응 소스 제공 조건을 별도 확인해야 합니다.
 
 | 구성요소 | 현재 버전/사용 | 라이선스 / 출처 |

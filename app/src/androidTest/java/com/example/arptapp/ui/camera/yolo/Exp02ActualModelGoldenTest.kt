@@ -58,7 +58,7 @@ class Exp02ActualModelGoldenTest {
             validateReference(reference)
             // DebugYoloModelSource is private noBackup-only. TfliteYoloRuntime verifies SHA/size
             // before Interpreter construction. Runtime compatibility must actually succeed here.
-            TfliteYoloRuntime(DebugYoloModelSource.open(context)).use { runtime ->
+            TfliteYoloRuntime(DebugYoloModelSource.open(context, KnownYoloModels.EXP02), KnownYoloModels.EXP02).use { runtime ->
                 metadata = runtime.metadata()
                 assertTrue("Canonical FLOAT32 tensor metadata mismatch", metadata!!.matchesExpected())
                 val preprocessor = Exp02BitmapPreprocessor()
@@ -125,7 +125,7 @@ class Exp02ActualModelGoldenTest {
                 "schemaVersion" to 1, "androidNativeInferenceExecuted" to (nativeInferenceCount > 0),
                 "nativeInferenceCount" to nativeInferenceCount,
                 "allSamplesPassed" to passed, "failure" to failure, "sdkInt" to Build.VERSION.SDK_INT,
-                "modelId" to YoloModelPolicy.MODEL_ID, "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
+                "modelId" to KnownYoloModels.EXP02.modelId, "modelSha256" to KnownYoloModels.EXP02.sha256,
                 "tensorMetadata" to metadata, "productionContract" to Exp02YoloContract.verification.name,
                 "toleranceStatus" to "DETECTION_PROVISIONAL_NOT_MEASURED_PREPROCESS_EXISTING_SYNTHETIC_BOUND",
                 "orderingPolicy" to "EXACT_ORDER_EXCEPT_EXACT_SCORE_TIES_IN_BOTH_OUTPUTS",
@@ -136,8 +136,8 @@ class Exp02ActualModelGoldenTest {
 
     private fun validateReference(reference: Reference) {
         require(reference.schemaVersion == 1 && reference.modelInferenceExecuted && !reference.exportContractVerified)
-        require(reference.model.id == YoloModelPolicy.MODEL_ID && reference.model.filename == YoloModelPolicy.FILE_NAME &&
-            reference.model.bytes == YoloModelPolicy.CANONICAL_MODEL_BYTES && reference.model.sha256 == YoloModelPolicy.CANONICAL_SHA256)
+        require(reference.model.id == KnownYoloModels.EXP02.modelId && reference.model.filename == KnownYoloModels.EXP02.fileName &&
+            reference.model.bytes == KnownYoloModels.EXP02.bytes && reference.model.sha256 == KnownYoloModels.EXP02.sha256)
         require(reference.ultralyticsVersion == "8.4.176" && reference.wheelSha256 ==
             "15f4bbac5c69fd9a5a9395f5957a7ce561e3eb4620699a9c2ff11ed38ec7d34c")
         require(reference.thresholds == Thresholds(.10f, .70f, 300)) // No tuning in the validation step.

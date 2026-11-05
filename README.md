@@ -74,9 +74,10 @@
 
 ## 🧠 AI 처리 아키텍처
 
-현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **EXP02 contract는 `VERIFIED`, 별도 DEBUG Shadow gate는 ON**이며 canonical 모델이 private 저장소에 있고 native 검사를 통과해야만 실행됩니다. release는 OFF이고 YOLO 결과는 세션 집계·진단에만 사용합니다. [최신 rollout·검증 범위](docs/ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md) · [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md) · [exact-source inference contract](docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)
+현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **현재 EXP03 contract는 `VERIFIED`, 별도 DEBUG Shadow gate는 ON**이며 canonical 모델이 private 저장소에 있고 native 검사를 통과해야만 실행됩니다. release는 OFF이고 YOLO 결과는 세션 집계·진단에만 사용합니다. [최신 rollout·검증 범위](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md) · [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md) · [현재 inference contract](docs/ml/EXP03_ANDROID_INFERENCE_CONTRACT.md)
 
-- **YOLO26n (DEBUG Shadow)**: canonical [EXP02 notebook](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), exact Ultralytics 8.4.176 source와 모델 metadata를 대조했습니다. RGB BCHW·letterbox·normalized xywh decoder·class-aware NMS와 실제 두 class Python/Android Golden을 검증했습니다. OpenCV 보간의 최대 1-byte 비교 한계는 유지하며 모든 크기의 bitwise 일치를 주장하지 않습니다. `VERIFIED`는 contract 동등성만 의미하고 실행에는 별도 gate와 모델 readiness가 필요합니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다. 숄더 프레스 수동 후보3장 중 검출1장(약10.8%)·무검출2장은 모델 전체 정확도가 아니며 stable `.60` 기준은 낮추지 않았습니다.
+- **현재 EXP03 (DEBUG Shadow)**: exact Ultralytics 8.4.202와 별도 모델 근거로 검증했습니다. OpenCV-compatible 보간 수정 후 동일 4장 tensor byte equality와 실제 Android Golden을 통과했습니다. [EXP03 전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md). 카메라 인식 품질은 별도 검증 대상입니다.
+- **과거 EXP02 검증 이력**: [EXP02 notebook](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), exact Ultralytics 8.4.176 source와 모델 metadata를 대조했습니다. RGB BCHW·letterbox·normalized xywh decoder·class-aware NMS와 실제 두 class Python/Android Golden을 검증했습니다. EXP02에는 OpenCV 보간의 최대 1-byte 비교 한계가 있었으며 모든 크기의 bitwise 일치를 주장하지 않습니다. `VERIFIED`는 contract 동등성만 의미하고 실행에는 별도 gate와 모델 readiness가 필요합니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다. 당시 숄더 프레스 수동 후보3장 중 검출1장(약10.8%)·무검출2장은 모델 전체 정확도가 아니며 stable `.60` 기준은 낮추지 않았습니다.
 - **MediaPipe Pose (현재)**: 분석 대상의 33개 관절 좌표를 추적합니다. YOLO 통합 후에도 유지합니다.
 - **Landmark Fallback Classifier (현재 Primary)**: 기존 classifier를 adapter로 감싸되 분류 정책은 유지합니다. 실제 세션 종목은 이 결과만으로 고정하며 YOLO는 영향을 주지 않습니다.
 - **Analyzer / Overlay / Feedback**: 운동별 관절·횟수·오류 후보 분석과 스켈레톤·교정 안내를 담당합니다.
@@ -108,9 +109,17 @@ flowchart LR
 |---|---|
 | `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
 | `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
-| `airptcoach_yolo26n_exp02_fp32.tflite` | 로컬 존재/Git·APK 제외, FLOAT32 입력 `[1,3,640,640]`·출력 `[1,6,8400]`, contract `VERIFIED`·별도 DEBUG Shadow gate ON/release OFF |
+| `airptcoach_yolo26n_exp02_fp32.tflite` | 과거 검증 모델·증거 보존, EXP02 contract `VERIFIED`. 현재 canonical runtime 모델로 자동 fallback하지 않음 |
+| `airptcoach_yolo26n_exp03_final_fp32.tflite` | canonical Shadow 모델, 9,894,032 bytes·SHA 확인, Git/APK 제외. Run 2 actual Golden4/4 및 exact tensor parity 확인 후 contract `VERIFIED`. DEBUG gate+READY에서만 허용, release OFF |
 
-RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
+EXP03은 별도 export입니다. EXP02의 근거를 상속하지 않았으며 Run 1 FAIL을 보존한 채 보간 수정 후
+Android actual Golden Run 2를 통과했습니다. [전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md).
+실제 카메라는 스쿼트 정면·측면 2세션의 제한된 baseline을 확인했습니다. YOLO 약 2.05~2.13 FPS,
+stable 판정은 모두 UNKNOWN으로 **인식 품질은 추가 검증 필요**입니다. Primary는 LANDMARK입니다.
+[실제 Camera 결과·해석](docs/ml/EXP03_CAMERA_SHADOW_BASELINE.md).
+현재 상태와 안전한 private 주입 절차는 [EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다.
+
+RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
 
 ## 🧩 주요 분석 구성요소
 
@@ -391,12 +400,12 @@ python -m unittest discover -s ai_module/tests -v
 - [x] 랜드마크 기반 fallback classifier
 - [x] 사용자 제공 Dataset A 기반 YOLO26n EXP01/EXP02 학습·test 평가 이력 문서화
 - [x] EXP02 LiteRT FP32 export 및 실제 tensor 구조 검사 이력 기록
-- [x] DEBUG Shadow 기반 구조·tensor 검증·실패 격리·안정화·진단 준비 (실제 prediction 비활성)
+- [x] DEBUG Shadow 구조·실패 격리·안정화·진단 및 EXP03 Run 2 actual Golden/exact tensor parity 통과 (DEBUG 한정 VERIFIED)
 - [x] EXP02 canonical notebook·Ultralytics 8.4.176 exact source·artifact metadata 기반 21개 contract 항목 문서화
 - [x] RGB/letterbox transform·decoder·NMS 후보 구현 및 synthetic Python golden fixture 준비 (활성화·동등성 검증 완료와 구분)
 - [ ] 모델 재배포/자산 고지·라이선스 검토 및 사용자 승인
-- [ ] OpenCV resize 편차 검토·실제 모델 golden 및 Android native Interpreter compatibility 검증
-- [ ] 전체 export contract 검증 완료 후 DEBUG Shadow actual prediction 활성화
+- [x] EXP03 OpenCV uint8 resize parity·동일4장 actual Golden·Android native compatibility 검증 (Run 1 FAIL 보존, Run 2 PASS)
+- [x] EXP03 VERIFIED 후 DEBUG Shadow gate/READY 및 실제 Camera 2세션 baseline 검증 (안정화 인식 품질은 미달·추가 검증 필요)
 - [ ] FRONT/45°/SIDE 실기기 비교·confidence/stabilizer tuning 후 별도 YOLO Primary 승격 결정
 - [x] 연속 유효 프레임 근거 기반 temporal smoothing 및 세션 종목 고정
 

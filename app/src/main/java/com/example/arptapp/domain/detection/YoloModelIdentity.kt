@@ -5,9 +5,14 @@ import java.security.MessageDigest
 
 /** Checks once at initialization, never per frame; no model bytes/paths are logged or persisted. */
 object YoloModelIdentity {
-    fun validate(model: ByteBuffer) {
+    fun matches(fileName: String, bytes: Long, sha256: String,
+                identity: YoloModelDescriptor = YoloModelPolicy.identity): Boolean =
+        KnownYoloModels.contains(identity) && fileName == identity.fileName && bytes == identity.bytes && sha256 == identity.sha256
+
+    fun validate(model: ByteBuffer, identity: YoloModelDescriptor = YoloModelPolicy.identity) {
+        if (!KnownYoloModels.contains(identity)) throw YoloModelIdentityMismatch()
         val copy = model.asReadOnlyBuffer()
-        if (copy.remaining().toLong() != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
+        if (copy.remaining().toLong() != identity.bytes) throw YoloModelIdentityMismatch()
         val digest = MessageDigest.getInstance("SHA-256")
         val chunk = ByteArray(8192)
         while (copy.hasRemaining()) {
@@ -15,7 +20,7 @@ object YoloModelIdentity {
             copy.get(chunk, 0, count); digest.update(chunk, 0, count)
         }
         val hash = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
-        if (hash != YoloModelPolicy.CANONICAL_SHA256) throw YoloModelIdentityMismatch()
+        if (hash != identity.sha256) throw YoloModelIdentityMismatch()
     }
 }
 

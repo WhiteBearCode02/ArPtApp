@@ -128,7 +128,7 @@ class Exp02NmsContractTest {
             validateDirectory(base, directory)
             val json = gson.toJson(mapOf("schemaVersion" to 1, "validationPurpose" to "EXP02_NMS_CONTRACT",
                 "run" to run, "allCasesPassed" to passed, "failure" to failure,
-                "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
+                "modelSha256" to KnownYoloModels.EXP02.sha256,
                 "androidModelInferenceExecuted" to false, "modelLoadPerformed" to false,
                 "productionDecoderAndPostProcessorUsed" to true,
                 "productionContract" to Exp02YoloContract.verification.name,
@@ -149,7 +149,7 @@ class Exp02NmsContractTest {
         require(reference.schemaVersion == 1 && reference.validationPurpose == "EXP02_NMS_CONTRACT")
         require(reference.ultralyticsVersion == "8.4.176" && reference.wheelSha256 ==
             "15f4bbac5c69fd9a5a9395f5957a7ce561e3eb4620699a9c2ff11ed38ec7d34c")
-        require(reference.modelSha256 == YoloModelPolicy.CANONICAL_SHA256)
+        require(reference.modelSha256 == KnownYoloModels.EXP02.sha256)
         require(reference.normalizedOutput == NormalizedOutput(listOf(1, 6, 8400), "FLOAT32", "LITTLE_ENDIAN"))
         require(reference.productionContract in setOf("NOT_VERIFIED", "NOT_INSPECTED") && !reference.contractPromotionPerformed &&
             !reference.predictionUsedForSession && !reference.modelInferenceExecutedByThisTool)

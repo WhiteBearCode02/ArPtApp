@@ -11,9 +11,11 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
 /** Reuses the existing TF Lite dependency; no delegate/SDK/download/network service is added. */
-internal class TfliteYoloRuntime(private val model: ByteBuffer) : YoloTensorRuntime {
+internal class TfliteYoloRuntime(private val model: ByteBuffer,
+    private val identity: YoloModelDescriptor = YoloModelPolicy.identity) : YoloTensorRuntime {
+    override val modelId get() = identity.modelId
     private val interpreter = try {
-        YoloModelIdentity.validate(model)
+        YoloModelIdentity.validate(model, identity)
         Interpreter(model, Interpreter.Options().setNumThreads(2))
     } catch (error: Exception) {
         if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
@@ -34,16 +36,17 @@ internal class TfliteYoloRuntime(private val model: ByteBuffer) : YoloTensorRunt
 
 /** Never stages/copies a model or weakens APK packaging. Both existing APK variants exclude weights. */
 internal object DebugYoloModelSource {
-    fun open(context: Context): ByteBuffer {
+    fun open(context: Context, identity: YoloModelDescriptor = YoloModelPolicy.identity): ByteBuffer {
         check(BuildConfig.DEBUG)
-        val privateModel = File(context.noBackupFilesDir, "yolo/${YoloModelPolicy.FILE_NAME}")
+        if (!KnownYoloModels.contains(identity)) throw YoloModelIdentityMismatch()
+        val privateModel = File(context.noBackupFilesDir, "yolo/${identity.fileName}")
         if (!privateModel.isFile) throw MissingYoloModel()
         // No asset/network fallback. Reject path traversal/symlink escapes before touching bytes.
         val expectedDirectory = File(context.noBackupFilesDir, "yolo").canonicalFile
         if (expectedDirectory.parentFile != context.noBackupFilesDir.canonicalFile ||
             privateModel.canonicalFile.parentFile != expectedDirectory ||
-            privateModel.canonicalFile.name != YoloModelPolicy.FILE_NAME ||
-            privateModel.length() != YoloModelPolicy.CANONICAL_MODEL_BYTES) throw YoloModelIdentityMismatch()
+            privateModel.canonicalFile.name != identity.fileName ||
+            privateModel.length() != identity.bytes) throw YoloModelIdentityMismatch()
         return FileInputStream(privateModel).use { it.channel.map(FileChannel.MapMode.READ_ONLY, 0, it.channel.size()) }
     }
 }
@@ -55,7 +58,7 @@ object DebugYoloShadowFactory {
         val app = context.applicationContext
         // Independent, explicit DEBUG rollout gate. Model presence and VERIFIED alone do not run frames.
         val runtimePolicy = YoloRuntimePolicy.forBuild(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED)
-        val contract = Exp02YoloContract.components(Exp02BitmapPreprocessor())
+        val contract = Exp03YoloContract.components(YoloBitmapPreprocessor())
         return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract,
             runtimePolicy = runtimePolicy),
             YoloExerciseStabilizer(contract.stabilization),
