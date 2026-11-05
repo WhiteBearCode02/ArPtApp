@@ -10,7 +10,7 @@ const factory = read(root + "ui/camera/yolo/TfliteYoloRuntime.kt")
 
 test("production factory is DEBUG-only and approved contract is independent of runtime rollout", () => {
   assert.match(factory, /if \(!BuildConfig.DEBUG\) return null/)
-  assert.match(factory, /Exp02YoloContract.components\(Exp02BitmapPreprocessor\(\)\)/)
+  assert.match(factory, /Exp03YoloContract.components\(YoloBitmapPreprocessor\(\)\)/)
   assert.doesNotMatch(factory, /ExportContractVerification.VERIFIED|Yolo26Classifier\(/)
   const contract = read(root + "domain/detection/Exp02YoloContract.kt")
   assert.match(contract, /get\(\) = ExportContractVerification.VERIFIED/)
@@ -21,7 +21,7 @@ test("production factory is DEBUG-only and approved contract is independent of r
 test("contract gate precedes runtime call and unknown exports retain three fail-closed ports", () => {
   const contract = read(root + "domain/detection/YoloExportContract.kt")
   assert.match(contract, /minimumConfidence = null/)
-  assert.match(contract, /TODO\(EXP02_EXPORT_CONTRACT\)/)
+  assert.match(contract, /NOT_VERIFIED: model-specific Android export contract required/)
   assert.equal((contract.match(/throw ExportContractNotVerified\(\)/g) ?? []).length, 3)
   assert.doesNotMatch(contract, /114|255|xywh|xyxy|sigmoid|nonMaxSuppression/)
   const detector = read(root + "domain/detection/YoloExerciseDetector.kt")
@@ -79,9 +79,11 @@ test("YOLO modules add no network, credentials, persistence of observations or m
 })
 
 test("canonical model bytes are validated before native initialization", () => {
-  assert.ok(factory.indexOf("YoloModelIdentity.validate(model)") < factory.indexOf("Interpreter(model,"))
-  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /CANONICAL_SHA256/)
-  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /CANONICAL_MODEL_BYTES/)
+  const validate = factory.indexOf("YoloModelIdentity.validate(model, identity)")
+  assert.ok(validate >= 0 && validate < factory.indexOf("Interpreter(model,"))
+  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /KnownYoloModels.contains\(identity\)/)
+  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /hash != identity.sha256/)
+  assert.match(read(root + "domain/detection/YoloModelIdentity.kt"), /copy.remaining\(\).toLong\(\) != identity.bytes/)
   assert.match(dashboard, /cameraController.invalidateShadowEvidence\(\)/)
   assert.match(camera, /yoloShadow\?\.isCurrent\(snapshot\)/)
 })

@@ -108,7 +108,11 @@ flowchart LR
 |---|---|
 | `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
 | `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
-| `airptcoach_yolo26n_exp02_fp32.tflite` | 로컬 존재/Git·APK 제외, FLOAT32 입력 `[1,3,640,640]`·출력 `[1,6,8400]`, contract `VERIFIED`·별도 DEBUG Shadow gate ON/release OFF |
+| `airptcoach_yolo26n_exp02_fp32.tflite` | 과거 검증 모델·증거 보존, EXP02 contract `VERIFIED`. 현재 canonical runtime 모델로 자동 fallback하지 않음 |
+| `airptcoach_yolo26n_exp03_final_fp32.tflite` | 새 canonical Shadow 모델, 9,894,032 bytes·SHA 확인, Git/APK 제외. EXP03 contract `NOT_VERIFIED`로 실제 prediction 비활성, release OFF |
+
+EXP03은 별도 export입니다. EXP02의 근거를 자동 상속하지 않으며 Android native/actual Golden은 아직 미검증입니다.
+현재 상태와 안전한 private 주입 절차는 [EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다.
 
 RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
 

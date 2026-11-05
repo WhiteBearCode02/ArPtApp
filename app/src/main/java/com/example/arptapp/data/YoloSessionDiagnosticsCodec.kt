@@ -3,10 +3,11 @@ package com.example.arptapp.data
 import com.example.arptapp.domain.analyzer.CameraView
 import com.example.arptapp.domain.detection.DetectorStatus
 import com.example.arptapp.domain.detection.ExportContractVerification
-import com.example.arptapp.domain.detection.YoloModelPolicy
+import com.example.arptapp.domain.detection.KnownYoloModels
 import com.example.arptapp.domain.detection.YoloSessionDiagnostics
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlin.math.abs
 
 /**
@@ -25,11 +26,16 @@ object YoloSessionDiagnosticsCodec {
 
     fun decode(raw: String?): YoloSessionDiagnostics? {
         if (raw.isNullOrBlank() || raw.length > MAX_JSON_CHARS) return null
-        return runCatching { sanitize(json.decodeFromString<YoloSessionDiagnostics>(raw)) }.getOrNull()
+        return runCatching {
+            // Never fill a missing historical identity from the NEW canonical model's defaults.
+            val fields = json.parseToJsonElement(raw).jsonObject
+            if (!fields.keys.containsAll(listOf("modelId", "modelSha256"))) return null
+            sanitize(json.decodeFromString<YoloSessionDiagnostics>(raw))
+        }.getOrNull()
     }
 
     private fun sanitize(value: YoloSessionDiagnostics): YoloSessionDiagnostics? = value.run {
-        if (schemaVersion != 1 || modelId != YoloModelPolicy.MODEL_ID || modelSha256 != YoloModelPolicy.CANONICAL_SHA256 ||
+        if (schemaVersion != 1 || !KnownYoloModels.matches(modelId, modelSha256) ||
             modelStatus !in DetectorStatus.entries.map { it.name } || contractStatus !in ExportContractVerification.entries.map { it.name } ||
             cameraView !in CameraView.entries.map { it.name } || expectedSessionExercise !in exercises ||
             predictionEnabled && (modelStatus != DetectorStatus.READY.name || contractStatus != ExportContractVerification.VERIFIED.name)) return null

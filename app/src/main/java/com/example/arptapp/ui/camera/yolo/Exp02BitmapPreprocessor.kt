@@ -8,7 +8,7 @@ import com.example.arptapp.domain.detection.YoloPreparedInput
 import com.example.arptapp.domain.detection.YoloPreprocessor
 
 /** Worker-owned adapter. getPixels exposes logical ARGB, independent of Bitmap memory byte order. */
-internal class Exp02BitmapPreprocessor : YoloPreprocessor<Bitmap> {
+internal class YoloBitmapPreprocessor : YoloPreprocessor<Bitmap> {
     private val delegate = Exp02RgbPreprocessor()
     private var pixels = IntArray(0)
     override fun preprocess(frame: Bitmap): YoloPreparedInput {
@@ -20,3 +20,6 @@ internal class Exp02BitmapPreprocessor : YoloPreprocessor<Bitmap> {
         return delegate.preprocess(Exp02RgbFrame(frame.width, frame.height, pixels))
     }
 }
+
+/** Source-compatible name for historical EXP02 harnesses, not EXP03 export evidence. */
+internal typealias Exp02BitmapPreprocessor = YoloBitmapPreprocessor

@@ -13,7 +13,6 @@ object Exp02YoloContract {
     const val SOURCE_VERSION = "8.4.176"
     val verification: ExportContractVerification get() = ExportContractVerification.VERIFIED
 
-    fun <F> components(preprocessor: YoloPreprocessor<F>) = YoloContractComponents(
-        verification, preprocessor, Exp02OutputDecoder(), Exp02PostProcessor(),
-        YoloStabilizationPolicy(minimumConfidence = Exp02DetectionPolicy.APP_ENGINEERING_INITIAL_STABLE_CONFIDENCE))
+    fun <F> components(preprocessor: YoloPreprocessor<F>) = YoloRaw640Algorithms.components(
+        KnownYoloModels.EXP02.modelId, verification, preprocessor)
 }

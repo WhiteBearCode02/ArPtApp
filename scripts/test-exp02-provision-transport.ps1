@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$PythonPath)
+param([Parameter(Mandatory=$true)][string]$PythonPath, [long[]]$AdditionalSizes = @())
 $ErrorActionPreference = 'Stop'
 
 # Load ONLY the existing process runner AST, never the provisioning script body.
@@ -22,7 +22,8 @@ $temporaryDirectory = Join-Path $transportRepository ('build/exp02-transport-tes
 $syntheticFile = Join-Path $temporaryDirectory 'synthetic.bin'
 Push-Location $transportRepository
 try {
-    foreach ($size in @(1, 511, 512, 513, 65535, 65536, 65537, 9894030)) {
+    foreach ($size in (@(1, 511, 512, 513, 65535, 65536, 65537, 9894030) + $AdditionalSizes)) {
+        if ($size -lt 1 -or $size -gt 16L * 1024 * 1024) { throw 'Unsafe synthetic transport test size.' }
         $bytes = New-Object byte[] $size
         # Contains all bytes, NUL, LF, CR, Ctrl-Z and high bytes, including at EOF.
         $prefix = [Math]::Min(256, $size)

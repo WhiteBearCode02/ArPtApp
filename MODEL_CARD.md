@@ -1,5 +1,40 @@
 # AIRPTCoach YOLO26n Exercise Detection 모델 카드
 
+## 현재 canonical Shadow 모델: EXP03_FINAL (2026-11-05)
+
+`yolo26n_exp03_final_fp32` · `airptcoach_yolo26n_exp03_final_fp32.tflite` · FP32.
+실제 파일 **9,894,032 bytes**, SHA256
+`3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167`를 직접 확인했습니다.
+입력 FLOAT32 `[1,3,640,640]`, 출력 FLOAT32 `[1,6,8400]`; 사용자 확정 class0 SQUAT/class1 SHOULDER_PRESS.
+
+사용자 제공 Subject-held-out Test 2,692장 결과(이번에 재평가하지 않음):
+
+| metric | PyTorch | FP32 TFLite |
+|---|---:|---:|
+| Precision | 0.9213 | 0.9144 |
+| Recall | 0.9369 | 0.9296 |
+| F1 | 0.9290 | 0.9219 |
+| mAP50 | 0.9551 | 0.9486 |
+| mAP50-95 | 0.8014 | 0.7936 |
+
+제공된 conversion delta: F1 -0.007145 / mAP50-95 -0.007830.
+대표12장 PT↔TFLite class12/12, confidence 평균 차이0.00853748, bbox 평균 IoU0.99399749도 사용자 제공 값입니다.
+PC LiteRT2.2.0 합성 입력 invoke1회와 **실제 Android TF Lite2.14.0 load/metadata/native smoke PASS**를
+확인했습니다. Android instrumentation 2/2 PASS, 단색 합성 입력 invoke1회이며 image Golden은 아닙니다.
+**contract NOT_VERIFIED / actual device PASS (native smoke만) / camera performance NOT_MEASURED**를
+유지합니다. EXP03 actual-image Golden은 NOT_RUN이고 prediction은 비활성입니다.
+기존 EXP02의 VERIFIED를 상속하지 않습니다.
+정확한 EXP03 학습·export 원문과 권리 확인을 기존 EXP02 기록에서 추정하지 않습니다.
+
+Landmark Primary / release Shadow OFF / 모델 Git·APK 제외를 유지합니다.
+현재 파일은 로컬 provisioning 원본이며 재배포 승인본이 아닙니다. 원본·기존 증거를 삭제/교체하지 않았습니다.
+[EXP03 계약](docs/ml/EXP03_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md) ·
+[실기기 확인](docs/ml/EXP03_ANDROID_DEVICE_SHADOW_CHECKLIST.md).
+
+---
+
+아래 EXP01/EXP02 내용은 기존 작성·검증 단계의 역사 기록입니다. EXP03의 근거로 소급 변경하지 않습니다.
+
 ## 목적·실험 근거
 
 졸업작품·졸업논문·취업 포트폴리오를 위한 비상업적 공개 연구 프로젝트의 운동 종류 **object detection** 모델입니다. Ultralytics YOLO26n을 사용자가 직접 학습한 EXP01/EXP02 이력에 따라 기록합니다. 수치는 사용자 제공 test 결과이며 이번 작업에서 학습·평가를 재실행하지 않았습니다. 상용/폐쇄형 배포에는 별도 검토가 필요합니다.

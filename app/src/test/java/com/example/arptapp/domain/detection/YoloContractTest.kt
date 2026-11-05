@@ -11,7 +11,8 @@ class YoloContractTest {
     private val enabled = YoloRuntimePolicy.forBuild(debug = true, requested = true)
     private val metadata = YoloTensorMetadata(listOf(TensorSpec(listOf(1, 3, 640, 640), "FLOAT32")),
         listOf(TensorSpec(listOf(1, 6, 8400), "FLOAT32")))
-    private class Runtime(private val spec: YoloTensorMetadata, private val shouldThrow: Boolean = false) : YoloTensorRuntime {
+    private class Runtime(private val spec: YoloTensorMetadata, private val shouldThrow: Boolean = false,
+                          override val modelId: String = YoloModelPolicy.MODEL_ID) : YoloTensorRuntime {
         var calls = 0; var closes = 0
         override fun metadata() = spec
         override fun run(input: ByteBuffer, output: ByteBuffer) { calls++; if (shouldThrow) error("synthetic failure") }
@@ -121,7 +122,7 @@ class YoloContractTest {
         assertEquals(mapOf(0 to ExerciseType.SQUAT, 1 to ExerciseType.SHOULDER_PRESS), YoloModelPolicy.classMapping)
     }
     @Test fun reviewedContractAloneCannotEnableRuntime() {
-        val runtime = Runtime(metadata)
+        val runtime = Runtime(metadata, modelId = KnownYoloModels.EXP02.modelId)
         val contract = Exp02YoloContract.components<Int>(YoloPreprocessor { error("unverified preprocess must not run") })
         assertEquals(ExportContractVerification.VERIFIED, contract.verification)
         val result = YoloExerciseDetector({ runtime }, contract).detect(0)

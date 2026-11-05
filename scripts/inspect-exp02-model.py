@@ -161,14 +161,15 @@ def validate_tensor_contract(metadata: dict) -> None:
             raise ValueError("Canonical EXP02 input/output shape or FLOAT32 dtype mismatch")
 
 
-def inspect_model(model: Path) -> dict:
+def inspect_model(model: Path, *, model_name: str = MODEL_NAME, model_bytes: int = MODEL_BYTES,
+                  model_sha256: str = MODEL_SHA256) -> dict:
     """Identity and directly observed tensor metadata only, NOT native evidence."""
     model = model.resolve(strict=True)
-    if model.name != MODEL_NAME or not model.is_file() or model.stat().st_size != MODEL_BYTES:
+    if model.name != model_name or not model.is_file() or model.stat().st_size != model_bytes:
         raise ValueError("Canonical EXP02 filename/size mismatch")
     data = model.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    if len(data) != MODEL_BYTES or digest != MODEL_SHA256:
+    if len(data) != model_bytes or digest != model_sha256:
         raise ValueError("Canonical EXP02 SHA256/size mismatch")
     metadata = FlatBufferMetadataReader(data).tensors()
     validate_tensor_contract(metadata)

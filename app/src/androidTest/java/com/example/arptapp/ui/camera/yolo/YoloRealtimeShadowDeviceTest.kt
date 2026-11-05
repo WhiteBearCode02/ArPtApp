@@ -37,8 +37,9 @@ class YoloRealtimeShadowDeviceTest {
     @Test fun verifiedDefaultOffLoadsModelWithoutPreprocessingOrNativeRun() {
         require(BuildConfig.DEBUG)
         var runs = 0
-        val native = TfliteYoloRuntime(DebugYoloModelSource.open(context))
+        val native = TfliteYoloRuntime(DebugYoloModelSource.open(context, KnownYoloModels.EXP02), KnownYoloModels.EXP02)
         val instrumented = object : YoloTensorRuntime {
+            override val modelId get() = native.modelId
             override fun metadata() = native.metadata()
             override fun run(input: ByteBuffer, output: ByteBuffer) { runs++; native.run(input, output) }
             override fun close() = native.close()
@@ -59,13 +60,14 @@ class YoloRealtimeShadowDeviceTest {
     @Test fun unverifiedContractCannotRunEvenWithDebugGateOn() {
         require(BuildConfig.DEBUG)
         var runs = 0
-        val native = TfliteYoloRuntime(DebugYoloModelSource.open(context))
+        val native = TfliteYoloRuntime(DebugYoloModelSource.open(context, KnownYoloModels.EXP02), KnownYoloModels.EXP02)
         val instrumented = object : YoloTensorRuntime {
+            override val modelId get() = native.modelId
             override fun metadata() = native.metadata()
             override fun run(input: ByteBuffer, output: ByteBuffer) { runs++; native.run(input, output) }
             override fun close() = native.close()
         }
-        YoloExerciseDetector({ instrumented }, UnverifiedYoloContract.components<Int>(),
+        YoloExerciseDetector({ instrumented }, UnverifiedYoloContract.components<Int>().copy(modelId = KnownYoloModels.EXP02.modelId),
             runtimePolicy = YoloRuntimePolicy.forBuild(true, true)).use { detector ->
             val result = detector.detect(0)
             assertEquals(DetectorStatus.CONTRACT_NOT_VERIFIED, result.status)
@@ -79,9 +81,16 @@ class YoloRealtimeShadowDeviceTest {
         val target = evidenceFile("controlled-shadow.json")
         require(!target.exists()) { "Keep previous evidence; use a new shadowEvidenceRun" }
         val queue = LinkedBlockingQueue<YoloShadowSnapshot>()
-        val bridge = YoloSessionDiagnosticsBridge(monotonicMs = SystemClock::uptimeMillis)
+        val bridge = YoloSessionDiagnosticsBridge(YoloSessionDiagnosticsCollector(KnownYoloModels.EXP02), SystemClock::uptimeMillis)
         val bitmap = loadExistingPrivateGoldenRaster()
-        val runner = requireNotNull(DebugYoloShadowFactory.create(context, { queue.offer(it) }, bridge))
+        // Historical EXP02 coverage: never substitute EXP03 or claim its current factory is enabled.
+        val contract = Exp02YoloContract.components(YoloBitmapPreprocessor())
+        val runner = YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(
+            DebugYoloModelSource.open(context, KnownYoloModels.EXP02), KnownYoloModels.EXP02) }, contract,
+            runtimePolicy = YoloRuntimePolicy.forBuild(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED)),
+            YoloExerciseStabilizer(contract.stabilization),
+            copyFrame = { bitmap: Bitmap -> requireNotNull(bitmap.copy(Bitmap.Config.ARGB_8888, false)) },
+            releaseFrame = { it.recycle() }, onSnapshot = { queue.offer(it) }, observer = bridge)
         try {
             runner.start()
             val initialized = requireNotNull(queue.poll(10, TimeUnit.SECONDS))
@@ -157,7 +166,7 @@ class YoloRealtimeShadowDeviceTest {
         val referenceFile = File(directory, "reference.json")
         require(referenceFile.canonicalFile.parentFile == directory && referenceFile.length() in 1..2_097_152)
         val reference = JSONObject(referenceFile.readText(Charsets.UTF_8))
-        assertEquals(YoloModelPolicy.CANONICAL_SHA256, reference.getJSONObject("model").getString("sha256"))
+        assertEquals(KnownYoloModels.EXP02.sha256, reference.getJSONObject("model").getString("sha256"))
         val samples = reference.getJSONArray("samples")
         val sample = (0 until samples.length()).map { samples.getJSONObject(it) }.single { it.getString("id") == "candidate_02" }
         val width = sample.getInt("width"); val height = sample.getInt("height")

@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.camera.yolo.DebugYoloModelSource
-import com.example.arptapp.ui.camera.yolo.Exp02BitmapPreprocessor
+import com.example.arptapp.ui.camera.yolo.YoloBitmapPreprocessor
 import com.example.arptapp.ui.camera.yolo.TfliteYoloRuntime
 import com.google.gson.Gson
 import java.nio.ByteBuffer
@@ -14,7 +14,7 @@ import java.security.MessageDigest
 
 /**
  * One saved PNG, one native invocation, isolated DEBUG validation scope. Reuses actual candidate
- * production preprocessor/decoder/postprocessor without changing Exp02YoloContract.verification.
+ * shared candidate preprocessor/decoder/postprocessor without promoting Exp03YoloContract.
  * No observer, stabilizer, session bridge, Room, rep analysis, or camera frame loop participates.
  */
 internal class DebugPositiveNativeInference(private val context: Context) {
@@ -37,14 +37,14 @@ internal class DebugPositiveNativeInference(private val context: Context) {
         TfliteYoloRuntime(DebugYoloModelSource.open(context)).use { runtime ->
             lastMetadata = runtime.metadata()
             require(lastMetadata!!.matchesExpected()) { "TENSOR_MISMATCH" }
-            val prepared = Exp02BitmapPreprocessor().preprocess(bitmap)
+            val prepared = YoloBitmapPreprocessor().preprocess(bitmap)
             val output = ByteBuffer.allocateDirect(4 * 6 * Exp02DetectionPolicy.ANCHORS).order(ByteOrder.nativeOrder())
             val start = SystemClock.elapsedRealtimeNanos()
             runtime.run(prepared.tensor, output)
             nativeInferenceExecuted = true
             lastInferenceMs = (SystemClock.elapsedRealtimeNanos() - start) / 1e6
             output.rewind()
-            val detections = Exp02PostProcessor().process(Exp02OutputDecoder().decode(output, prepared.transform)).map {
+            val detections = YoloRaw640Algorithms.postProcessor().process(YoloRaw640Algorithms.decoder().decode(output, prepared.transform)).map {
                 val box = requireNotNull(it.boundingBox)
                 PositiveCandidateDetection(YoloModelPolicy.classMapping.entries.single { entry -> entry.value == it.exerciseType }.key,
                     it.exerciseType.name, requireNotNull(it.confidence), PositiveCandidateBox(box.left, box.top, box.right, box.bottom))
@@ -61,7 +61,7 @@ internal class DebugPositiveNativeInference(private val context: Context) {
         "sourceImageSha256" to candidate.sha256, "decodedRgbSha256" to decodedRgbSha256,
         "width" to candidate.width, "height" to candidate.height,
         "rasterProvenance" to "MANUALLY_REQUESTED_NORMALIZED_CAMERA_BITMAP_LOSSLESS_OPAQUE_PNG_NO_EXTRA_RESIZE_OR_MIRROR",
-        "productionContract" to Exp02YoloContract.verification.name, "status" to result.status,
+        "productionContract" to Exp03YoloContract.verification.name, "status" to result.status,
         "androidNativeInferenceExecuted" to result.nativeInferenceExecuted,
         "nativeInferenceCount" to if (result.nativeInferenceExecuted) 1 else 0,
         "tensorMetadata" to lastMetadata, "inferenceMs" to lastInferenceMs,
