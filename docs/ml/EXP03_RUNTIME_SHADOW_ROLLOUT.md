@@ -1,6 +1,11 @@
 # EXP03_FINAL Shadow 전환 기록
 
-2026-11-05 · **Run 1 FAIL 보존 → 보간 수정 → Run 2 PASS → VERIFIED / Camera NOT_MEASURED**
+2026-11-06 · **Run 1 FAIL 보존 → 보간 수정 → Run 2 PASS → VERIFIED / Camera MEASURED_LIMITED**
+
+실제 스쿼트 정면·측면 2세션에서 native 완료와 진단 저장/재시작 readback을 확인했습니다.
+YOLO 약 2.05~2.13 FPS, stable 판정은 모두 UNKNOWN으로 인식 품질은 추가 검증이 필요합니다.
+[Camera baseline·제약·다음 단계](EXP03_CAMERA_SHADOW_BASELINE.md).
+아래 NOT_MEASURED는 이전 Golden 작업 시점의 이력이며 삭제하거나 PASS로 덮어쓰지 않습니다.
 
 | 경계 | 현재 코드 |
 |---|---|

@@ -16,6 +16,7 @@ import com.example.arptapp.presentation.report.YoloSessionDiagnosticsPresentatio
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONObject
+import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,6 +65,62 @@ class YoloSessionPersistenceDeviceTest {
         }
         writeEvidence("selected_record.json", evidence(selected).put("baselineMaxRecordId", baseline)
             .put("newRowCount", 1).put("processId", Process.myPid()))
+    }
+
+    /**
+     * Owner-requested readback of TWO already saved sessions, not a fabricated MAX(id) baseline.
+     * Bound the query to two rows and reject mixed owners. Never search older rows for a nicer result.
+     * Readiness, view and prediction failures remain evidence rather than filtering criteria.
+     */
+    @Test fun captureLatestSavedPair() {
+        requireDebug()
+        check(InstrumentationRegistry.getArguments().getString("confirmedSavedPair") == "true") {
+            "Owner must confirm both workouts are saved and the app may be stopped."
+        }
+        val records = withReadOnlyDatabase { db ->
+            db.rawQuery("SELECT id FROM exercise_records ORDER BY id DESC LIMIT 2", null).use { cursor ->
+                buildList { while (cursor.moveToNext()) add(readSelectedRecord(db, cursor.getInt(0))) }
+            }
+        }
+        check(records.size == 2) { "Two saved local records are required; do not create workouts." }
+        check(records.first().userId.isNotBlank() && records.map { it.userId }.distinct().size == 1) {
+            "Latest rows belong to different owners; request explicit record selection."
+        }
+        writeEvidence("saved_pair.json", JSONObject().put("schemaVersion", 1)
+            .put("source", "READ_ONLY_LATEST_TWO_OWNER_CONFIRMED_ROWS")
+            .put("processId", Process.myPid()).put("sameOwner", true)
+            .put("sessions", JSONArray().apply { records.reversed().forEach { put(evidence(it)) } })
+            .put("viewAndModelStatusUsedAsSelectionFilter", false))
+    }
+
+    /** A second process reopens exact IDs: no inference, reclassification, Room writes or network. */
+    @Test fun verifySavedPairAfterRestart() {
+        requireDebug()
+        val sourceRun = sourceEvidenceRun()
+        val saved = readEvidence("saved_pair.json", sourceRun)
+        check(saved.getInt("processId") != Process.myPid()) { "Fresh process required for restart evidence." }
+        val sessions = saved.getJSONArray("sessions")
+        check(sessions.length() == 2)
+        val observed = JSONArray()
+        withReadOnlyDatabase { db ->
+            repeat(sessions.length()) { index ->
+                val previous = sessions.getJSONObject(index)
+                val record = readSelectedRecord(db, previous.getInt("recordId"))
+                val current = evidence(record)
+                assertEquals(previous.toString(), current.toString())
+                val report = WorkoutReportData.fromRecord(record)
+                val readback = ReportNavigation.read(ReportNavigation.intent(context, report))
+                assertEquals(report, readback)
+                assertEquals(YoloSessionDiagnosticsCodec.decode(record.yoloDiagnosticsJson),
+                    YoloSessionDiagnosticsCodec.decode(readback.yoloDiagnosticsJson))
+                observed.put(current)
+            }
+        }
+        writeEvidence("pair_restart_verification.json", JSONObject().put("schemaVersion", 1)
+            .put("sourceEvidenceRun", sourceRun).put("processId", Process.myPid())
+            .put("freshProcessObserved", true).put("sameRecords", true)
+            .put("historyReportMapperRoundTrip", true).put("historyRowTapPerformed", false)
+            .put("sessions", observed))
     }
 
     @Test fun verifySameRecordAfterRestart() {

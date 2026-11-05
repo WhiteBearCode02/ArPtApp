@@ -1,6 +1,9 @@
 # EXP03_FINAL FP32 Android 계약
 
-2026-11-05 · **VERIFIED / Landmark Primary / release Shadow OFF / camera NOT_MEASURED**
+2026-11-06 · **VERIFIED / Landmark Primary / release Shadow OFF / camera MEASURED_LIMITED**
+
+실제 Camera 2세션은 실시간 경로/저장 동작을 확인했지만 stable 운동 인식은 미확보입니다.
+[Camera baseline](EXP03_CAMERA_SHADOW_BASELINE.md). 이는 Golden 동등성 PASS와 별도입니다.
 
 Run 1은 **FAIL (1/4 PASS)**로 보존했습니다. 보간 수정 뒤 Run 2는 **PASS (4/4)**,
 input tensor4/4 byte identical, confidence 최대3.5762787e-7 / bbox 최대9.1552734e-5px입니다.

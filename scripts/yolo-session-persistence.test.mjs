@@ -5,6 +5,23 @@ import { readFileSync } from "node:fs"
 const base = "app/src/main/java/com/example/arptapp/"
 const read = path => readFileSync(path, "utf8")
 
+test("owner-confirmed saved pair is bounded, read-only and preserves unsuccessful diagnostics", () => {
+  const source = read("app/src/androidTest/java/com/example/arptapp/data/YoloSessionPersistenceDeviceTest.kt")
+  const capture = source.slice(source.indexOf("@Test fun captureLatestSavedPair()"), source.indexOf("@Test fun verifySavedPairAfterRestart()"))
+  assert.match(capture, /confirmedSavedPair/)
+  assert.match(capture, /ORDER BY id DESC LIMIT 2/)
+  assert.match(capture, /records\.map \{ it\.userId \}\.distinct\(\)\.size == 1/)
+  assert.match(capture, /viewAndModelStatusUsedAsSelectionFilter", false/)
+  assert.doesNotMatch(capture, /\.filter\(|INSERT|UPDATE|DELETE|HttpClient|Supabase|force-stop/)
+  assert.match(source, /SQLiteDatabase\.OPEN_READONLY/)
+  assert.match(source, /file\.createNewFile\(\)/)
+  const restart = source.slice(source.indexOf("@Test fun verifySavedPairAfterRestart()"), source.indexOf("@Test fun verifySameRecordAfterRestart()"))
+  assert.match(restart, /saved\.getInt\("processId"\) != Process\.myPid\(\)/)
+  assert.match(restart, /previous\.getInt\("recordId"\)/)
+  assert.match(restart, /assertEquals\(previous\.toString\(\), current\.toString\(\)\)/)
+  assert.match(restart, /historyRowTapPerformed", false/)
+})
+
 test("YOLO persistence is an additive nullable v6 column without destructive fallback", () => {
   const database = read(base + "data/AppDatabase.kt")
   assert.match(database, /version = 7/)

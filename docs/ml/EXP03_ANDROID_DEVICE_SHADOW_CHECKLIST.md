@@ -1,6 +1,8 @@
 # EXP03 Android private provisioning 및 실기기 검증
 
-2026-11-05 · 실제 휴대폰 native / actual-image Golden **PASS (Run 2)**, contract **VERIFIED**, camera **NOT_MEASURED**.
+2026-11-06 · 실제 휴대폰 native / actual-image Golden **PASS (Run 2)**, contract **VERIFIED**, camera **MEASURED_LIMITED**.
+스쿼트 정면·측면 2세션의 실시간 경로/저장만 확인했으며 stable 운동 인식은 미확보입니다.
+[실제 Camera baseline](EXP03_CAMERA_SHADOW_BASELINE.md). 아래 이전 Golden 시점의 미측정 이력은 보존합니다.
 모델 9,894,032 bytes / SHA256 `3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167`.
 
 Run 1 FAIL(1/4)은 보존했습니다. pure Kotlin OpenCV parity 수정 후 **Run 2 전체 PASS(4/4)**,

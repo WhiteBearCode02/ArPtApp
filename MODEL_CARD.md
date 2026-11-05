@@ -21,7 +21,9 @@
 대표12장 PT↔TFLite class12/12, confidence 평균 차이0.00853748, bbox 평균 IoU0.99399749도 사용자 제공 값입니다.
 PC LiteRT2.2.0 합성 입력 invoke1회와 **실제 Android TF Lite2.14.0 load/metadata/native smoke PASS**를
 확인했습니다. Android instrumentation 2/2 PASS, 단색 합성 입력 invoke1회이며 image Golden은 아닙니다.
-**contract VERIFIED / actual device PASS (actual-image Golden) / camera performance NOT_MEASURED**입니다.
+**contract VERIFIED / actual device PASS (actual-image Golden) / camera MEASURED_LIMITED**입니다.
+스쿼트 정면·측면 2세션의 실시간 추론·로컬 저장은 확인했지만, stable 판정은 모두 UNKNOWN입니다.
+모델 전체 정확도나 실사용 품질 통과로 해석하지 않습니다. [Camera baseline](docs/ml/EXP03_CAMERA_SHADOW_BASELINE.md).
 Run 1의 FAIL(1/4)은 보존했고, OpenCV4.13.0 uint8 보간을 pure Kotlin으로 재현한 Run 2는
 전체4/4 tensor SHA 동일·실제 inference/decoder/NMS PASS였습니다. confidence 허용치를 넓히지
 않았고 최대 차이3.5762787e-7 / bbox9.1552734e-5px를 확인한 뒤에만 승격했습니다.

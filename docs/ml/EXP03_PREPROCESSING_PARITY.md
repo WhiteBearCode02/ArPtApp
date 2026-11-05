@@ -1,7 +1,8 @@
 # EXP03 preprocessing parity · 2026-11-05
 
 **Run 1 FAIL 보존 → 보간 구현 수정 → Run 2 PASS → EXP03 VERIFIED**.
-실제 Camera 성능은 **NOT_MEASURED**, Primary는 **LANDMARK**입니다.
+이 보간/Golden 작업 당시 실제 Camera는 **NOT_MEASURED**였습니다. 후속 스쿼트 2세션의
+[제한된 Camera baseline](EXP03_CAMERA_SHADOW_BASELINE.md)은 별도 기록이며 Primary는 계속 **LANDMARK**입니다.
 
 ## 원인: 일반 bilinear가 아닌 uint8 INTER_LINEAR
 
