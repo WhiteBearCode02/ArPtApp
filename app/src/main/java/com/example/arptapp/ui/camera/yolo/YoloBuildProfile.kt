@@ -1,0 +1,19 @@
+package com.example.arptapp.ui.camera.yolo
+
+import android.graphics.Bitmap
+import com.example.arptapp.BuildConfig
+import com.example.arptapp.domain.detection.*
+
+/** Single composition root for native identity, contract, preprocessor, live label and session collector.
+ * Canonical production policy stays EXP03; historical EXP02 arithmetic is only selected explicitly.
+ */
+internal object YoloBuildProfile {
+    val identity: YoloModelDescriptor = YoloBuildSelection.identity(BuildConfig.YOLO_MODEL_VARIANT,
+        BuildConfig.DEBUG, BuildConfig.YOLO_AB_COMPARISON, BuildConfig.APPLICATION_ID)
+
+    fun components(): YoloContractComponents<Bitmap> = when (identity) {
+        KnownYoloModels.EXP02 -> Exp02YoloContract.components(Exp02BitmapPreprocessor())
+        KnownYoloModels.EXP03 -> Exp03YoloContract.components(YoloBitmapPreprocessor())
+        else -> error("No reviewed preprocessing contract")
+    }
+}

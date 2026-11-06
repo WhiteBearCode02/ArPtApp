@@ -8,12 +8,13 @@ import java.util.Locale
 data class DetectorComparison(
     val yolo: YoloShadowSnapshot, val fallbackDetected: ExerciseType, val sessionExerciseType: ExerciseType,
     val cameraView: CameraView, val posePeopleCount: Int, val thermalStatus: Int,
-    val processedFps: Double? = null
+    val processedFps: Double? = null,
+    val modelId: String = YoloModelPolicy.MODEL_ID
 )
 object DetectorComparisonFormatter {
     fun format(data: DetectorComparison): String = buildString {
         val result = data.yolo.result
-        append("YOLO SHADOW ${YoloModelPolicy.MODEL_ID} · model=${result.status}\n")
+        append("YOLO SHADOW ${data.modelId} · model=${result.status}\n")
         append("exportContract=${result.contractVerification} · ")
         append("shadow=${if (result.shadowRuntimeEnabled) "ENABLED" else "DISABLED"} · primary=LANDMARK\n")
         append(if (result.predictionAllowed)

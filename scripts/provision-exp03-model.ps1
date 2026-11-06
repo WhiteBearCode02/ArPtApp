@@ -3,13 +3,22 @@ param(
     [string]$ModelPath,
     [string]$AdbPath = 'adb',
     [string]$DeviceSerial,
-    [switch]$ValidateLocalOnly
+    [switch]$ValidateLocalOnly,
+    [ValidateSet('EXP02', 'EXP03')][string]$ModelVariant = 'EXP03',
+    [switch]$ComparisonApp
 )
 $ErrorActionPreference = 'Stop'
+$ModelVariant = $ModelVariant.ToUpperInvariant() # ValidateSet is case-insensitive; branch/package mapping must agree.
 $canonicalName = 'airptcoach_yolo26n_exp03_final_fp32.tflite'
 $canonicalBytes = 9894032L
 $canonicalHash = '3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167'
-$packageName = 'com.example.arptapp'
+if ($ModelVariant -ceq 'EXP02') {
+    if (-not $ComparisonApp) { throw 'EXP02 here is restricted to the dedicated comparison sandbox; use the historical EXP02 tool for the original app.' }
+    $canonicalName = 'airptcoach_yolo26n_exp02_fp32.tflite'
+    $canonicalBytes = 9894030L
+    $canonicalHash = '464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749'
+}
+$packageName = if ($ComparisonApp) { 'com.example.arptapp.' + $ModelVariant.ToLowerInvariant() } else { 'com.example.arptapp' }
 if ([string]::IsNullOrWhiteSpace($ModelPath)) { $ModelPath = Join-Path $PSScriptRoot "../app/src/main/assets/$canonicalName" }
 
 # Reuse ONLY the reviewed binary/hash helpers, not the EXP02 script's body/identity/provenance.
@@ -24,14 +33,14 @@ foreach ($name in @('Get-PrivateFileSha256', 'Invoke-PrivateAdb')) {
     . ([ScriptBlock]::Create($function.Extent.Text))
 }
 $model = Get-Item -LiteralPath $ModelPath
-if ($model.PSIsContainer -or $model.Name -cne $canonicalName -or $model.Length -ne $canonicalBytes) { throw 'EXP03 filename/size mismatch.' }
+if ($model.PSIsContainer -or $model.Name -cne $canonicalName -or $model.Length -ne $canonicalBytes) { throw 'Selected model filename/size mismatch.' }
 for ($item = $model; $null -ne $item; $item = $item.Parent) {
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Model source cannot use symlinks/junctions.' }
     # FileInfo has Directory rather than Parent.
     if ($item -is [IO.FileInfo]) { $item = $item.Directory; if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Model directory is a reparse point.' } }
 }
-if ((Get-PrivateFileSha256 -LiteralPath $model.FullName) -cne $canonicalHash) { throw 'EXP03 SHA256 mismatch.' }
-Write-Output "EXP03 local identity PASS: $canonicalBytes bytes SHA256=$canonicalHash"
+if ((Get-PrivateFileSha256 -LiteralPath $model.FullName) -cne $canonicalHash) { throw 'Selected model SHA256 mismatch.' }
+Write-Output "$ModelVariant local identity PASS: $canonicalBytes bytes SHA256=$canonicalHash"
 if ($ValidateLocalOnly) { return } # No adb, device mutation or inference in this mode.
 $adb = Get-Command $AdbPath -ErrorAction Stop
 if ($adb.CommandType -ne 'Application' -or [IO.Path]::GetExtension($adb.Source) -ine '.exe') { throw 'Use the actual platform-tools adb.exe.' }
@@ -43,7 +52,7 @@ if ($online.Count -ne 1 -or ($DeviceSerial -and $DeviceSerial -cne $online[0])) 
 $serial = $online[0]
 $prefix = @('-s', $serial)
 $privateRoot = Invoke-PrivateAdb -AdbArguments ($prefix + @('exec-out', 'run-as', $packageName, 'pwd'))
-if ($privateRoot -notmatch '^/data/(user/[0-9]+|data)/com\.example\.arptapp$') { throw 'DEBUG run-as private root not verified.' }
+if ($privateRoot -cnotmatch ('^/data/(user/[0-9]+|data)/' + [Regex]::Escape($packageName) + '$')) { throw 'Exact DEBUG run-as private root not verified.' }
 
 function Assert-Exp03PrivatePath([string]$RelativePath) {
     # Every relative target is fixed/flat; compare readlink output before mkdir/dd/mv to reject links.
@@ -52,7 +61,7 @@ function Assert-Exp03PrivatePath([string]$RelativePath) {
     if ($resolved -cne "$privateRoot/$RelativePath") { throw 'Private symlink/path traversal rejected.' }
 }
 Assert-Exp03PrivatePath 'no_backup'
-if (-not $PSCmdlet.ShouldProcess("DEBUG $packageName private noBackup", 'Provision canonical EXP03 without clearing data')) { return }
+if (-not $PSCmdlet.ShouldProcess("DEBUG $packageName private noBackup", "Provision $ModelVariant without clearing data")) { return }
 Invoke-PrivateAdb -AdbArguments ($prefix + @('exec-out', 'am', 'force-stop', $packageName)) | Out-Null
 Invoke-PrivateAdb -AdbArguments ($prefix + @('exec-out', 'run-as', $packageName, 'mkdir', '-p', 'no_backup')) | Out-Null
 Assert-Exp03PrivatePath 'no_backup/yolo'
@@ -84,6 +93,6 @@ try {
     # Only this newly generated exact temporary filename, never a model, directory or user record.
     Invoke-PrivateAdb -AdbArguments ($prefix + @('exec-out', 'run-as', $packageName, 'rm', '-f', $temporary)) | Out-Null
 }
-Write-Output "EXP03 device identity PASS: $canonicalBytes bytes SHA256=$canonicalHash"
+Write-Output "$ModelVariant device identity PASS: $canonicalBytes bytes SHA256=$canonicalHash"
 Write-Output "Private destination: $privateRoot/$target"
-Write-Output 'Contract NOT_VERIFIED is unchanged. Provisioning does not activate inference.'
+Write-Output 'Reviewed contract is unchanged. Provisioning does not activate inference or promote YOLO to Primary.'

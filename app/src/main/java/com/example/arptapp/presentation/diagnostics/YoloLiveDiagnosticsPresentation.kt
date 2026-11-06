@@ -21,6 +21,7 @@ object YoloLiveDiagnosticsPresentation {
             append("\n관절 기반 감지: ${YoloDiagnosticGuide.exercise(data.fallbackDetected.name)}")
             append("\n기록 중인 운동: ${YoloDiagnosticGuide.exercise(data.sessionExerciseType.name)}")
             append("\n촬영 방향: ${YoloDiagnosticGuide.direction(data.cameraView.name)}")
+            append("\n비교 모델: ${data.modelId}")
             if (data.posePeopleCount > 1 || result.detectionCount > 1)
                 append("\n주의: 여러 검출이 있어 YOLO 결과와 분석 중인 사람을 같은 대상으로 단정할 수 없어요.")
         }

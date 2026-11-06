@@ -58,8 +58,9 @@ object DebugYoloShadowFactory {
         val app = context.applicationContext
         // Independent, explicit DEBUG rollout gate. Model presence and VERIFIED alone do not run frames.
         val runtimePolicy = YoloRuntimePolicy.forBuild(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED)
-        val contract = Exp03YoloContract.components(YoloBitmapPreprocessor())
-        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract,
+        val identity = YoloBuildProfile.identity
+        val contract = YoloBuildProfile.components()
+        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app, identity), identity) }, contract,
             runtimePolicy = runtimePolicy),
             YoloExerciseStabilizer(contract.stabilization),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },

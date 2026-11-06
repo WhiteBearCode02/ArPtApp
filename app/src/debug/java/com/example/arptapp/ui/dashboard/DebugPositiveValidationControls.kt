@@ -12,6 +12,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.example.arptapp.BuildConfig
+import com.example.arptapp.ui.camera.yolo.YoloBuildProfile
 import com.example.arptapp.ui.camera.yolo.validation.DebugPositiveValidationFactory
 import com.example.arptapp.ui.camera.yolo.validation.Exp02PositiveValidation
 import com.example.arptapp.ui.camera.yolo.validation.PositiveCandidateInventory
@@ -34,10 +36,11 @@ object DebugPositiveValidationControls {
         private val localOnly = CheckBox(activity).apply {
             text = "로컬 검증 세션 · 업로드 안 함"
             setTextColor(Color.WHITE)
-            isChecked = false
+            isChecked = BuildConfig.YOLO_AB_COMPARISON
+            isEnabled = !BuildConfig.YOLO_AB_COMPARISON
         }
         private val status = TextView(activity).apply {
-            text = "수동 촬영만 저장 · private noBackup · 최대 8장\n실시간 YOLO는 NOT_VERIFIED 유지"
+            text = "수동 촬영만 저장 · private noBackup · 최대 8장\n${YoloBuildProfile.identity.modelId} · Primary LANDMARK"
             textSize = 11f
             setTextColor(Color.WHITE)
         }
@@ -140,7 +143,7 @@ object DebugPositiveValidationControls {
         override fun freezeLocalOnlyForSession(): Boolean = localOnly.isChecked
         override fun setSessionActive(active: Boolean) {
             sessionActive = active
-            localOnly.isEnabled = !active
+            localOnly.isEnabled = !active && !BuildConfig.YOLO_AB_COMPARISON
             delete.isEnabled = !busy && !active
         }
         override fun onHostPaused() {

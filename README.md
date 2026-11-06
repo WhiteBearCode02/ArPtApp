@@ -117,6 +117,8 @@ Android actual Golden Run 2를 통과했습니다. [전처리·검증 근거](do
 실제 카메라는 스쿼트 정면·측면 2세션의 제한된 baseline을 확인했습니다. YOLO 약 2.05~2.13 FPS,
 stable 판정은 모두 UNKNOWN으로 **인식 품질은 추가 검증 필요**입니다. Primary는 LANDMARK입니다.
 [실제 Camera 결과·해석](docs/ml/EXP03_CAMERA_SHADOW_BASELINE.md).
+동일 휴대폰에서 비교하려면 [EXP02 / EXP03 별도 DEBUG 앱 A/B 절차](docs/ml/YOLO_AB_DEVICE_COMPARISON.md)를 따릅니다.
+기존 앱·release는 유지하며 두 비교 앱의 실제 운동 성능은 별도 4세션으로 측정합니다.
 현재 상태와 안전한 private 주입 절차는 [EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다.
 
 RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.

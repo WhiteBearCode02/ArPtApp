@@ -82,7 +82,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var shadowThermalStatus = -1
     private var lastShadowLogAt = 0L
     private val yoloSessionDiagnostics = if (BuildConfig.DEBUG)
-        YoloSessionDiagnosticsBridge(monotonicMs = SystemClock::uptimeMillis) else null
+        YoloSessionDiagnosticsBridge(
+            collector = YoloSessionDiagnosticsCollector(com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity),
+            monotonicMs = SystemClock::uptimeMillis) else null
     private var completedYoloDiagnosticsJson: String? = null
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
@@ -558,7 +560,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         if (!BuildConfig.DEBUG) return
         val liveStats = yoloSessionDiagnostics?.current(System.currentTimeMillis(), SystemClock.uptimeMillis())
         val comparison = DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
-            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps)
+            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps,
+            modelId = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity.modelId)
         val text = DetectorComparisonFormatter.format(comparison)
         binding.yoloDiagnosticsPanel.updateComparison(comparison)
         binding.yoloDiagnosticsPanel.updateDiagnostics(text)

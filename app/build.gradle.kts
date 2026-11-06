@@ -41,6 +41,9 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", localPropertyAsBuildConfigString("supabase.url"))
         buildConfigField("String", "SUPABASE_KEY", localPropertyAsBuildConfigString("supabase.key"))
+        // Canonical debug/release retain EXP03. Only the two explicit DEBUG builds override identity.
+        buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP03\"")
+        buildConfigField("boolean", "YOLO_AB_COMPARISON", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -62,7 +65,35 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // Build types rather than flavors preserve assembleDebug/assembleRelease and release identity.
+        create("exp02Debug") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".exp02"
+            resValue("string", "app_name", "AIRPTCoach V1 - EXP02")
+            buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP02\"")
+            buildConfigField("boolean", "YOLO_AB_COMPARISON", "true")
+            matchingFallbacks += listOf("debug")
+        }
+        create("exp03Debug") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".exp03"
+            resValue("string", "app_name", "AIRPTCoach V2 - EXP03")
+            buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP03\"")
+            buildConfigField("boolean", "YOLO_AB_COMPARISON", "true")
+            matchingFallbacks += listOf("debug")
+        }
     }
+
+    sourceSets {
+        for (name in listOf("exp02Debug", "exp03Debug")) getByName(name) {
+            java.srcDir("src/debug/java")
+            manifest.srcFile("src/abComparison/AndroidManifest.xml")
+        }
+    }
+    // AGP instruments one build type per invocation. Default and ordinary commands remain debug.
+    val selectedTestBuild = providers.gradleProperty("abTestBuildType").getOrElse("debug")
+    require(selectedTestBuild in listOf("debug", "exp02Debug", "exp03Debug")) { "Unknown test build type" }
+    testBuildType = selectedTestBuild
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
