@@ -562,7 +562,10 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val comparison = DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
             sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps,
             modelId = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity.modelId)
-        val text = DetectorComparisonFormatter.format(comparison)
+        val modelProfile = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity
+        val text = DetectorComparisonFormatter.format(comparison) +
+            "\n${if (BuildConfig.YOLO_AB_COMPARISON) "Comparison" else "Production Model"}: ${BuildConfig.YOLO_MODEL_VARIANT}\n" +
+            "Model File: ${modelProfile.fileName}"
         binding.yoloDiagnosticsPanel.updateComparison(comparison)
         binding.yoloDiagnosticsPanel.updateDiagnostics(text)
         val now = SystemClock.uptimeMillis()

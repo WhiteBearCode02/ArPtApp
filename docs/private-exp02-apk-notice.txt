@@ -1,0 +1,19 @@
+AIRPTCoach - OWNER-ONLY DEBUG TEST APK / NOT FOR PUBLIC DISTRIBUTION
+
+Model: airptcoach_yolo26n_exp02_fp32.tflite (packaged as yolo_private/exp02.bin)
+SHA-256: 464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749
+Architecture/training software: Ultralytics YOLO26n, Ultralytics 8.4.176.
+License: GNU Affero General Public License version 3; full text accompanies this notice.
+https://www.ultralytics.com/license
+https://github.com/ultralytics/ultralytics/tree/v8.4.176
+
+Training data source, as identified by the model owner:
+AI-Hub - 크로스핏 동작 데이터 (dataset 71422).
+과학기술정보통신부 및 한국지능정보사회진흥원(NIA)의 AI 학습용 데이터 구축 사업 결과물을 활용했습니다.
+https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=71422
+No original training photographs, videos or annotation files are included.
+
+Owner-only local device testing was approved on 2026-11-09.
+This notice is not an additional restriction on rights granted by applicable licenses.
+Public distribution requires a separate review of corresponding source, model and dependency obligations.
+No paid service, cloud model download or billing integration is added by this build.

@@ -16,14 +16,15 @@ object KnownYoloModels {
     fun matches(modelId: String, sha256: String): Boolean = known.any { it.modelId == modelId && it.sha256 == sha256 }
 }
 
-/** Current canonical Shadow export. Identity is not evidence that its Android contract is verified. */
+/** Selected final app export. "Production" selects identity, NOT Primary authority or redistribution rights. */
 object YoloModelPolicy {
-    const val MODEL_ID = "yolo26n_exp03_final_fp32"
-    const val FILE_NAME = "airptcoach_yolo26n_exp03_final_fp32.tflite"
+    const val MODEL_VERSION = "EXP02"
+    const val MODEL_ID = "yolo26n_exp02_fp32"
+    const val FILE_NAME = "airptcoach_yolo26n_exp02_fp32.tflite"
     const val MAX_MODEL_BYTES = 16L * 1024 * 1024
-    const val CANONICAL_MODEL_BYTES = 9894032L
-    const val CANONICAL_SHA256 = "3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167"
-    val identity get() = KnownYoloModels.EXP03
+    const val CANONICAL_MODEL_BYTES = 9894030L
+    const val CANONICAL_SHA256 = "464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749"
+    val identity get() = KnownYoloModels.EXP02
     val inputShape: List<Int> get() = listOf(1, 3, 640, 640)
     val outputShape: List<Int> get() = listOf(1, 6, 8400)
     val classMapping = mapOf(0 to ExerciseType.SQUAT, 1 to ExerciseType.SHOULDER_PRESS)

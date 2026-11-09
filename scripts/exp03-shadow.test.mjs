@@ -6,8 +6,8 @@ const root = 'app/src/main/java/com/example/arptapp/'
 const read = path => readFileSync(path, 'utf8')
 test('EXP03 identity stays ignored and cannot be packaged or tracked', () => {
   const source = read(root + 'domain/detection/YoloExportContract.kt')
-  assert.match(source, /const val MODEL_ID = "yolo26n_exp03_final_fp32"/)
-  assert.match(source, /const val CANONICAL_MODEL_BYTES = 9894032L/)
+  assert.match(source, /val EXP03 = YoloModelDescriptor\("yolo26n_exp03_final_fp32", "airptcoach_yolo26n_exp03_final_fp32.tflite", 9894032L/)
+  assert.match(source, /3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167/)
   assert.match(read('.gitignore'), /^\/app\/src\/main\/assets\/airptcoach_yolo26n_exp03_final_fp32\.tflite$/m)
   assert.equal(execFileSync('git', ['ls-files', '--', 'app/src/main/assets/airptcoach_yolo26n_exp03_final_fp32.tflite'], { encoding: 'utf8' }).trim(), '')
   assert.match(read('app/build.gradle.kts'), /ignoreAssetsPattern = "[^"\n]*\*\.tflite:\*\.pt:\*\.pth:\*\.onnx/)

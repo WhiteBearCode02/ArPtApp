@@ -1,6 +1,17 @@
 # AIRPTCoach YOLO26n Exercise Detection 모델 카드
 
-## 현재 canonical Shadow 모델: EXP03_FINAL (2026-11-05)
+## 현재 최종 앱 선택 모델: EXP02 (2026-11-09)
+
+`yolo26n_exp02_fp32` · `airptcoach_yolo26n_exp02_fp32.tflite` · FP32 · 9,894,030 bytes.
+재계산 SHA256 `464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749` 일치.
+실제 tensor는 input FLOAT32 `[1,3,640,640]`, output FLOAT32 `[1,6,8400]`, class0 SQUAT/class1 SHOULDER_PRESS입니다.
+기존 EXP02 전처리/계약으로 기본 앱을 복귀시켰습니다. 사용자 실기기 관찰에 따른 선택이며 정식 accuracy 측정이 아닙니다.
+Primary LANDMARK / DEBUG Shadow / release OFF는 유지합니다. 권리 자료 검토 전 모델 Git/APK 제외도 유지합니다.
+[선택 근거·실행 경로·검증·한계](docs/model-selection-exp02.md).
+
+## 보존된 실험 모델: EXP03_FINAL (아래는 2026-11-05~06 기록)
+
+아래 EXP03 수치와 PASS/FAIL 이력은 당시 기록이며, 현재 기본 앱 선택은 EXP02입니다.
 
 `yolo26n_exp03_final_fp32` · `airptcoach_yolo26n_exp03_final_fp32.tflite` · FP32.
 실제 파일 **9,894,032 bytes**, SHA256

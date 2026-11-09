@@ -1,5 +1,8 @@
 # EXP02 / EXP03 · 동일 휴대폰 DEBUG A/B 비교
 
+2026-11-09 후속 결정: 기본 앱은 [EXP02로 복귀](../model-selection-exp02.md)했습니다.
+아래 기본 앱 EXP03 설명·실행 기록은 2026-11-06 당시 검증 이력이며 그대로 보존합니다. 두 비교 build type은 유지합니다.
+
 ## 범위와 빌드 구조
 
 기존 `debug` / `release` / `com.example.arptapp`는 유지합니다. flavor로 모든 release variant를

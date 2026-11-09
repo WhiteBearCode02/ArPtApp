@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.security.MessageDigest
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 val localProperties = Properties().apply {
@@ -28,6 +29,32 @@ val artifactFolder = providers.gradleProperty("verificationBuildDir").getOrElse(
 require(artifactFolder.matches(Regex("[A-Za-z0-9_-]+"))) { "Build directory must be a simple folder name" }
 layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(artifactFolder))
 
+// Explicit owner-only experiment. Ordinary debug/release/A-B APKs still exclude model weights.
+val privateExp02Apk = providers.gradleProperty("privateExp02Apk").orNull == "true"
+val privateExp02Assets = layout.buildDirectory.dir("generated/privateExp02Assets")
+val preparePrivateExp02Assets = tasks.register<Copy>("preparePrivateExp02Assets") {
+    val modelFile = rootProject.file("app/src/main/assets/airptcoach_yolo26n_exp02_fp32.tflite")
+    onlyIf { privateExp02Apk }
+    from(modelFile) { into("yolo_private"); rename { "exp02.bin" } }
+    from(rootProject.file("licenses/ULTRALYTICS_AGPL-3.0.txt")) { into("yolo_private") }
+    from(rootProject.file("docs/private-exp02-apk-notice.txt")) { into("yolo_private") }
+    into(privateExp02Assets)
+    doFirst {
+        check(modelFile.length() == 9894030L) { "Private EXP02 model size mismatch" }
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest(modelFile.readBytes()).joinToString("") { "%02x".format(it) }
+        check(hash == "464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749") {
+            "Private EXP02 model SHA-256 mismatch"
+        }
+    }
+}
+tasks.configureEach {
+    if (privateExp02Apk && (name == "mergeDebugAssets" ||
+            (name.contains("Debug") && name.contains("Lint", ignoreCase = true)))) {
+        dependsOn(preparePrivateExp02Assets)
+    }
+}
+
 android {
     namespace = "com.example.arptapp"
     compileSdk = 36
@@ -41,9 +68,10 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", localPropertyAsBuildConfigString("supabase.url"))
         buildConfigField("String", "SUPABASE_KEY", localPropertyAsBuildConfigString("supabase.key"))
-        // Canonical debug/release retain EXP03. Only the two explicit DEBUG builds override identity.
-        buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP03\"")
+        // Selected final app model is EXP02. EXP03 remains an explicit comparison-only build.
+        buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP02\"")
         buildConfigField("boolean", "YOLO_AB_COMPARISON", "false")
+        buildConfigField("boolean", "YOLO_PRIVATE_BUNDLED", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -54,6 +82,7 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("boolean", "YOLO_PRIVATE_BUNDLED", privateExp02Apk.toString())
             // Explicit local-only Shadow rollout. Contract VERIFIED alone cannot enable inference.
             buildConfigField("boolean", "YOLO_SHADOW_ENABLED", "true")
         }
@@ -68,6 +97,7 @@ android {
         // Build types rather than flavors preserve assembleDebug/assembleRelease and release identity.
         create("exp02Debug") {
             initWith(getByName("debug"))
+            buildConfigField("boolean", "YOLO_PRIVATE_BUNDLED", "false")
             applicationIdSuffix = ".exp02"
             resValue("string", "app_name", "AIRPTCoach V1 - EXP02")
             buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP02\"")
@@ -76,6 +106,7 @@ android {
         }
         create("exp03Debug") {
             initWith(getByName("debug"))
+            buildConfigField("boolean", "YOLO_PRIVATE_BUNDLED", "false")
             applicationIdSuffix = ".exp03"
             resValue("string", "app_name", "AIRPTCoach V2 - EXP03")
             buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP03\"")
@@ -85,6 +116,7 @@ android {
     }
 
     sourceSets {
+        if (privateExp02Apk) getByName("debug").assets.srcDir(files(privateExp02Assets).builtBy(preparePrivateExp02Assets))
         for (name in listOf("exp02Debug", "exp03Debug")) getByName(name) {
             java.srcDir("src/debug/java")
             manifest.srcFile("src/abComparison/AndroidManifest.xml")
@@ -114,6 +146,7 @@ android {
 
     androidResources {
         noCompress += "tflite"
+        noCompress += "bin"
         // Default deny in ALL variants, including shared debug APKs. Keep original files on disk.
         // MediaPipe's reviewed .task bundle is retained; loose unreviewed weights are not.
         ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:*.tflite:*.pt:*.pth:*.onnx"

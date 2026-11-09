@@ -7,10 +7,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class YoloBuildSelectionTest {
-    @Test fun canonicalDebugAndReleaseRemainExp03() {
-        for (debug in listOf(true, false)) assertEquals(KnownYoloModels.EXP03,
-            YoloBuildSelection.identity("EXP03", debug, false, "com.example.arptapp"))
-        assertEquals(KnownYoloModels.EXP03, YoloModelPolicy.identity)
+    @Test fun canonicalDebugAndReleaseSelectExp02() {
+        for (debug in listOf(true, false)) assertEquals(KnownYoloModels.EXP02,
+            YoloBuildSelection.identity("EXP02", debug, false, "com.example.arptapp"))
+        assertEquals(KnownYoloModels.EXP02, YoloModelPolicy.identity)
     }
     @Test fun comparisonPairsAreExact() {
         assertEquals(KnownYoloModels.EXP02, YoloBuildSelection.identity("EXP02", true, true, "com.example.arptapp.exp02"))
@@ -25,7 +25,7 @@ class YoloBuildSelectionTest {
         for ((key, comparison, applicationId) in listOf(
             Triple("EXP02", true, "com.example.arptapp.exp03"),
             Triple("EXP03", true, "com.example.arptapp.exp02"),
-            Triple("EXP02", false, "com.example.arptapp"),
+            Triple("EXP03", false, "com.example.arptapp"),
             Triple("EXP03", true, "com.example.arptapp"),
             Triple("unknown", true, "com.example.arptapp.exp03"),
             Triple("EXP03", false, "com.example.arptapp.exp03"))) {

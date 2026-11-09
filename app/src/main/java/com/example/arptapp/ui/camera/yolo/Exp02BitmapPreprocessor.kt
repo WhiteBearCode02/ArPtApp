@@ -23,5 +23,5 @@ internal class YoloBitmapPreprocessor(
     }
 }
 
-/** Keep historical EXP02 arithmetic/evidence unchanged; the new canonical adapter is EXP03-only. */
+/** Selected final EXP02 path. Preserve reviewed arithmetic; the OpenCV adapter stays EXP03-only. */
 internal class Exp02BitmapPreprocessor : YoloPreprocessor<Bitmap> by YoloBitmapPreprocessor(Exp02RgbPreprocessor())

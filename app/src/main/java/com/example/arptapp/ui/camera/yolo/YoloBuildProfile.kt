@@ -5,7 +5,7 @@ import com.example.arptapp.BuildConfig
 import com.example.arptapp.domain.detection.*
 
 /** Single composition root for native identity, contract, preprocessor, live label and session collector.
- * Canonical production policy stays EXP03; historical EXP02 arithmetic is only selected explicitly.
+ * Final app uses EXP02's reviewed arithmetic. EXP03 stays isolated in its explicit comparison build.
  */
 internal object YoloBuildProfile {
     val identity: YoloModelDescriptor = YoloBuildSelection.identity(BuildConfig.YOLO_MODEL_VARIANT,

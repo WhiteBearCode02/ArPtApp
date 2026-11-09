@@ -4,8 +4,8 @@ package com.example.arptapp.domain.detection
 object YoloBuildSelection {
     fun identity(variant: String, debug: Boolean, comparison: Boolean, applicationId: String): YoloModelDescriptor {
         if (!comparison) {
-            require(variant == "EXP03" && applicationId == "com.example.arptapp")
-            return KnownYoloModels.EXP03
+            require(variant == YoloModelPolicy.MODEL_VERSION && applicationId == "com.example.arptapp")
+            return YoloModelPolicy.identity
         }
         require(debug) { "A/B comparison is DEBUG-only" }
         return when (variant) {

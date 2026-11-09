@@ -5,15 +5,18 @@ param(
     [string]$DeviceSerial,
     [switch]$ValidateLocalOnly,
     [ValidateSet('EXP02', 'EXP03')][string]$ModelVariant = 'EXP03',
-    [switch]$ComparisonApp
+    [switch]$ComparisonApp,
+    [switch]$ProductionApp
 )
 $ErrorActionPreference = 'Stop'
 $ModelVariant = $ModelVariant.ToUpperInvariant() # ValidateSet is case-insensitive; branch/package mapping must agree.
+if ($ComparisonApp -and $ProductionApp) { throw 'Choose exactly one explicit app mode.' }
+if ($ProductionApp -and $ModelVariant -cne 'EXP02') { throw 'The selected final app accepts only EXP02 provisioning.' }
 $canonicalName = 'airptcoach_yolo26n_exp03_final_fp32.tflite'
 $canonicalBytes = 9894032L
 $canonicalHash = '3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167'
 if ($ModelVariant -ceq 'EXP02') {
-    if (-not $ComparisonApp) { throw 'EXP02 here is restricted to the dedicated comparison sandbox; use the historical EXP02 tool for the original app.' }
+    if (-not $ComparisonApp -and -not $ProductionApp) { throw 'EXP02 requires an explicit comparison or final-app mode.' }
     $canonicalName = 'airptcoach_yolo26n_exp02_fp32.tflite'
     $canonicalBytes = 9894030L
     $canonicalHash = '464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749'
