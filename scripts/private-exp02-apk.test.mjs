@@ -6,7 +6,11 @@ test('bundled model is explicit opt-in debug source, never default or comparison
   const gradle = read('app/build.gradle.kts')
   assert.match(gradle, /gradleProperty\("privateExp02Apk"\).orNull == "true"/)
   assert.match(gradle, /if \(privateExp02Apk\) getByName\("debug"\).assets.srcDir/)
-  assert.equal((gradle.match(/"YOLO_PRIVATE_BUNDLED", "false"/g) || []).length, 3)
+  // Default false plus the three explicitly isolated comparison variants (including EXP04).
+  assert.equal((gradle.match(/"YOLO_PRIVATE_BUNDLED", "false"/g) || []).length, 4)
+  for (const variant of ['exp02Debug', 'exp03Debug', 'exp04Debug']) {
+    assert.match(gradle.slice(gradle.indexOf(`create("${variant}")`)).split('\n        }')[0], /"YOLO_PRIVATE_BUNDLED", "false"/)
+  }
   assert.match(gradle, /\*\.tflite:\*\.pt:\*\.pth:\*\.onnx/)
   assert.match(gradle, /464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749/)
 })

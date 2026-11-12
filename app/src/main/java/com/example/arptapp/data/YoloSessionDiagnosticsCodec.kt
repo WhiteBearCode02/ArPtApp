@@ -18,7 +18,6 @@ import kotlin.math.abs
 object YoloSessionDiagnosticsCodec {
     const val MAX_JSON_CHARS = 16_384
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
-    private val exercises = setOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN")
     private val sessionExercises = com.example.arptapp.domain.classifier.ExerciseType.supportedNames + "UNKNOWN"
 
     fun encode(value: YoloSessionDiagnostics?): String? = value?.let { sanitize(it) }?.let {
@@ -40,6 +39,7 @@ object YoloSessionDiagnosticsCodec {
             modelStatus !in DetectorStatus.entries.map { it.name } || contractStatus !in ExportContractVerification.entries.map { it.name } ||
             cameraView !in CameraView.entries.map { it.name } || expectedSessionExercise !in sessionExercises ||
             predictionEnabled && (modelStatus != DetectorStatus.READY.name || contractStatus != ExportContractVerification.VERIFIED.name)) return null
+        val exercises = com.example.arptapp.domain.detection.YoloModelProfiles.requireModel(modelId).countKeys.toSet()
         // Historical documents omit the gate. New documents must not contradict the independent policy.
         if (shadowRuntimeEnabled != null && predictionEnabled != (shadowRuntimeEnabled &&
                 modelStatus == DetectorStatus.READY.name && contractStatus == ExportContractVerification.VERIFIED.name)) return null

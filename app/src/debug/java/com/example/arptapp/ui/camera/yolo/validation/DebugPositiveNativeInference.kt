@@ -38,17 +38,17 @@ internal class DebugPositiveNativeInference(private val context: Context) {
         val contract = YoloBuildProfile.components()
         TfliteYoloRuntime(DebugYoloModelSource.open(context, identity), identity).use { runtime ->
             lastMetadata = runtime.metadata()
-            require(lastMetadata!!.matchesExpected()) { "TENSOR_MISMATCH" }
+            require(lastMetadata!!.matchesExpected(contract.profile)) { "TENSOR_MISMATCH" }
             val prepared = contract.preprocessor.preprocess(bitmap)
-            val output = ByteBuffer.allocateDirect(4 * 6 * Exp02DetectionPolicy.ANCHORS).order(ByteOrder.nativeOrder())
+            val output = ByteBuffer.allocateDirect(contract.profile.outputBytes).order(ByteOrder.nativeOrder())
             val start = SystemClock.elapsedRealtimeNanos()
             runtime.run(prepared.tensor, output)
             nativeInferenceExecuted = true
             lastInferenceMs = (SystemClock.elapsedRealtimeNanos() - start) / 1e6
             output.rewind()
-            val detections = YoloRaw640Algorithms.postProcessor().process(YoloRaw640Algorithms.decoder().decode(output, prepared.transform)).map {
+            val detections = contract.postProcessor.process(contract.decoder.decode(output, prepared.transform)).map {
                 val box = requireNotNull(it.boundingBox)
-                PositiveCandidateDetection(YoloModelPolicy.classMapping.entries.single { entry -> entry.value == it.exerciseType }.key,
+                PositiveCandidateDetection(contract.profile.classMapping.entries.single { entry -> entry.value == it.exerciseType }.key,
                     it.exerciseType.name, requireNotNull(it.confidence), PositiveCandidateBox(box.left, box.top, box.right, box.bottom))
             }
             return PositiveCandidateAnalysis(candidate, if (detections.isEmpty()) "NO_DETECTION" else "POSITIVE_CANDIDATE",

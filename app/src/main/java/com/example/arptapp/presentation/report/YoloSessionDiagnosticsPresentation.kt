@@ -24,9 +24,9 @@ object YoloSessionDiagnosticsPresentation {
             row("기록 시간", "${timestamp(value.startedAt)} ~ ${timestamp(value.endedAt)}")
         )),
         MetricGroupUiModel("AI가 무슨 운동으로 보았나요?", listOf(
-            row("한 화면씩 본 결과", friendlyCounts(value.rawDetectionCounts, value.processedFrames) +
+            row("한 화면씩 본 결과", friendlyCounts(value.rawDetectionCounts, value.processedFrames, value.modelId) +
                 "\n순간적으로 달라질 수 있는 판단입니다."),
-            row("연속 화면을 모은 판단", friendlyCounts(value.stableDetectionCounts, value.processedFrames) +
+            row("연속 화면을 모은 판단", friendlyCounts(value.stableDetectionCounts, value.processedFrames, value.modelId) +
                 "\n판단 보류는 오답이 아니라 아직 결과가 모이지 않은 상태입니다."),
             row("평균 모델 확신도", (if (value.confidenceSampleCount > 0) YoloDiagnosticGuide.confidence(value.averageConfidence) else "미측정 · 검출 표본 없음") +
                 "\n모델의 판단 강도이며 실제 정답률이나 자세 점수가 아닙니다. 검출이 없는 화면을 0%로 넣지 않습니다.")
@@ -54,8 +54,8 @@ object YoloSessionDiagnosticsPresentation {
         ))
     )
 
-    private fun friendlyCounts(counts: Map<String, Long>, processed: Long): String = if (processed == 0L)
-        "분석 완료 표본 없음" else listOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN").joinToString(" / ") { key ->
+    private fun friendlyCounts(counts: Map<String, Long>, processed: Long, modelId: String): String = if (processed == 0L)
+        "분석 완료 표본 없음" else countKeys(modelId).joinToString(" / ") { key ->
             "${if (key == "UNKNOWN") "판단 보류" else YoloDiagnosticGuide.exercise(key)} ${counts[key] ?: 0L}장"
         }
 
@@ -82,8 +82,8 @@ object YoloSessionDiagnosticsPresentation {
             row("실제 처리 프레임", value.processedFrames.toString()),
             row("프레임 기준", "후보는 기존 카메라 분석 throttle을 통과한 Shadow 입력만 포함 · 원본 카메라 전체 프레임 수가 아님")
         )),
-        detections("YOLO raw 결과", value.rawDetectionCounts, value.processedFrames),
-        detections("YOLO stable 결과", value.stableDetectionCounts, value.processedFrames),
+        detections("YOLO raw 결과", value.rawDetectionCounts, value.processedFrames, value.modelId),
+        detections("YOLO stable 결과", value.stableDetectionCounts, value.processedFrames, value.modelId),
         MetricGroupUiModel("실제 detection confidence", if (value.confidenceSampleCount > 0L) listOfNotNull(
             row("Detection 표본 수", value.confidenceSampleCount.toString()),
             value.averageConfidence?.let { row("평균 confidence", decimal(it)) },
@@ -112,11 +112,12 @@ object YoloSessionDiagnosticsPresentation {
         ))
     )
 
-    private fun detections(title: String, counts: Map<String, Long>, processed: Long): MetricGroupUiModel =
+    private fun detections(title: String, counts: Map<String, Long>, processed: Long, modelId: String): MetricGroupUiModel =
         MetricGroupUiModel(title, if (processed == 0L) listOf(row("검출 표본", "실제 prediction 표본 없음"))
-        else listOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN").map { key -> row(exercise(key), (counts[key] ?: 0L).toString()) })
+        else countKeys(modelId).map { key -> row(exercise(key), (counts[key] ?: 0L).toString()) })
 
-    private fun exercise(value: String): String = when (value) { "SQUAT" -> "스쿼트"; "SHOULDER_PRESS" -> "숄더 프레스"; else -> "UNKNOWN" }
+    private fun countKeys(modelId: String) = com.example.arptapp.domain.detection.YoloModelProfiles.requireModel(modelId).countKeys
+    private fun exercise(value: String): String = if (value == "UNKNOWN") "UNKNOWN" else YoloDiagnosticGuide.exercise(value)
     private fun row(label: String, value: String) = MetricRowUiModel(label, value)
     private fun decimal(value: Double, places: Int = 3) = String.format(Locale.KOREA, "%.${places}f", value)
     private fun timestamp(value: Long): String = if (value > 0L)

@@ -1,5 +1,7 @@
 # YOLO Android Shadow Mode · 계약 구현 및 검증
 
+> 2026-11-12 EXP04 추가: 명시적인 `exp04Debug` / `.exp04` 분리 빌드와 7-class profile·실제 Golden 준비 도구를 추가했습니다. **EXP04 contract NOT_VERIFIED / Android native·actual Golden·camera NOT_RUN**. 실제 입력 사진이 없어 reference 생성·기기 전송·실행을 하지 않았습니다. 기본 앱의 EXP02와 아래 EXP02/EXP03 증거는 유지합니다. [EXP04 계약](ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md) · [기기 7종 체크리스트](ml/EXP04_ANDROID_DEVICE_SHADOW_CHECKLIST.md).
+
 기준일: 2026-10-16. 상태: **local development / research validation**.
 
 > 최신 2026-10-17: 사용자 승인 후 contract `VERIFIED` / 독립 DEBUG Shadow ON / release OFF입니다. 실행에는 canonical private 모델 load·tensor 검사까지 필요합니다. 이 문서 아래의 NOT_VERIFIED/비활성 설명은 최초 구현 당시 기록입니다. [최신 rollout·새 빌드·실시간 baseline 확인 여부](ml/EXP02_RUNTIME_SHADOW_ROLLOUT.md)를 우선 확인하세요. Landmark Primary와 사진/모델 Git·APK 제외는 유지합니다.

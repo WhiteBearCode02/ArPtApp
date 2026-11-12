@@ -18,14 +18,14 @@ class YoloExerciseDetector<F>(
         if (result.status != DetectorStatus.INITIALIZING) return result
         try {
             runtime = runtimeFactory()
-            if (runtime?.metadata()?.matchesExpected() != true) return fail(DetectorStatus.TENSOR_MISMATCH)
+            if (runtime?.metadata()?.matchesExpected(contract.profile) != true) return fail(DetectorStatus.TENSOR_MISMATCH)
             if (runtime?.modelId != contract.modelId) {
                 effectiveVerification = ExportContractVerification.NOT_VERIFIED
                 return fail(DetectorStatus.CONTRACT_NOT_VERIFIED)
             }
             if (contract.verification != ExportContractVerification.VERIFIED || contract.stabilization.minimumConfidence == null)
                 return fail(DetectorStatus.CONTRACT_NOT_VERIFIED)
-            output = ByteBuffer.allocateDirect(YoloModelPolicy.outputShape.fold(4) { a, n -> a * n }).order(ByteOrder.nativeOrder())
+            output = ByteBuffer.allocateDirect(contract.profile.outputBytes).order(ByteOrder.nativeOrder())
             result = state(DetectorStatus.READY)
         } catch (_: MissingYoloModel) { return fail(DetectorStatus.MODEL_MISSING) }
         catch (_: YoloModelIdentityMismatch) { return fail(DetectorStatus.MODEL_IDENTITY_MISMATCH) }
@@ -40,7 +40,7 @@ class YoloExerciseDetector<F>(
         val start = clockMs()
         return try {
             val prepared = contract.preprocessor.preprocess(frame)
-            val inputBytes = YoloModelPolicy.inputShape.fold(4) { a, n -> a * n }
+            val inputBytes = contract.profile.inputBytes
             if (!prepared.tensor.isDirect || prepared.tensor.remaining() != inputBytes || prepared.tensor.order() != ByteOrder.nativeOrder())
                 return fail(DetectorStatus.INFERENCE_FAILED)
             val preprocessed = clockMs()
@@ -51,12 +51,12 @@ class YoloExerciseDetector<F>(
             buffer.rewind()
             val decoded = contract.decoder.decode(buffer.asReadOnlyBuffer().order(ByteOrder.nativeOrder()), prepared.transform)
             val detections = contract.postProcessor.process(decoded)
-            if (detections.size > 8400 || detections.any { it.source != DetectionSource.YOLO || it.exerciseType !in YoloModelPolicy.supported ||
+            if (detections.size > contract.profile.anchors || detections.any { it.source != DetectionSource.YOLO || it.exerciseType !in contract.profile.supportedExercises ||
                     it.confidence?.let { c -> c.isFinite() && c in 0f..1f } != true || it.boundingBox?.isValid == false })
                 return fail(DetectorStatus.INVALID_OUTPUT)
             val end = clockMs()
             result = ExerciseDetectionResult(DetectorStatus.READY, DetectionSource.YOLO,
-                MainExerciseDetectionSelector.select(detections), detections.size,
+                MainExerciseDetectionSelector.select(detections, contract.profile), detections.size,
                 DetectionTimings((preprocessed-start).coerceAtLeast(0), (inferred-preprocessed).coerceAtLeast(0),
                     (end-inferred).coerceAtLeast(0), (end-start).coerceAtLeast(0)), contract.verification,
                 runtimePolicy.shadowRuntimeEnabled)

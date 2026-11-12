@@ -16,26 +16,36 @@ object Exp02DetectionPolicy {
     const val ANCHORS = 8400
 }
 
-/** Exact 8.4.176 raw head/LiteRT path: normalized cx,cy,w,h; already-sigmoid class0,class1. */
-class Exp02OutputDecoder : YoloOutputDecoder {
+/** Historical API delegates to unchanged two-class math. */
+class Exp02OutputDecoder : YoloOutputDecoder by YoloRawOutputDecoder(YoloModelProfiles.EXP02)
+
+/** Source-reviewed raw path: normalized cx,cy,w,h + nc sigmoid scores; never second sigmoid/objectness.
+ * Reusing these algorithms is not export-specific Android Golden verification.
+ */
+class YoloRawOutputDecoder(private val profile: YoloModelProfile) : YoloOutputDecoder {
     override fun decode(output: ByteBuffer, transform: YoloFrameTransform): YoloDecodedOutput {
-        if (output.remaining() != 4 * 6 * Exp02DetectionPolicy.ANCHORS || output.order() != ByteOrder.nativeOrder()) throw InvalidYoloOutput()
+        if (output.remaining() != profile.outputBytes || output.order() != ByteOrder.nativeOrder()) throw InvalidYoloOutput()
         val tensor = output.slice().order(ByteOrder.nativeOrder())
         val candidates = ArrayList<YoloDecodedCandidate>()
-        for (anchor in 0 until Exp02DetectionPolicy.ANCHORS) {
-            fun read(channel: Int) = tensor.getFloat((channel * Exp02DetectionPolicy.ANCHORS + anchor) * 4)
-            val class0 = read(4); val class1 = read(5)
-            if (!class0.isFinite() || !class1.isFinite() || class0 !in 0f..1f || class1 !in 0f..1f) throw InvalidYoloOutput()
+        for (anchor in 0 until profile.anchors) {
+            fun read(channel: Int) = tensor.getFloat((channel * profile.anchors + anchor) * 4)
+            var classId = 0
+            var score = -1f
+            for (index in profile.classMapping.keys) {
+                val probability = read(4 + index)
+                if (!probability.isFinite() || probability !in 0f..1f) throw InvalidYoloOutput()
+                // Strict > preserves the historical lower-class-id tie break.
+                if (probability > score) { score = probability; classId = index }
+            }
             val raw = floatArrayOf(read(0), read(1), read(2), read(3))
             if (raw.any { !it.isFinite() }) throw InvalidYoloOutput()
-            val score = max(class0, class1)
             if (score <= 0 || raw[2] <= 0 || raw[3] <= 0) continue // invalid/empty candidates are not forced into a class
             // LiteRTBackend.forward denormalizes; no objectness term and NO second sigmoid.
             val centerX = raw[0] * transform.modelWidth; val centerY = raw[1] * transform.modelHeight
             val halfWidth = raw[2] * transform.modelWidth / 2f; val halfHeight = raw[3] * transform.modelHeight / 2f
             val box = DetectionBox(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight)
             if (!box.isValid) throw InvalidYoloOutput()
-            candidates += YoloDecodedCandidate(anchor, if (class0 >= class1) 0 else 1, score, box)
+            candidates += YoloDecodedCandidate(anchor, classId, score, box)
         }
         return YoloDecodedOutput(candidates, transform)
     }
@@ -45,13 +55,14 @@ class Exp02OutputDecoder : YoloOutputDecoder {
 class Exp02PostProcessor(
     private val confidenceThreshold: Float = Exp02DetectionPolicy.APP_ENGINEERING_INITIAL_RAW_CONFIDENCE,
     private val iouThreshold: Float = Exp02DetectionPolicy.IOU_THRESHOLD,
-    private val maxDetections: Int = Exp02DetectionPolicy.MAX_DETECTIONS
+    private val maxDetections: Int = Exp02DetectionPolicy.MAX_DETECTIONS,
+    private val profile: YoloModelProfile = YoloModelProfiles.EXP02
 ) : YoloPostProcessor {
     init { require(confidenceThreshold.isFinite() && confidenceThreshold in 0f..1f)
         require(iouThreshold.isFinite() && iouThreshold in 0f..1f); require(maxDetections in 1..300) }
     override fun process(decoded: YoloDecodedOutput): List<ExerciseDetection> {
-        if (decoded.candidates.size > Exp02DetectionPolicy.ANCHORS || decoded.candidates.any {
-                it.classId !in YoloModelPolicy.classMapping || !it.confidence.isFinite() || it.confidence !in 0f..1f || !it.modelBox.isValid }) throw InvalidYoloOutput()
+        if (decoded.candidates.size > profile.anchors || decoded.candidates.any {
+                it.classId !in profile.classMapping || !it.confidence.isFinite() || it.confidence !in 0f..1f || !it.modelBox.isValid }) throw InvalidYoloOutput()
         val ordered = decoded.candidates.filter { it.confidence > confidenceThreshold }
             .sortedWith(compareByDescending<YoloDecodedCandidate> { it.confidence }.thenBy { it.anchorIndex })
         val kept = ArrayList<YoloDecodedCandidate>()
@@ -62,7 +73,7 @@ class Exp02PostProcessor(
         return kept.mapNotNull { candidate ->
             val sourceBox = decoded.transform.modelToOriginal(candidate.modelBox)
             // Additional domain safety guard: fully clipped/degenerate boxes are not usable detections.
-            sourceBox.takeIf { it.isValid }?.let { ExerciseDetection(YoloModelPolicy.classMapping.getValue(candidate.classId),
+            sourceBox.takeIf { it.isValid }?.let { ExerciseDetection(profile.classMapping.getValue(candidate.classId),
                 candidate.confidence, DetectionSource.YOLO, it) }
         }
     }

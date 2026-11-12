@@ -15,7 +15,8 @@ data class YoloStabilizationPolicy(
 }
 
 /** No model semantics are inferred here; input must already be a verified, canonical detection. */
-class YoloExerciseStabilizer(private val policy: YoloStabilizationPolicy) {
+class YoloExerciseStabilizer(private val policy: YoloStabilizationPolicy,
+                             private val profile: YoloModelProfile = YoloModelProfiles.EXP02) {
     private val evidence = ArrayDeque<Pair<Long, ExerciseType>>()
     private var lastTimestamp: Long? = null
     fun observe(detection: ExerciseDetection?, timestampMs: Long): ExerciseType {
@@ -25,11 +26,11 @@ class YoloExerciseStabilizer(private val policy: YoloStabilizationPolicy) {
         while (evidence.isNotEmpty() && timestampMs - evidence.first().first > policy.maximumEvidenceAgeMs) evidence.removeFirst()
         val threshold = policy.minimumConfidence
         val type = detection?.takeIf { d -> threshold != null && d.source == DetectionSource.YOLO &&
-            d.exerciseType in YoloModelPolicy.supported && d.confidence?.let { it.isFinite() && it in threshold..1f } == true }
+            d.exerciseType in profile.supportedExercises && d.confidence?.let { it.isFinite() && it in threshold..1f } == true }
             ?.exerciseType ?: ExerciseType.UNKNOWN
         evidence.addLast(timestampMs to type)
         while (evidence.size > policy.windowSize) evidence.removeFirst()
-        return evidence.map { it.second }.filter { it in YoloModelPolicy.supported }
+        return evidence.map { it.second }.filter { it in profile.supportedExercises }
             .groupingBy { it }.eachCount().entries.firstOrNull { it.value >= policy.minimumAgreeing }?.key ?: ExerciseType.UNKNOWN
     }
     fun reset() { evidence.clear(); lastTimestamp = null }

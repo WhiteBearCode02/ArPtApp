@@ -8,6 +8,8 @@
 
 > 2026-11-12: 관절 기반 분석 파이프라인을 **7종 운동**으로 확장했습니다. 스쿼트 · 숄더 프레스 · 바이셉 컬 · 푸시업 · 벤트오버 로우 · 트라이셉스 익스텐션 · 사이드 벤드. [구현·검증 범위](docs/EXERCISE_EXPANSION_7.md) / [논문 근거와 한계](docs/BIOMECHANICS_REFERENCES_7.md). 신규 규칙은 초기 공학 기준이며 실사용 인식 정확도는 기기 검증이 필요합니다. EXP02 YOLO는 기존 **2종 Shadow** 그대로입니다.
 
+> EXP04 7종 YOLO: 모델별 profile·decoder·진단과 전용 `exp04Debug` 검증 도구를 준비했습니다. **Android Golden/native/camera = NOT_RUN, contract = NOT_VERIFIED**이며 실제 EXP04 카메라 prediction은 비활성입니다. 기본 앱은 EXP02/Landmark Primary를 유지합니다. [계약·7종 입력 준비](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [안전한 rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md) · [기기 체크리스트](docs/ml/EXP04_ANDROID_DEVICE_SHADOW_CHECKLIST.md).
+
 카메라 속 사용자를 추적하고, 관절 좌표와 운동별 분석 규칙을 이용해<br>
 반복 횟수·자세 품질·교정 피드백을 제공하는 온디바이스 퍼스널 트레이너입니다.
 

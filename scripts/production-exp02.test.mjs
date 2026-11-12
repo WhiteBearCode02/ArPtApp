@@ -26,10 +26,11 @@ test('known EXP03 evidence is explicitly model-bound after final selection chang
 
 test('debug-only loaded log is based on observed native metadata and selected file', () => {
   const native = read(root + 'ui/camera/yolo/TfliteYoloRuntime.kt')
-  assert.match(native, /BuildConfig.DEBUG && !metadataLogged && observed.matchesExpected\(\)/)
+  assert.match(native, /BuildConfig.DEBUG && !metadataLogged && observed.matchesExpected\(profile\)/)
+  assert.match(native, /profile = YoloModelProfiles.forIdentity\(identity\)/)
   assert.match(native, /AIRPTCoach model loaded/)
   assert.match(native, /file=\$\{identity.fileName\}/)
-  assert.match(native, /classes=\$\{YoloModelPolicy.classMapping\}/)
+  assert.match(native, /classes=\$\{profile.classMapping\}/)
   const dashboard = read(root + 'DashboardActivity.kt')
   assert.match(dashboard, /Production Model/)
   assert.match(dashboard, /Model File: \$\{modelProfile.fileName\}/)

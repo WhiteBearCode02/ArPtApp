@@ -11,7 +11,11 @@ object KnownYoloModels {
         "464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749")
     val EXP03 = YoloModelDescriptor("yolo26n_exp03_final_fp32", "airptcoach_yolo26n_exp03_final_fp32.tflite", 9894032L,
         "3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167")
-    private val known = listOf(EXP02, EXP03)
+    // Exact local bytes/hash checked on 2026-11-12; NOT an Android contract promotion.
+    val EXP04 = YoloModelDescriptor("yolo26n_exp04_7class_fp32", "airptcoach_yolo26n_exp04_7class_fp32.tflite", 9898949L,
+        "3e613e94fc1ef3aebbeba309d1b31d7ba6fc71a19274c9b2946793fe493eb84d")
+    private val known = listOf(EXP02, EXP03, EXP04)
+    fun find(modelId: String): YoloModelDescriptor? = known.firstOrNull { it.modelId == modelId }
     fun contains(identity: YoloModelDescriptor): Boolean = identity in known
     fun matches(modelId: String, sha256: String): Boolean = known.any { it.modelId == modelId && it.sha256 == sha256 }
 }
@@ -32,8 +36,9 @@ object YoloModelPolicy {
 }
 data class TensorSpec(val shape: List<Int>, val dtype: String)
 data class YoloTensorMetadata(val inputs: List<TensorSpec>, val outputs: List<TensorSpec>) {
-    fun matchesExpected(): Boolean = inputs == listOf(TensorSpec(YoloModelPolicy.inputShape, "FLOAT32")) &&
-        outputs == listOf(TensorSpec(YoloModelPolicy.outputShape, "FLOAT32"))
+    fun matchesExpected(profile: YoloModelProfile = YoloModelProfiles.EXP02): Boolean =
+        inputs == listOf(TensorSpec(profile.inputShape, "FLOAT32")) &&
+            outputs == listOf(TensorSpec(profile.outputShape, "FLOAT32"))
 }
 
 /** Interpreter is created, inspected, invoked and closed by ONE worker only. */
@@ -73,7 +78,10 @@ data class YoloContractComponents<F>(
     val preprocessor: YoloPreprocessor<F>, val decoder: YoloOutputDecoder, val postProcessor: YoloPostProcessor,
     val stabilization: YoloStabilizationPolicy,
     val modelId: String = YoloModelPolicy.MODEL_ID
-)
+) {
+    /** Derived from exact registered identity, never a mutable global/caller-supplied shape. */
+    val profile: YoloModelProfile get() = YoloModelProfiles.requireModel(modelId)
+}
 
 /** Preserved fail-closed ports for unknown future exports. A flag cannot verify a contract. */
 object UnverifiedYoloContract {

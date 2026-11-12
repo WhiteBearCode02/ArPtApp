@@ -11,6 +11,7 @@ object YoloBuildSelection {
         return when (variant) {
             "EXP02" -> KnownYoloModels.EXP02.also { require(applicationId == "com.example.arptapp.exp02") }
             "EXP03" -> KnownYoloModels.EXP03.also { require(applicationId == "com.example.arptapp.exp03") }
+            "EXP04" -> KnownYoloModels.EXP04.also { require(applicationId == "com.example.arptapp.exp04") }
             else -> error("Unknown compiled YOLO variant")
         }
     }

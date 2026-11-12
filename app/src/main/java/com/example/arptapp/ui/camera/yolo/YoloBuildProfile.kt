@@ -14,6 +14,8 @@ internal object YoloBuildProfile {
     fun components(): YoloContractComponents<Bitmap> = when (identity) {
         KnownYoloModels.EXP02 -> Exp02YoloContract.components(Exp02BitmapPreprocessor())
         KnownYoloModels.EXP03 -> Exp03YoloContract.components(YoloBitmapPreprocessor())
+        // Candidate OpenCV/RGB ports only: NOT_VERIFIED prevents camera frame admission.
+        KnownYoloModels.EXP04 -> Exp04YoloContract.components(YoloBitmapPreprocessor())
         else -> error("No reviewed preprocessing contract")
     }
 }

@@ -559,7 +559,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val liveStats = yoloSessionDiagnostics?.current(System.currentTimeMillis(), SystemClock.uptimeMillis())
         val comparison = DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
             sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps,
-            modelId = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity.modelId)
+            modelId = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity.modelId,
+            processedFrames = liveStats?.processedFrames, holdFrames = liveStats?.stableDetectionCounts?.get("UNKNOWN"))
         val modelProfile = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity
         val text = DetectorComparisonFormatter.format(comparison) +
             "\n${if (BuildConfig.YOLO_AB_COMPARISON) "Comparison" else "Production Model"}: ${BuildConfig.YOLO_MODEL_VARIANT}\n" +

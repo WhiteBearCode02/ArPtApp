@@ -40,8 +40,8 @@ interface ExerciseDetector<F> : AutoCloseable {
 
 /** Same largest-area philosophy as MainPersonSelector; NOT bbox-to-pose identity association. */
 object MainExerciseDetectionSelector {
-    fun select(detections: List<ExerciseDetection>): ExerciseDetection? = detections
-        .filter { it.exerciseType in YoloModelPolicy.supported && it.confidence?.let { c -> c.isFinite() && c in 0f..1f } == true &&
+    fun select(detections: List<ExerciseDetection>, profile: YoloModelProfile = YoloModelProfiles.EXP02): ExerciseDetection? = detections
+        .filter { it.exerciseType in profile.supportedExercises && it.confidence?.let { c -> c.isFinite() && c in 0f..1f } == true &&
             it.boundingBox?.isValid != false }
         .maxWithOrNull(compareBy<ExerciseDetection> { it.boundingBox?.area ?: 0f }.thenBy { it.confidence ?: 0f })
 }

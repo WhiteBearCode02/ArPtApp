@@ -14,6 +14,7 @@ import java.nio.channels.FileChannel
 /** Reuses the existing TF Lite dependency; no delegate/SDK/download/network service is added. */
 internal class TfliteYoloRuntime(private val model: ByteBuffer,
     private val identity: YoloModelDescriptor = YoloModelPolicy.identity) : YoloTensorRuntime {
+    private val profile = YoloModelProfiles.forIdentity(identity)
     override val modelId get() = identity.modelId
     private val interpreter = try {
         YoloModelIdentity.validate(model, identity)
@@ -29,14 +30,15 @@ internal class TfliteYoloRuntime(private val model: ByteBuffer,
             (0 until interpreter.outputTensorCount).map { index -> interpreter.getOutputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } }
         )
         // Only validated bytes + directly observed native tensors earn a "loaded" log. No frame/account data.
-        if (BuildConfig.DEBUG && !metadataLogged && observed.matchesExpected()) {
+        if (BuildConfig.DEBUG && !metadataLogged && observed.matchesExpected(profile)) {
             metadataLogged = true
             Log.d("YoloModel", "AIRPTCoach model loaded · modelId=${identity.modelId} · file=${identity.fileName} · " +
-                "input=${observed.inputs.single()} · output=${observed.outputs.single()} · classes=${YoloModelPolicy.classMapping} · primary=LANDMARK")
+                "input=${observed.inputs.single()} · output=${observed.outputs.single()} · classes=${profile.classMapping} · primary=LANDMARK")
         }
         return observed
     }
     override fun run(input: ByteBuffer, output: ByteBuffer) {
+        require(input.remaining() == profile.inputBytes && output.remaining() == profile.outputBytes)
         try { interpreter.run(input, output) } catch (error: Exception) {
             if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
             throw error
@@ -84,7 +86,7 @@ object DebugYoloShadowFactory {
         val contract = YoloBuildProfile.components()
         return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app, identity), identity) }, contract,
             runtimePolicy = runtimePolicy),
-            YoloExerciseStabilizer(contract.stabilization),
+            YoloExerciseStabilizer(contract.stabilization, contract.profile),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },
             releaseFrame = { it.recycle() }, onSnapshot = onSnapshot, observer = observer)
     }

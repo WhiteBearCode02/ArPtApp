@@ -9,7 +9,8 @@ data class DetectorComparison(
     val yolo: YoloShadowSnapshot, val fallbackDetected: ExerciseType, val sessionExerciseType: ExerciseType,
     val cameraView: CameraView, val posePeopleCount: Int, val thermalStatus: Int,
     val processedFps: Double? = null,
-    val modelId: String = YoloModelPolicy.MODEL_ID
+    val modelId: String = YoloModelPolicy.MODEL_ID,
+    val processedFrames: Long? = null, val holdFrames: Long? = null
 )
 object DetectorComparisonFormatter {
     fun format(data: DetectorComparison): String = buildString {
@@ -25,7 +26,8 @@ object DetectorComparisonFormatter {
         } ?: "미측정")
         append(" · stable=${data.yolo.stableExercise}\n")
         append("fallback=${data.fallbackDetected} · session=${data.sessionExerciseType} · view=${data.cameraView}\n")
-        if (data.sessionExerciseType in ExerciseType.supported && data.sessionExerciseType !in YoloModelPolicy.supported)
+        if (data.sessionExerciseType in ExerciseType.supported && data.sessionExerciseType !in
+            (YoloModelProfiles.find(data.modelId)?.supportedExercises ?: emptySet()))
             append("comparison=UNSUPPORTED_EXERCISE · NOT_APPLICABLE · two-class model, no agreement/accuracy judgement\n")
         val t = result.timings
         append(if (t == null) "pre/infer/post/total=미측정" else

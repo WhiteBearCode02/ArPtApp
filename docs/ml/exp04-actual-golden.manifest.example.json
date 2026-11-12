@@ -1,0 +1,12 @@
+{
+  "note": "Template ONLY. Set real filenames and explicit rights confirmation in an ignored local_validation/exp04_golden/manifest.json. Never commit photos or generated results.",
+  "samples": [
+    {"id":"squat_front","image":"inputs/0_SQUAT/squat_front.jpg","exercise":"SQUAT","cameraView":"FRONT","rightsCleared":false,"rightsBasis":""},
+    {"id":"press_front","image":"inputs/1_SHOULDER_PRESS/press_front.jpg","exercise":"SHOULDER_PRESS","cameraView":"FRONT","rightsCleared":false,"rightsBasis":""},
+    {"id":"curl_front","image":"inputs/2_BICEP_CURL/curl_front.jpg","exercise":"BICEP_CURL","cameraView":"FRONT","rightsCleared":false,"rightsBasis":""},
+    {"id":"pushup_side","image":"inputs/3_PUSH_UP/pushup_side.jpg","exercise":"PUSH_UP","cameraView":"SIDE","rightsCleared":false,"rightsBasis":""},
+    {"id":"row_side","image":"inputs/4_BENT_OVER_ROW/row_side.jpg","exercise":"BENT_OVER_ROW","cameraView":"SIDE","rightsCleared":false,"rightsBasis":""},
+    {"id":"triceps_front","image":"inputs/5_TRICEPS_EXTENSION/triceps_front.jpg","exercise":"TRICEPS_EXTENSION","cameraView":"FRONT","rightsCleared":false,"rightsBasis":""},
+    {"id":"bend_front","image":"inputs/6_SIDE_BEND/bend_front.jpg","exercise":"SIDE_BEND","cameraView":"FRONT","rightsCleared":false,"rightsBasis":""}
+  ]
+}

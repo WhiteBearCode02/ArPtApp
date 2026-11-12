@@ -113,18 +113,28 @@ android {
             buildConfigField("boolean", "YOLO_AB_COMPARISON", "true")
             matchingFallbacks += listOf("debug")
         }
+        // Explicit, isolated seven-class SHADOW validation build. Never the default/release model.
+        create("exp04Debug") {
+            initWith(getByName("debug"))
+            buildConfigField("boolean", "YOLO_PRIVATE_BUNDLED", "false")
+            applicationIdSuffix = ".exp04"
+            resValue("string", "app_name", "AIRPTCoach EXP04 - Shadow")
+            buildConfigField("String", "YOLO_MODEL_VARIANT", "\"EXP04\"")
+            buildConfigField("boolean", "YOLO_AB_COMPARISON", "true")
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     sourceSets {
         if (privateExp02Apk) getByName("debug").assets.srcDir(files(privateExp02Assets).builtBy(preparePrivateExp02Assets))
-        for (name in listOf("exp02Debug", "exp03Debug")) getByName(name) {
+        for (name in listOf("exp02Debug", "exp03Debug", "exp04Debug")) getByName(name) {
             java.srcDir("src/debug/java")
             manifest.srcFile("src/abComparison/AndroidManifest.xml")
         }
     }
     // AGP instruments one build type per invocation. Default and ordinary commands remain debug.
     val selectedTestBuild = providers.gradleProperty("abTestBuildType").getOrElse("debug")
-    require(selectedTestBuild in listOf("debug", "exp02Debug", "exp03Debug")) { "Unknown test build type" }
+    require(selectedTestBuild in listOf("debug", "exp02Debug", "exp03Debug", "exp04Debug")) { "Unknown test build type" }
     testBuildType = selectedTestBuild
 
     compileOptions {
