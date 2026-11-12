@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.camera.yolo.DebugYoloModelSource
-import com.example.arptapp.ui.camera.yolo.YoloBitmapPreprocessor
+import com.example.arptapp.ui.camera.yolo.YoloBuildProfile
 import com.example.arptapp.ui.camera.yolo.TfliteYoloRuntime
 import com.google.gson.Gson
 import java.nio.ByteBuffer
@@ -34,34 +34,36 @@ internal class DebugPositiveNativeInference(private val context: Context) {
     fun analyze(candidate: PositiveCandidate, bitmap: Bitmap): PositiveCandidateAnalysis {
         resetDiagnostics()
         decodedRgbSha256 = logicalRgbSha256(bitmap)
-        TfliteYoloRuntime(DebugYoloModelSource.open(context)).use { runtime ->
+        val identity = YoloBuildProfile.identity
+        val contract = YoloBuildProfile.components()
+        TfliteYoloRuntime(DebugYoloModelSource.open(context, identity), identity).use { runtime ->
             lastMetadata = runtime.metadata()
-            require(lastMetadata!!.matchesExpected()) { "TENSOR_MISMATCH" }
-            val prepared = YoloBitmapPreprocessor().preprocess(bitmap)
-            val output = ByteBuffer.allocateDirect(4 * 6 * Exp02DetectionPolicy.ANCHORS).order(ByteOrder.nativeOrder())
+            require(lastMetadata!!.matchesExpected(contract.profile)) { "TENSOR_MISMATCH" }
+            val prepared = contract.preprocessor.preprocess(bitmap)
+            val output = ByteBuffer.allocateDirect(contract.profile.outputBytes).order(ByteOrder.nativeOrder())
             val start = SystemClock.elapsedRealtimeNanos()
             runtime.run(prepared.tensor, output)
             nativeInferenceExecuted = true
             lastInferenceMs = (SystemClock.elapsedRealtimeNanos() - start) / 1e6
             output.rewind()
-            val detections = YoloRaw640Algorithms.postProcessor().process(YoloRaw640Algorithms.decoder().decode(output, prepared.transform)).map {
+            val detections = contract.postProcessor.process(contract.decoder.decode(output, prepared.transform)).map {
                 val box = requireNotNull(it.boundingBox)
-                PositiveCandidateDetection(YoloModelPolicy.classMapping.entries.single { entry -> entry.value == it.exerciseType }.key,
+                PositiveCandidateDetection(contract.profile.classMapping.entries.single { entry -> entry.value == it.exerciseType }.key,
                     it.exerciseType.name, requireNotNull(it.confidence), PositiveCandidateBox(box.left, box.top, box.right, box.bottom))
             }
             return PositiveCandidateAnalysis(candidate, if (detections.isEmpty()) "NO_DETECTION" else "POSITIVE_CANDIDATE",
-                true, detections, "검증 전용 · ${detections.size}개 검출 · NOT_VERIFIED 유지")
+                true, detections, "검증 전용 · ${detections.size}개 검출 · 계약 ${contract.verification} · Primary LANDMARK 유지")
         }
     }
 
     fun json(candidate: PositiveCandidate, result: PositiveCandidateAnalysis): String = Gson().toJson(mapOf(
         "schemaVersion" to 1, "validationPurpose" to "EXPLICIT_DEBUG_POSITIVE_CANDIDATE",
-        "modelId" to YoloModelPolicy.MODEL_ID, "modelSha256" to YoloModelPolicy.CANONICAL_SHA256,
+        "modelId" to YoloBuildProfile.identity.modelId, "modelSha256" to YoloBuildProfile.identity.sha256,
         "image" to "${candidate.id}.png", "imageSha256" to candidate.sha256,
         "sourceImageSha256" to candidate.sha256, "decodedRgbSha256" to decodedRgbSha256,
         "width" to candidate.width, "height" to candidate.height,
         "rasterProvenance" to "MANUALLY_REQUESTED_NORMALIZED_CAMERA_BITMAP_LOSSLESS_OPAQUE_PNG_NO_EXTRA_RESIZE_OR_MIRROR",
-        "productionContract" to Exp03YoloContract.verification.name, "status" to result.status,
+        "productionContract" to YoloBuildProfile.components().verification.name, "status" to result.status,
         "androidNativeInferenceExecuted" to result.nativeInferenceExecuted,
         "nativeInferenceCount" to if (result.nativeInferenceExecuted) 1 else 0,
         "tensorMetadata" to lastMetadata, "inferenceMs" to lastInferenceMs,

@@ -24,9 +24,9 @@ object YoloSessionDiagnosticsPresentation {
             row("기록 시간", "${timestamp(value.startedAt)} ~ ${timestamp(value.endedAt)}")
         )),
         MetricGroupUiModel("AI가 무슨 운동으로 보았나요?", listOf(
-            row("한 화면씩 본 결과", friendlyCounts(value.rawDetectionCounts, value.processedFrames) +
+            row("한 화면씩 본 결과", friendlyCounts(value.rawDetectionCounts, value.processedFrames, value.modelId) +
                 "\n순간적으로 달라질 수 있는 판단입니다."),
-            row("연속 화면을 모은 판단", friendlyCounts(value.stableDetectionCounts, value.processedFrames) +
+            row("연속 화면을 모은 판단", friendlyCounts(value.stableDetectionCounts, value.processedFrames, value.modelId) +
                 "\n판단 보류는 오답이 아니라 아직 결과가 모이지 않은 상태입니다."),
             row("평균 모델 확신도", (if (value.confidenceSampleCount > 0) YoloDiagnosticGuide.confidence(value.averageConfidence) else "미측정 · 검출 표본 없음") +
                 "\n모델의 판단 강도이며 실제 정답률이나 자세 점수가 아닙니다. 검출이 없는 화면을 0%로 넣지 않습니다.")
@@ -42,17 +42,20 @@ object YoloSessionDiagnosticsPresentation {
                 "\nAndroid가 알리는 기기 제한 단계입니다. 섭씨 온도나 체온이 아니며, 미측정은 제한 없음과 다릅니다.")
         )),
         MetricGroupUiModel("앱이 확정한 운동과 같은가요?", listOf(
-            row("비교 결과", "같음 ${value.matchingStableFrames}장 / 다름 ${value.mismatchingStableFrames}장 / 판단 보류 ${value.unknownStableFrames}장"),
+            row("비교 결과", if (value.comparisonApplicability == "UNSUPPORTED_EXERCISE")
+                "비교 대상 아님 · 이 2종 모델은 해당 운동을 지원하지 않아 오답이나 불일치로 판단하지 않습니다." else
+                "같음 ${value.matchingStableFrames}장 / 다름 ${value.mismatchingStableFrames}장 / 판단 보류 ${value.unknownStableFrames}장"),
             row("판단 가능한 결과끼리의 일치 비율", (value.knownMatchRate?.let { YoloDiagnosticGuide.confidence(it) } ?: "비교 표본 없음") +
                 "\n같음 / (같음 + 다름). 판단 보류는 제외합니다. 실제 정답과 비교한 모델 정확도가 아닙니다."),
             row("판단 보류 비율", (value.unknownStableRate?.let { YoloDiagnosticGuide.confidence(it) } ?: "비교 표본 없음") +
                 "\n보류 / (같음 + 다름 + 보류). 앱의 운동이 확정된 뒤의 표본만 비교합니다."),
-            row("비교하지 않은 화면", "${value.unknownSessionFrames}장 · 앱에서 운동을 확정하기 전이므로 비교 대상에서 제외했습니다.")
+            row("비교하지 않은 화면", "${value.unknownSessionFrames}장 · " + if (value.comparisonApplicability == "UNSUPPORTED_EXERCISE")
+                "운동 미확정 또는 모델이 지원하지 않는 운동이므로 비교에서 제외했습니다." else "앱에서 운동을 확정하기 전이므로 비교 대상에서 제외했습니다.")
         ))
     )
 
-    private fun friendlyCounts(counts: Map<String, Long>, processed: Long): String = if (processed == 0L)
-        "분석 완료 표본 없음" else listOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN").joinToString(" / ") { key ->
+    private fun friendlyCounts(counts: Map<String, Long>, processed: Long, modelId: String): String = if (processed == 0L)
+        "분석 완료 표본 없음" else countKeys(modelId).joinToString(" / ") { key ->
             "${if (key == "UNKNOWN") "판단 보류" else YoloDiagnosticGuide.exercise(key)} ${counts[key] ?: 0L}장"
         }
 
@@ -60,6 +63,7 @@ object YoloSessionDiagnosticsPresentation {
     fun technicalGroups(value: YoloSessionDiagnostics): List<MetricGroupUiModel> = listOf(
         MetricGroupUiModel("모델·세션", listOf(
             row("모델", value.modelId),
+            row("운동 비교 적용", value.comparisonApplicability),
             row("모델 기준 SHA256 · 실제 로드 증명 아님", value.modelSha256.ifBlank { "정보 없음" }),
             row("모델 상태", value.modelStatus),
             row("Export 계약", value.contractStatus),
@@ -78,8 +82,8 @@ object YoloSessionDiagnosticsPresentation {
             row("실제 처리 프레임", value.processedFrames.toString()),
             row("프레임 기준", "후보는 기존 카메라 분석 throttle을 통과한 Shadow 입력만 포함 · 원본 카메라 전체 프레임 수가 아님")
         )),
-        detections("YOLO raw 결과", value.rawDetectionCounts, value.processedFrames),
-        detections("YOLO stable 결과", value.stableDetectionCounts, value.processedFrames),
+        detections("YOLO raw 결과", value.rawDetectionCounts, value.processedFrames, value.modelId),
+        detections("YOLO stable 결과", value.stableDetectionCounts, value.processedFrames, value.modelId),
         MetricGroupUiModel("실제 detection confidence", if (value.confidenceSampleCount > 0L) listOfNotNull(
             row("Detection 표본 수", value.confidenceSampleCount.toString()),
             value.averageConfidence?.let { row("평균 confidence", decimal(it)) },
@@ -108,11 +112,12 @@ object YoloSessionDiagnosticsPresentation {
         ))
     )
 
-    private fun detections(title: String, counts: Map<String, Long>, processed: Long): MetricGroupUiModel =
+    private fun detections(title: String, counts: Map<String, Long>, processed: Long, modelId: String): MetricGroupUiModel =
         MetricGroupUiModel(title, if (processed == 0L) listOf(row("검출 표본", "실제 prediction 표본 없음"))
-        else listOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN").map { key -> row(exercise(key), (counts[key] ?: 0L).toString()) })
+        else countKeys(modelId).map { key -> row(exercise(key), (counts[key] ?: 0L).toString()) })
 
-    private fun exercise(value: String): String = when (value) { "SQUAT" -> "스쿼트"; "SHOULDER_PRESS" -> "숄더 프레스"; else -> "UNKNOWN" }
+    private fun countKeys(modelId: String) = com.example.arptapp.domain.detection.YoloModelProfiles.requireModel(modelId).countKeys
+    private fun exercise(value: String): String = if (value == "UNKNOWN") "UNKNOWN" else YoloDiagnosticGuide.exercise(value)
     private fun row(label: String, value: String) = MetricRowUiModel(label, value)
     private fun decimal(value: Double, places: Int = 3) = String.format(Locale.KOREA, "%.${places}f", value)
     private fun timestamp(value: Long): String = if (value > 0L)

@@ -9,10 +9,15 @@ import kotlin.math.abs
  * ENGINEERING_INITIAL observation flags, not medical or safety thresholds.
  */
 class RepAnalysisEngine {
+    private val expanded = ExpandedRepAnalysisEngine()
     private val frames = ArrayDeque<RepFrameFeatures>()
     private var partial = false
-    fun reset() { frames.clear(); partial = false }
+    fun reset() { frames.clear(); partial = false; expanded.reset() }
     fun observe(frame: RepFrameFeatures) {
+        if (com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.forExercise(frame.exerciseType) != null) {
+            frames.clear(); partial = false; expanded.observe(frame); return
+        }
+        expanded.reset()
         if (frame.representativeAngle?.let { it.isFinite() && it in 0.0..180.0 } != true) { reset(); return }
         val last = frames.lastOrNull()
         if (last != null && (frame.exerciseType != last.exerciseType || frame.view != last.view ||
@@ -27,7 +32,9 @@ class RepAnalysisEngine {
         }
     }
 
-    fun complete(repNumber: Int, score: Float? = null): StructuredRepAnalysis? {
+    fun complete(repNumber: Int, score: Float? = null, activeSide: BodySide? = null,
+                 motionStartedAtMs: Long? = null): StructuredRepAnalysis? {
+        if (expanded.isActive) return expanded.complete(repNumber, activeSide, motionStartedAtMs)
         val all = frames.toList()
         val wasPartial = partial
         reset()
@@ -115,12 +122,15 @@ class RepAnalysisEngine {
 }
 
 object LocalRepFeedback {
-    fun forEvent(event: FormErrorEvent?): String = event?.let(LocalEventPresentation::feedback) ?: forIssue(null)
+    fun forEvent(event: FormErrorEvent?): String = event?.let { LocalEventPresentation.feedback(it) } ?: forIssue(null)
     fun forIssue(type: FormErrorType?): String = when (type) {
         FormErrorType.KNEE_VALGUS -> "다음 회차에서는 무릎 방향을 발 방향에 맞춰 보세요."
         FormErrorType.KNEE_ASYMMETRY -> "다음 회차에서는 양쪽 무릎의 움직임을 함께 확인해 보세요."
         FormErrorType.ELBOW_ASYMMETRY -> "다음 회차에서는 양팔이 함께 올라가도록 천천히 움직여 보세요."
         FormErrorType.FORWARD_LEAN -> "다음 회차에서는 몸통 기울기를 확인하며 편안하게 움직여 보세요."
+        FormErrorType.UPPER_ARM_POSITION_VARIATION, FormErrorType.TRUNK_POSITION_VARIATION,
+        FormErrorType.BODY_LINE_VARIATION, FormErrorType.LATERAL_RANGE_ASYMMETRY,
+        FormErrorType.RETURN_TO_NEUTRAL_VARIATION -> ExerciseReportLanguage.observation(type)
         else -> "회차가 기록되었습니다. 편안한 범위에서 천천히 반복해 보세요."
     }
     fun strength(key: String): String = when (key) {
@@ -135,7 +145,7 @@ object LocalRepFeedback {
 object WorkoutAnalysisAggregator {
     fun aggregate(exerciseType: String, reps: List<StructuredRepAnalysis>, totalReps: Int = reps.size): StructuredWorkoutAnalysis {
         val scored = reps.filter { it.score != null }
-        return StructuredWorkoutAnalysis(exerciseType = exerciseType, totalReps = totalReps,
+        return StructuredWorkoutAnalysis(schemaVersion = 2, exerciseType = exerciseType, totalReps = totalReps,
             averageScore = scored.takeIf { it.isNotEmpty() }?.map { it.score!!.toDouble() }?.average()?.toFloat(),
             bestRepNumber = scored.maxByOrNull { it.score!! }?.repNumber,
             weakestRepNumber = scored.minByOrNull { it.score!! }?.repNumber,

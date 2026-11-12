@@ -51,6 +51,12 @@ data class YoloSessionDiagnostics(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val shadowRuntimeEnabled: Boolean? = null
 ) {
+    /** EXP02/03 remain two-class exports; new exercises are never labelled a YOLO mismatch. */
+    val comparisonApplicability: String get() = when {
+        expectedSessionExercise in (YoloModelProfiles.find(modelId)?.supportedExercises?.map { it.name } ?: emptyList()) -> "SUPPORTED"
+        expectedSessionExercise in ExerciseType.supportedNames -> "UNSUPPORTED_EXERCISE"
+        else -> "SESSION_NOT_LOCKED"
+    }
     /** UNKNOWN is not a negative label and is excluded from this denominator. */
     val knownMatchRate: Double? get() = (matchingStableFrames + mismatchingStableFrames)
         .takeIf { it > 0 }?.let { matchingStableFrames.toDouble() / it }
@@ -67,6 +73,7 @@ data class YoloSessionDiagnostics(
  */
 class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescriptor = YoloModelPolicy.identity) {
     init { require(KnownYoloModels.contains(modelIdentity)) }
+    private val profile = YoloModelProfiles.forIdentity(modelIdentity)
     private var nextToken = 0L
     private var active: State? = null
 
@@ -76,7 +83,7 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
         require(startedAtEpochMs >= 0 && startedAtMonotonicMs >= 0)
         nextToken = if (nextToken == Long.MAX_VALUE) 1 else nextToken + 1
         active = State(nextToken, startedAtEpochMs, startedAtMonotonicMs, cameraView,
-            initialSnapshot.result.status, initialSnapshot.result.contractVerification, initialSnapshot.result.shadowRuntimeEnabled)
+            initialSnapshot.result.status, initialSnapshot.result.contractVerification, initialSnapshot.result.shadowRuntimeEnabled, profile)
         return nextToken
     }
 
@@ -111,14 +118,14 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
         state.raw.add(snapshot.result.exerciseType)
         state.stable.add(snapshot.stableExercise)
         val selected = snapshot.result.selected
-        if (selected != null && selected.exerciseType in YoloModelPolicy.supported && selected.source == DetectionSource.YOLO) {
+        if (selected != null && selected.exerciseType in profile.supportedExercises && selected.source == DetectionSource.YOLO) {
             selected.confidence?.toDouble()?.takeIf { it.isFinite() && it in 0.0..1.0 }?.let(state.confidence::add)
         }
-        if (expectedSessionExercise !in YoloModelPolicy.supported) {
+        if (expectedSessionExercise !in profile.supportedExercises) {
             state.unknownSession = increment(state.unknownSession)
         } else {
             when {
-                snapshot.stableExercise !in YoloModelPolicy.supported -> state.unknown = increment(state.unknown)
+                snapshot.stableExercise !in profile.supportedExercises -> state.unknown = increment(state.unknown)
                 snapshot.stableExercise == expectedSessionExercise -> state.matching = increment(state.matching)
                 else -> state.mismatching = increment(state.mismatching)
             }
@@ -154,7 +161,7 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
             minConfidence = state.confidence.min, maxConfidence = state.confidence.max,
             maxThermalStatus = state.maxThermal, rawDetectionCounts = state.raw.frozen(),
             stableDetectionCounts = state.stable.frozen(),
-            expectedSessionExercise = supportedOrUnknown(expectedSessionExercise).name,
+            expectedSessionExercise = expectedSessionExercise.takeIf { it in ExerciseType.supported }?.name ?: "UNKNOWN",
             matchingStableFrames = state.matching, mismatchingStableFrames = state.mismatching,
             unknownStableFrames = state.unknown, unknownSessionFrames = state.unknownSession,
             cameraView = state.view.name, startedAt = state.epochStart,
@@ -166,12 +173,13 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
     private fun state(token: Long): State? = active?.takeIf { it.token == token }
 
     private class State(val token: Long, val epochStart: Long, val monotonicStart: Long, val view: CameraView,
-                        var status: DetectorStatus, var contract: ExportContractVerification, var shadowEnabled: Boolean) {
+                        var status: DetectorStatus, var contract: ExportContractVerification, var shadowEnabled: Boolean,
+                        profile: YoloModelProfile) {
         var seen = 0L; var admitted = 0L; var processed = 0L
         var matching = 0L; var mismatching = 0L; var unknown = 0L; var unknownSession = 0L
         var maxThermal: Int? = null
         val preprocess = Mean(); val inference = Mean(); val postprocess = Mean(); val total = Mean(); val confidence = Mean()
-        val raw = Counts(); val stable = Counts()
+        val raw = Counts(profile); val stable = Counts(profile)
         fun observeThermal(value: Int) {
             if (value in 0..6) maxThermal = maxOf(maxThermal ?: value, value)
         }
@@ -191,15 +199,13 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
         }
     }
 
-    private class Counts {
-        private val values = linkedMapOf("SQUAT" to 0L, "SHOULDER_PRESS" to 0L, "UNKNOWN" to 0L)
-        fun add(type: ExerciseType) { val key = supportedOrUnknown(type).name; values[key] = increment(values.getValue(key)) }
+    private class Counts(private val profile: YoloModelProfile) {
+        private val values = profile.countKeys.associateWith { 0L }.toMutableMap()
+        fun add(type: ExerciseType) { val key = type.takeIf { it in profile.supportedExercises }?.name ?: "UNKNOWN"; values[key] = increment(values.getValue(key)) }
         fun frozen(): Map<String, Long> = Collections.unmodifiableMap(LinkedHashMap(values))
     }
 
     companion object {
         private fun increment(value: Long): Long = if (value < Long.MAX_VALUE) value + 1 else value
-        private fun supportedOrUnknown(type: ExerciseType): ExerciseType =
-            type.takeIf { it in YoloModelPolicy.supported } ?: ExerciseType.UNKNOWN
     }
 }

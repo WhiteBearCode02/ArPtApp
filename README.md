@@ -6,6 +6,10 @@
 
 ### AI Personal Trainer · 실시간 운동 자세 분석 Android 앱
 
+> 2026-11-12: 관절 기반 분석 파이프라인을 **7종 운동**으로 확장했습니다. 스쿼트 · 숄더 프레스 · 바이셉 컬 · 푸시업 · 벤트오버 로우 · 트라이셉스 익스텐션 · 사이드 벤드. [구현·검증 범위](docs/EXERCISE_EXPANSION_7.md) / [논문 근거와 한계](docs/BIOMECHANICS_REFERENCES_7.md). 신규 규칙은 초기 공학 기준이며 실사용 인식 정확도는 기기 검증이 필요합니다. EXP02 YOLO는 기존 **2종 Shadow** 그대로입니다.
+
+> EXP04 7종 YOLO: 모델별 profile·decoder·진단과 전용 `exp04Debug` 검증 도구를 준비했습니다. **Android Golden/native/camera = NOT_RUN, contract = NOT_VERIFIED**이며 실제 EXP04 카메라 prediction은 비활성입니다. 기본 앱은 EXP02/Landmark Primary를 유지합니다. [계약·7종 입력 준비](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [안전한 rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md) · [기기 체크리스트](docs/ml/EXP04_ANDROID_DEVICE_SHADOW_CHECKLIST.md).
+
 카메라 속 사용자를 추적하고, 관절 좌표와 운동별 분석 규칙을 이용해<br>
 반복 횟수·자세 품질·교정 피드백을 제공하는 온디바이스 퍼스널 트레이너입니다.
 
@@ -53,7 +57,7 @@
 | Pose Tracking | MediaPipe Pose Landmarker로 33개 관절의 `x/y/z/visibility` 추출 | ✅ |
 | Visual Feedback | 추적 중인 사람의 관절점과 스켈레톤을 카메라 위에 표시 | ✅ |
 | Person Selection | 검출된 포즈 중 가장 큰 관절 영역의 사용자를 우선 선택 | 🧪 |
-| Exercise Analysis | 스쿼트·숄더프레스 관절 각도 추출 및 초기 운동별 분석 | 🧪 |
+| Exercise Analysis | 7종 관절 기반 측정·회차 카운터·상세 분석 (신규 기준은 초기 공학값, 실기기 검증 필요) | 🧪 |
 | Rep Counter | 관절 각도와 `UP/DOWN` 상태 머신을 이용한 반복 횟수 계산 | ✅ |
 | Form Feedback | 무릎 모임과 상체 숙임 등 초기 자세 오류 규칙 분석 | 🧪 |
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
@@ -74,10 +78,10 @@
 
 ## 🧠 AI 처리 아키텍처
 
-현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **현재 EXP03 contract는 `VERIFIED`, 별도 DEBUG Shadow gate는 ON**이며 canonical 모델이 private 저장소에 있고 native 검사를 통과해야만 실행됩니다. release는 OFF이고 YOLO 결과는 세션 집계·진단에만 사용합니다. [최신 rollout·검증 범위](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md) · [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md) · [현재 inference contract](docs/ml/EXP03_ANDROID_INFERENCE_CONTRACT.md)
+현재 실제 분석 구조는 **CameraX → MediaPipe Pose → landmark 기반 ExerciseClassifier primary → 세션 종목 고정 → 운동별 분석**입니다. **기본 앱의 최종 선택 모델은 EXP02이며 contract는 `VERIFIED`, DEBUG Shadow gate는 ON**입니다. private 모델과 native 검사를 통과해야만 실행됩니다. release는 OFF이고 YOLO 결과는 세션 집계·진단에만 사용합니다. [EXP02 선택 근거·현재 검증](docs/model-selection-exp02.md) · [YOLO 구조·검증 경계](docs/YOLO_DEVICE_VALIDATION.md) · [EXP02 inference contract](docs/ml/EXP02_ANDROID_INFERENCE_CONTRACT.md)
 
-- **현재 EXP03 (DEBUG Shadow)**: exact Ultralytics 8.4.202와 별도 모델 근거로 검증했습니다. OpenCV-compatible 보간 수정 후 동일 4장 tensor byte equality와 실제 Android Golden을 통과했습니다. [EXP03 전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md). 카메라 인식 품질은 별도 검증 대상입니다.
-- **과거 EXP02 검증 이력**: [EXP02 notebook](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), exact Ultralytics 8.4.176 source와 모델 metadata를 대조했습니다. RGB BCHW·letterbox·normalized xywh decoder·class-aware NMS와 실제 두 class Python/Android Golden을 검증했습니다. EXP02에는 OpenCV 보간의 최대 1-byte 비교 한계가 있었으며 모든 크기의 bitwise 일치를 주장하지 않습니다. `VERIFIED`는 contract 동등성만 의미하고 실행에는 별도 gate와 모델 readiness가 필요합니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다. 당시 숄더 프레스 수동 후보3장 중 검출1장(약10.8%)·무검출2장은 모델 전체 정확도가 아니며 stable `.60` 기준은 낮추지 않았습니다.
+- **보존된 EXP03 실험**: exact Ultralytics 8.4.202와 별도 모델 근거로 검증했습니다. OpenCV-compatible 보간 수정 후 동일 4장 tensor byte equality와 실제 Android Golden을 통과했습니다. [EXP03 전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md). 기본 앱에서는 선택하지 않으며 별도 비교 앱/기존 실험 증거는 보존합니다.
+- **선택 모델 EXP02의 검증 이력**: [EXP02 notebook](docs/ml/AIRPTCoach_EXP02_Export_Verify.ipynb), exact Ultralytics 8.4.176 source와 모델 metadata를 대조했습니다. RGB BCHW·letterbox·normalized xywh decoder·class-aware NMS와 실제 두 class Python/Android Golden을 검증했습니다. EXP02에는 OpenCV 보간의 최대 1-byte 비교 한계가 있었으며 모든 크기의 bitwise 일치를 주장하지 않습니다. `VERIFIED`는 contract 동등성만 의미하고 실행에는 별도 gate와 모델 readiness가 필요합니다. class는 `0 = SQUAT`, `1 = SHOULDER_PRESS`입니다. 당시 숄더 프레스 수동 후보3장 중 검출1장(약10.8%)·무검출2장은 모델 전체 정확도가 아니며 stable `.60` 기준은 낮추지 않았습니다.
 - **MediaPipe Pose (현재)**: 분석 대상의 33개 관절 좌표를 추적합니다. YOLO 통합 후에도 유지합니다.
 - **Landmark Fallback Classifier (현재 Primary)**: 기존 classifier를 adapter로 감싸되 분류 정책은 유지합니다. 실제 세션 종목은 이 결과만으로 고정하며 YOLO는 영향을 주지 않습니다.
 - **Analyzer / Overlay / Feedback**: 운동별 관절·횟수·오류 후보 분석과 스켈레톤·교정 안내를 담당합니다.
@@ -109,17 +113,19 @@ flowchart LR
 |---|---|
 | `pose_landmarker_lite.task` | PoseCameraController에서 실제 로딩, 기존 관절 추적 유지 |
 | `yolo11n-pose_int8.tflite` | 휴면 Yolo26Classifier에 로딩 코드만 존재, 현재 실행 경로 호출 미확인 → unused asset candidate; 승인 없이 삭제하지 않음 |
-| `airptcoach_yolo26n_exp02_fp32.tflite` | 과거 검증 모델·증거 보존, EXP02 contract `VERIFIED`. 현재 canonical runtime 모델로 자동 fallback하지 않음 |
-| `airptcoach_yolo26n_exp03_final_fp32.tflite` | canonical Shadow 모델, 9,894,032 bytes·SHA 확인, Git/APK 제외. Run 2 actual Golden4/4 및 exact tensor parity 확인 후 contract `VERIFIED`. DEBUG gate+READY에서만 허용, release OFF |
+| `airptcoach_yolo26n_exp02_fp32.tflite` | 기본 앱의 최종 선택 모델, 9,894,030 bytes·SHA 확인. 기존 EXP02 전처리/VERIFIED 계약 사용, Git/APK 제외·private 주입 유지 |
+| `airptcoach_yolo26n_exp03_final_fp32.tflite` | 보존된 실험/명시적 비교 앱 전용. 9,894,032 bytes·SHA 확인, Git/APK 제외. Run 1 FAIL·Run 2 actual Golden PASS 증거 유지 |
 
 EXP03은 별도 export입니다. EXP02의 근거를 상속하지 않았으며 Run 1 FAIL을 보존한 채 보간 수정 후
 Android actual Golden Run 2를 통과했습니다. [전처리·검증 근거](docs/ml/EXP03_PREPROCESSING_PARITY.md).
-실제 카메라는 스쿼트 정면·측면 2세션의 제한된 baseline을 확인했습니다. YOLO 약 2.05~2.13 FPS,
+과거 EXP03 카메라는 스쿼트 정면·측면 2세션의 제한된 baseline을 확인했습니다. YOLO 약 2.05~2.13 FPS,
 stable 판정은 모두 UNKNOWN으로 **인식 품질은 추가 검증 필요**입니다. Primary는 LANDMARK입니다.
 [실제 Camera 결과·해석](docs/ml/EXP03_CAMERA_SHADOW_BASELINE.md).
-현재 상태와 안전한 private 주입 절차는 [EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 따릅니다.
+동일 휴대폰에서 비교하려면 [EXP02 / EXP03 별도 DEBUG 앱 A/B 절차](docs/ml/YOLO_AB_DEVICE_COMPARISON.md)를 따릅니다.
+기존 앱·release는 유지하며 두 비교 앱의 실제 운동 성능은 별도 4세션으로 측정합니다.
+현재 기본 앱 모델과 안전한 private 주입 절차는 [EXP02 선택 문서](docs/model-selection-exp02.md)를 따릅니다.
 
-RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. 실제 모델 비교·Android native 근거와 새 실시간 성능 측정은 [최신 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)에서 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 fallback은 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
+RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 shape 추정이 아니라 exact-version source와 모델 metadata로 확인했습니다. 계약 동등성과 실제 카메라 성능은 별개입니다. [현재 선택·검증 범위](docs/model-selection-exp02.md)와 [과거 EXP03 rollout](docs/ml/EXP03_RUNTIME_SHADOW_ROLLOUT.md)을 구분합니다. 현재 공개/일반 debug APK 모두 weight를 제외하므로 모델 없는 기기의 `MODEL_MISSING`은 정상이며 Landmark 경로는 유지됩니다. 원본 모델을 복사·삭제·이동하지 않았습니다. `.gitignore`와 APK 제외는 별개이며 재배포 권리 확인을 대신하지 않습니다.
 
 ## 🧩 주요 분석 구성요소
 
@@ -131,7 +137,7 @@ RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 s
 | `RepReportAnalyzer` | Android와 분리된 회차 점수·관찰 설명·세션 피드백 계산 |
 | `OverlayView` | 관절점과 관절 연결선을 카메라 위에 렌더링 |
 | `ExerciseClassifier` | 랜드마크 기반 임시 운동 분류 fallback |
-| `PoseAngleExtractor` | 스쿼트·숄더프레스의 2D 내각 및 정규화 랜드마크 벡터각 계산 |
+| `PoseAngleExtractor` | 기존 두 운동 측정 유지 + 신규 5종의 촬영 방향별 측정 전략 연결 |
 | `ExerciseCounter` | 운동별 임계값과 상태 전환으로 repetition 계산 |
 | `FormErrorAnalyzer` | 관절 위치 관계를 이용한 자세 오류 후보 검출 |
 | `CoordinateNormalizer` | 골반 중심 이동과 신체 크기 기반 좌표 정규화 |
@@ -386,6 +392,8 @@ python -m unittest discover -s ai_module/tests -v
 - [x] MediaPipe 33개 관절 추출
 - [x] 대상 사용자 선택 및 스켈레톤 오버레이
 - [x] 스쿼트·숄더프레스 각도 추출
+- [x] 신규 5종 측정·좌우 독립 카운터·회차 리포트·V2 저장 계약 연결 ([검증 기록](docs/EXERCISE_EXPANSION_7_VALIDATION.md))
+- [ ] 7종 실제 사용자 인식·횟수·음성 및 두 기기 History 동기화 검증
 - [x] repetition 상태 머신과 세션 리포트
 - [x] Supabase 로그인, 운동 세션·횟수별 분석, 신체 이력 및 알림 설정 동기화
 - [x] 현재 분석 흐름과 생체역학 근거·한계 문서화

@@ -8,12 +8,14 @@ import java.util.Locale
 data class DetectorComparison(
     val yolo: YoloShadowSnapshot, val fallbackDetected: ExerciseType, val sessionExerciseType: ExerciseType,
     val cameraView: CameraView, val posePeopleCount: Int, val thermalStatus: Int,
-    val processedFps: Double? = null
+    val processedFps: Double? = null,
+    val modelId: String = YoloModelPolicy.MODEL_ID,
+    val processedFrames: Long? = null, val holdFrames: Long? = null
 )
 object DetectorComparisonFormatter {
     fun format(data: DetectorComparison): String = buildString {
         val result = data.yolo.result
-        append("YOLO SHADOW ${YoloModelPolicy.MODEL_ID} · model=${result.status}\n")
+        append("YOLO SHADOW ${data.modelId} · model=${result.status}\n")
         append("exportContract=${result.contractVerification} · ")
         append("shadow=${if (result.shadowRuntimeEnabled) "ENABLED" else "DISABLED"} · primary=LANDMARK\n")
         append(if (result.predictionAllowed)
@@ -24,6 +26,9 @@ object DetectorComparisonFormatter {
         } ?: "미측정")
         append(" · stable=${data.yolo.stableExercise}\n")
         append("fallback=${data.fallbackDetected} · session=${data.sessionExerciseType} · view=${data.cameraView}\n")
+        if (data.sessionExerciseType in ExerciseType.supported && data.sessionExerciseType !in
+            (YoloModelProfiles.find(data.modelId)?.supportedExercises ?: emptySet()))
+            append("comparison=UNSUPPORTED_EXERCISE · NOT_APPLICABLE · two-class model, no agreement/accuracy judgement\n")
         val t = result.timings
         append(if (t == null) "pre/infer/post/total=미측정" else
             "pre=${t.preprocessMs}ms infer=${t.inferenceMs}ms post=${t.postprocessMs}ms total=${t.totalMs}ms")

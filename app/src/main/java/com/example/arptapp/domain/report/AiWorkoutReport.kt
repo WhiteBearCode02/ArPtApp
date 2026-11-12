@@ -12,13 +12,16 @@ import kotlinx.serialization.json.Json
 /** Strict syntactic + evidence-reference validation. Free prose still requires human review. */
 object AiReportValidator {
     private val json = Json { ignoreUnknownKeys = false }
-    private val prohibited = Regex("진단|치료|질환|부상|완벽|완전히 안전|diagnos|cure|injur|perfect", RegexOption.IGNORE_CASE)
+    private val prohibited = Regex("진단|치료|질환|부상|완벽|정상|안전하|안전한|안전합|전문가.*자세|근활성|근육 활성|척추 부하|scapular|spinal load|muscle activation|\\bsafe\\b|\\bnormal\\b|diagnos|cure|injur|perfect", RegexOption.IGNORE_CASE)
     fun evidenceKeys(rep: StructuredRepAnalysis): Set<String> = buildSet {
         if (rep.score != null) add("score")
         if (rep.totalDurationMs != null) add("totalDurationMs")
         rep.strengths.forEach { add("strength:$it") }
         rep.errorEvents.forEach { add("issue:${it.type.name}"); add(DirectionalClaimValidator.key(it)) }
         val j = rep.jointMetrics
+        ExerciseMetricPolicy.joints(j).keys.forEach { add("jointMetrics.$it") }
+        ExerciseMetricPolicy.asymmetries(rep.asymmetryMetrics).keys.forEach { add("asymmetryMetrics.$it") }
+        rep.activeSide?.let { add("activeSide") }
         listOf("leftKneeMinAngle" to j.leftKneeMinAngle, "rightKneeMinAngle" to j.rightKneeMinAngle,
             "leftHipMinAngle" to j.leftHipMinAngle, "rightHipMinAngle" to j.rightHipMinAngle,
             "leftElbowMaxAngle" to j.leftElbowMaxAngle, "rightElbowMaxAngle" to j.rightElbowMaxAngle,
@@ -31,6 +34,7 @@ object AiReportValidator {
             .forEach { (k, v) -> if (v != null) add("phaseDurations.$k") }
     }
     fun decode(raw: String, input: StructuredWorkoutAnalysis): AiWorkoutReport {
+        require(ExerciseMetricPolicy.validSchema(input))
         require(raw.toByteArray(Charsets.UTF_8).size <= 32_768)
         val report = json.decodeFromString<AiWorkoutReport>(raw)
         require(report.exerciseType == input.exerciseType)
@@ -39,10 +43,9 @@ object AiReportValidator {
         require(report.strengths.size <= 5 && report.improvements.size <= 5)
         require(texts.all { it.isNotBlank() && it.length <= 500 && !prohibited.containsMatchIn(it) &&
             it.none { c -> c.isISOControl() && c != '\n' } })
-        val wrongExercise = if (input.exerciseType == "SQUAT") Regex("숄더.?프레스|shoulder.?press", RegexOption.IGNORE_CASE)
-            else Regex("스쿼트|squat", RegexOption.IGNORE_CASE)
-        require(texts.none { wrongExercise.containsMatchIn(it) })
+        require(texts.none { ExerciseNameClaims.mentionsOther(it, input.exerciseType) })
         val reps = input.repAnalyses.associateBy { it.repNumber }
+        MetricClaimValidator.validate(listOf(report.summary,report.priority,report.nextWorkoutGoal)+report.strengths+report.improvements,input.repAnalyses)
         DirectionalClaimValidator.validate(listOf(report.summary, report.priority, report.nextWorkoutGoal) +
             report.strengths + report.improvements, input.repAnalyses)
         MeasuredClaimValidator.validate(listOf(report.summary, report.priority, report.nextWorkoutGoal) +
@@ -53,6 +56,8 @@ object AiReportValidator {
         report.repFeedback.forEach { feedback ->
             require(feedback.evidenceKeys.size in 1..12 && feedback.evidenceKeys.distinct().size == feedback.evidenceKeys.size)
             require(evidenceKeys(reps.getValue(feedback.repNumber)).containsAll(feedback.evidenceKeys))
+            MetricClaimValidator.validate(listOf(feedback.summary,feedback.positive,feedback.improvement),
+                listOf(reps.getValue(feedback.repNumber)),feedback.evidenceKeys.toSet())
             DirectionalClaimValidator.validate(listOf(feedback.summary, feedback.positive, feedback.improvement),
                 listOf(reps.getValue(feedback.repNumber)), feedback.evidenceKeys.toSet())
             MeasuredClaimValidator.validate(listOf(feedback.summary, feedback.positive, feedback.improvement),

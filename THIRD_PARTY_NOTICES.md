@@ -1,5 +1,14 @@
 # 주요 외부 구성요소 고지
 
+## 본인 기기 테스트 전용 EXP02 APK (2026-11-09)
+
+사용자가 AI-Hub **크로스핏 동작 데이터**(71422)를 학습 데이터로 확인했습니다.
+이는 사용자 진술에 따른 출처 보완이며, 원본 학습 이력을 독립적으로 재감사한 결과는 아닙니다.
+본인 기기용 opt-in DEBUG APK에는 검증된 EXP02와 데이터 출처 고지,
+로컬 Ultralytics 8.4.176 패키지에서 보존한 AGPL-3.0 전문을 포함합니다.
+기본/공개 빌드는 모델 제외를 유지합니다. 상세 조건은 [개인용 APK 문서](docs/PRIVATE_EXP02_APK.md)를 참고하세요.
+아래 과거 자산 목록은 당시 검토 기록이며, 공개 재배포 권리를 부여하지 않습니다.
+
 ## OpenCV-compatible EXP03 interpolation (2026-11-05)
 
 `YoloOpenCvLinearRgbPreprocessor`는 [OpenCV 4.13.0 resize.cpp](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/resize.cpp)의

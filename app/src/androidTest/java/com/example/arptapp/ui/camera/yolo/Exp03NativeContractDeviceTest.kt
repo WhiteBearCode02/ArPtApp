@@ -27,7 +27,8 @@ class Exp03NativeContractDeviceTest {
         val bitmap = Bitmap.createBitmap(640, 640, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(0xff112233.toInt()) // in-memory synthetic fixture only, never saved/uploaded
         try {
-            TfliteYoloRuntime(DebugYoloModelSource.open(context)).use { runtime ->
+            // Historical EXP03 smoke must not silently load the newly selected final EXP02.
+            TfliteYoloRuntime(DebugYoloModelSource.open(context, KnownYoloModels.EXP03), KnownYoloModels.EXP03).use { runtime ->
                 assertEquals(KnownYoloModels.EXP03.modelId, runtime.modelId)
                 val metadata = runtime.metadata()
                 assertTrue(metadata.matchesExpected())
@@ -52,8 +53,8 @@ class Exp03NativeContractDeviceTest {
                 require(file.createNewFile())
                 file.setReadable(false, false); file.setWritable(false, false)
                 require(file.setReadable(true, true) && file.setWritable(true, true))
-                file.writeText(JSONObject().put("modelId", runtime.modelId).put("sha256", YoloModelPolicy.CANONICAL_SHA256)
-                    .put("bytes", YoloModelPolicy.CANONICAL_MODEL_BYTES).put("input", "FLOAT32 [1,3,640,640]")
+                file.writeText(JSONObject().put("modelId", runtime.modelId).put("sha256", KnownYoloModels.EXP03.sha256)
+                    .put("bytes", KnownYoloModels.EXP03.bytes).put("input", "FLOAT32 [1,3,640,640]")
                     .put("output", "FLOAT32 [1,6,8400]").put("nativeInferenceCount", 1).put("nativeMs", nativeMs)
                     .put("fixture", "SYNTHETIC_SOLID_COLOR_NOT_CAMERA_NOT_GOLDEN").put("detectionsAfterNms", detections.size)
                     .put("contractStatus", Exp03YoloContract.verification.name).put("contractPromotionPerformed", false)

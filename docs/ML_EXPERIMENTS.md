@@ -1,5 +1,18 @@
 # YOLO Exercise Detection 실험 이력
 
+## 최신 추가: EXP04 7-class (2026-11-12)
+
+아래 Dataset A/EXP01~03 기록은 보존합니다. EXP04는 사용자 제공 Mendeley Data “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels” / CC BY 4.0 기반이며, 이전 데이터 출처를 소급 적용하지 않습니다. 이번에 데이터셋 다운로드·학습·Colab 평가를 재실행하지 않았습니다.
+
+7종: SQUAT / SHOULDER_PRESS / BICEP_CURL / PUSH_UP / BENT_OVER_ROW / TRICEPS_EXTENSION / SIDE_BEND. 사용자 제공 holdout 9,031장, label 9,031, background/corrupt/subject leakage 0. 35장 PT↔LiteRT parity: Top1 1.0 / IoU 1.0 / confidence delta 0 / missing 0 / PASS.
+
+| 사용자 제공 지표 | PT | FP32 LiteRT |
+|---|---:|---:|
+| Precision / Recall / F1 | .8363 / .8546 / .8453 | .8312 / .8613 / .8460 |
+| mAP50 / mAP50-95 | .8865 / .7464 | .8857 / .7460 |
+
+제공된 변환 drop .0008/.0003, offline Shadow engineering gate PASS. 이번 로컬 검증은 EXP04 9,898,949 bytes·SHA256 일치 및 실제 PC LiteRT tensor load/allocate까지이며 **모델 inference 미실행**입니다. Android actual Golden/native/camera는 **NOT_RUN**, `Exp04YoloContract`는 **NOT_VERIFIED**입니다. 7종 실제 TEST 대표 프레임을 사용자가 제공한 뒤 [검증 절차](ml/EXP04_ANDROID_INFERENCE_CONTRACT.md)를 실행합니다. 합성 JVM 테스트·Colab 지표를 Android 실제 Golden PASS로 기록하지 않습니다.
+
 ## 근거와 범위
 
 이 문서는 사용자가 제공한 실제 실험 이력을 정리합니다. 이번 문서 정리에서 학습·평가를 재실행하거나 외부 실험 로그/manifest를 독립적으로 재검증하지 않았습니다. 로컬 파일 존재·자산 해시·코드 호출 경로 확인은 실험 수치의 재현 검증과 구분합니다.

@@ -28,12 +28,16 @@ class MainActivity : AppCompatActivity() {
             loginPreferences.pendingGoogleRememberLogin ?: loginPreferences.rememberLogin
 
         setupClickListeners()
+        setAuthActionsEnabled(true)
+        if (BuildConfig.YOLO_AB_COMPARISON) Toast.makeText(this,
+            "A/B 비교 앱은 기존 이메일·비밀번호로 로그인해 주세요. Google 로그인·가입·비밀번호 복구는 원본 앱에서 이용하세요.",
+            Toast.LENGTH_LONG).show()
         observeLoginState()
         intent.getStringExtra(EXTRA_NOTICE)?.let {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
             intent.removeExtra(EXTRA_NOTICE)
         }
-        if (intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
+        if (!BuildConfig.YOLO_AB_COMPARISON && intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
     }
 
     private fun setupClickListeners() {
@@ -132,9 +136,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setAuthActionsEnabled(enabled: Boolean) {
         binding.btnLogin.isEnabled = enabled
-        binding.btnGoogleLogin.isEnabled = enabled
-        binding.btnSignUp.isEnabled = enabled
-        binding.tvForgotPassword.isEnabled = enabled
+        // A/B manifests deliberately do not own production OAuth/recovery deep links.
+        binding.btnGoogleLogin.isEnabled = enabled && !BuildConfig.YOLO_AB_COMPARISON
+        binding.btnSignUp.isEnabled = enabled && !BuildConfig.YOLO_AB_COMPARISON
+        binding.tvForgotPassword.isEnabled = enabled && !BuildConfig.YOLO_AB_COMPARISON
         binding.tvHelp.isEnabled = enabled
     }
 
@@ -151,7 +156,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
+        if (!BuildConfig.YOLO_AB_COMPARISON && intent.data?.scheme == "arptapp") loginViewModel.handleAuthCallback(intent)
     }
 
     companion object {

@@ -8,9 +8,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DashboardUiPolicyTest {
-    @Test fun referenceListHasExactlySquatThenShoulderPress() {
+    @Test fun referenceListPreservesFirstTwoThenIncludesFiveNewSupportedExercises() {
         assertEquals(
-            listOf(ExerciseType.SQUAT, ExerciseType.SHOULDER_PRESS),
+            listOf(ExerciseType.SQUAT, ExerciseType.SHOULDER_PRESS, ExerciseType.BICEP_CURL,
+                ExerciseType.PUSH_UP, ExerciseType.BENT_OVER_ROW, ExerciseType.TRICEPS_EXTENSION, ExerciseType.SIDE_BEND),
             DashboardUiPolicy.referenceExerciseOptions
         )
     }

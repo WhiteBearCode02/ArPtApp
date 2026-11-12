@@ -95,12 +95,12 @@ object YoloActualGoldenComparator {
      */
     fun compare(
         reference: List<YoloGoldenDetection>, android: List<YoloGoldenDetection>,
-        tolerance: YoloGoldenTolerance = YoloGoldenTolerance()
+        tolerance: YoloGoldenTolerance = YoloGoldenTolerance(), profile: YoloModelProfile = YoloModelProfiles.EXP02
     ): YoloGoldenComparison {
         val referenceClasses = reference.map { it.classId }
         val androidClasses = android.map { it.classId }
         val ordering = YoloGoldenOrdering(referenceClasses, androidClasses, referenceClasses == androidClasses)
-        fun valid(detection: YoloGoldenDetection) = detection.classId in YoloModelPolicy.classMapping &&
+        fun valid(detection: YoloGoldenDetection) = detection.classId in profile.classMapping &&
             detection.confidence.isFinite() && detection.confidence in 0f..1f && detection.box.isValid
         if (reference.size > 300 || android.size > 300 || (reference + android).any { !valid(it) })
             return YoloGoldenComparison(false, "INVALID_DETECTION", ordering = ordering)

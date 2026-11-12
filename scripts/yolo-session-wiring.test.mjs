@@ -5,12 +5,16 @@ import { readFileSync } from "node:fs"
 const base = "app/src/main/java/com/example/arptapp/"
 const read = path => readFileSync(path, "utf8")
 
-test("development model source exclusively uses private noBackup storage and preserves identity checks", () => {
+test("ordinary development model source uses private noBackup; owner-only bundle is explicitly gated", () => {
   const source = read(base + "ui/camera/yolo/TfliteYoloRuntime.kt")
   assert.match(source, /check\(BuildConfig.DEBUG\)/)
   assert.match(source, /context.noBackupFilesDir/)
   assert.match(source, /canonicalFile/)
-  assert.doesNotMatch(source, /assets\.open|openFd\(|\.download\(|HttpURLConnection|URL\(/)
+  assert.doesNotMatch(source, /\.download\(|HttpURLConnection|URL\(/)
+  assert.match(source, /if \(BuildConfig.YOLO_PRIVATE_BUNDLED\)/)
+  assert.match(source, /!BuildConfig.YOLO_AB_COMPARISON && identity == KnownYoloModels.EXP02/)
+  const ordinarySource = source.slice(source.indexOf('val privateModel ='))
+  assert.doesNotMatch(ordinarySource, /assets\.open|openFd\(/)
   assert.ok(source.indexOf("YoloModelIdentity.validate(model, identity)") < source.indexOf("Interpreter(model,"))
 })
 

@@ -36,7 +36,7 @@ class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
         fun squat(side: ExerciseSideFeatures) = side.legVisibility >= 0.65f && valid(side.knee) && valid(side.hip) &&
             side.knee!! <= 135 && side.hip!! <= 155
         val (l, r) = features
-        val next = when (cameraView) {
+        val next = AdditionalExerciseClassifier.detect(features, cameraView) ?: when (cameraView) {
             CameraView.FRONT -> when {
                 press(l) && press(r) -> ExerciseType.SHOULDER_PRESS
                 squat(l) && squat(r) && abs(l.knee!! - r.knee!!) <= 30 -> ExerciseType.SQUAT

@@ -205,7 +205,11 @@ test("personal reference uses expandable vertical rows with one separate bottom 
   assert.doesNotMatch(dialog, /referenceExerciseOptions\[[01]\]|btnReferenceSquat|btnReferenceShoulderPress/)
   assert.match(dialog, /if \(selected \|\| !dialog\.isShowing\) return/)
   const policy = read(javaRoot + "ui/dashboard/DashboardUiPolicy.kt")
-  assert.match(policy, /listOf\(ExerciseType\.SQUAT, ExerciseType\.SHOULDER_PRESS\)/)
+  assert.match(policy, /ExerciseType\.supported\.toList\(\)/)
+  const types = read(javaRoot + "domain/classifier/ExerciseType.kt")
+  const registry = types.slice(types.indexOf("val supported ="), types.indexOf("val supportedNames"))
+  for (const name of ["SQUAT", "SHOULDER_PRESS", "BICEP_CURL", "PUSH_UP", "BENT_OVER_ROW", "TRICEPS_EXTENSION", "SIDE_BEND"]) assert.ok(registry.includes(name))
+  assert.doesNotMatch(registry, /LUNGE/)
   assert.match(dialog, /cameraView/)
 })
 

@@ -12,5 +12,5 @@ class SessionExerciseLock {
         return true
     }
     fun reset() { sessionExerciseType = ExerciseType.UNKNOWN }
-    companion object { val supported = setOf(ExerciseType.SQUAT, ExerciseType.SHOULDER_PRESS) }
+    companion object { val supported = ExerciseType.supported }
 }

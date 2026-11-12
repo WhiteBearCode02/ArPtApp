@@ -2,6 +2,7 @@ package com.example.arptapp.ui.camera.yolo
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.example.arptapp.BuildConfig
 import com.example.arptapp.domain.detection.*
 import org.tensorflow.lite.Interpreter
@@ -13,6 +14,7 @@ import java.nio.channels.FileChannel
 /** Reuses the existing TF Lite dependency; no delegate/SDK/download/network service is added. */
 internal class TfliteYoloRuntime(private val model: ByteBuffer,
     private val identity: YoloModelDescriptor = YoloModelPolicy.identity) : YoloTensorRuntime {
+    private val profile = YoloModelProfiles.forIdentity(identity)
     override val modelId get() = identity.modelId
     private val interpreter = try {
         YoloModelIdentity.validate(model, identity)
@@ -21,11 +23,22 @@ internal class TfliteYoloRuntime(private val model: ByteBuffer,
         if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
         throw error
     }
-    override fun metadata() = YoloTensorMetadata(
-        (0 until interpreter.inputTensorCount).map { index -> interpreter.getInputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } },
-        (0 until interpreter.outputTensorCount).map { index -> interpreter.getOutputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } }
-    )
+    private var metadataLogged = false
+    override fun metadata(): YoloTensorMetadata {
+        val observed = YoloTensorMetadata(
+            (0 until interpreter.inputTensorCount).map { index -> interpreter.getInputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } },
+            (0 until interpreter.outputTensorCount).map { index -> interpreter.getOutputTensor(index).let { TensorSpec(it.shape().toList(), it.dataType().name) } }
+        )
+        // Only validated bytes + directly observed native tensors earn a "loaded" log. No frame/account data.
+        if (BuildConfig.DEBUG && !metadataLogged && observed.matchesExpected(profile)) {
+            metadataLogged = true
+            Log.d("YoloModel", "AIRPTCoach model loaded · modelId=${identity.modelId} · file=${identity.fileName} · " +
+                "input=${observed.inputs.single()} · output=${observed.outputs.single()} · classes=${profile.classMapping} · primary=LANDMARK")
+        }
+        return observed
+    }
     override fun run(input: ByteBuffer, output: ByteBuffer) {
+        require(input.remaining() == profile.inputBytes && output.remaining() == profile.outputBytes)
         try { interpreter.run(input, output) } catch (error: Exception) {
             if (YoloRuntimeCompatibility.isUnsupported(error)) throw UnsupportedYoloRuntime()
             throw error
@@ -34,11 +47,22 @@ internal class TfliteYoloRuntime(private val model: ByteBuffer,
     override fun close() { interpreter.close() }
 }
 
-/** Never stages/copies a model or weakens APK packaging. Both existing APK variants exclude weights. */
+/** Private APK is explicit DEBUG-only opt-in; normal builds retain private-file-only loading. */
 internal object DebugYoloModelSource {
     fun open(context: Context, identity: YoloModelDescriptor = YoloModelPolicy.identity): ByteBuffer {
         check(BuildConfig.DEBUG)
         if (!KnownYoloModels.contains(identity)) throw YoloModelIdentityMismatch()
+        if (BuildConfig.YOLO_PRIVATE_BUNDLED) {
+            check(!BuildConfig.YOLO_AB_COMPARISON && identity == KnownYoloModels.EXP02)
+            // Fixed path, no network or public storage; validate exact bytes before native loading.
+            return context.assets.openFd("yolo_private/exp02.bin").use { asset ->
+                if (asset.declaredLength != identity.bytes) throw YoloModelIdentityMismatch()
+                FileInputStream(asset.fileDescriptor).use { input ->
+                    input.channel.map(FileChannel.MapMode.READ_ONLY, asset.startOffset, asset.declaredLength)
+                        .also { YoloModelIdentity.validate(it, identity) }
+                }
+            }
+        }
         val privateModel = File(context.noBackupFilesDir, "yolo/${identity.fileName}")
         if (!privateModel.isFile) throw MissingYoloModel()
         // No asset/network fallback. Reject path traversal/symlink escapes before touching bytes.
@@ -58,10 +82,11 @@ object DebugYoloShadowFactory {
         val app = context.applicationContext
         // Independent, explicit DEBUG rollout gate. Model presence and VERIFIED alone do not run frames.
         val runtimePolicy = YoloRuntimePolicy.forBuild(BuildConfig.DEBUG, BuildConfig.YOLO_SHADOW_ENABLED)
-        val contract = Exp03YoloContract.components(YoloBitmapPreprocessor())
-        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app)) }, contract,
+        val identity = YoloBuildProfile.identity
+        val contract = YoloBuildProfile.components()
+        return YoloShadowRunner(YoloExerciseDetector({ TfliteYoloRuntime(DebugYoloModelSource.open(app, identity), identity) }, contract,
             runtimePolicy = runtimePolicy),
-            YoloExerciseStabilizer(contract.stabilization),
+            YoloExerciseStabilizer(contract.stabilization, contract.profile),
             copyFrame = { requireNotNull(it.copy(Bitmap.Config.ARGB_8888, false)) },
             releaseFrame = { it.recycle() }, onSnapshot = onSnapshot, observer = observer)
     }

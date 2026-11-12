@@ -69,13 +69,15 @@ def validate_candidate_name(filename: str) -> str:
 
 class PrivateAdb:
     """Small fixed-command transport; no remote data appears in exception text."""
-    def __init__(self, executable: Path, serial: str):
+    def __init__(self, executable: Path, serial: str, package: str = PACKAGE):
         executable = executable.resolve()
         if not executable.is_file() or executable.name.lower() != "adb.exe":
             raise ValueError("Pass the actual platform-tools adb.exe path, not a shell wrapper")
         if not re.fullmatch(r"[A-Za-z0-9_.:-]+", serial):
             raise ValueError("Invalid explicit device serial")
-        self.executable, self.serial = executable, serial
+        if package not in (PACKAGE, PACKAGE + ".exp02", PACKAGE + ".exp03", PACKAGE + ".exp04"):
+            raise ValueError("Only known DEBUG comparison package names are allowed")
+        self.executable, self.serial, self.package = executable, serial, package
 
     def call(self, *arguments: str, data: bytes | None = None) -> bytes:
         if any(not re.fullmatch(r"[A-Za-z0-9_./:=+-]+", argument) for argument in arguments):
@@ -92,14 +94,14 @@ class PrivateAdb:
     def verify_debug_device(self):
         if self.call("get-state").strip() != b"device":
             raise RuntimeError("Selected device is not online and authorized")
-        root = self.call("exec-out", "run-as", PACKAGE, "pwd").decode("ascii", errors="strict").strip()
-        if not re.fullmatch(r"/data/(?:user/[0-9]+|data)/" + re.escape(PACKAGE), root):
+        root = self.call("exec-out", "run-as", self.package, "pwd").decode("ascii", errors="strict").strip()
+        if not re.fullmatch(r"/data/(?:user/[0-9]+|data)/" + re.escape(self.package), root):
             raise RuntimeError("Unexpected DEBUG private directory; refusing transfer")
         return root
 
     def remote_identity(self, remote: str, maximum: int) -> tuple[int, str]:
-        size_output = self.call("exec-out", "run-as", PACKAGE, "wc", "-c", remote).split()
-        hash_output = self.call("exec-out", "run-as", PACKAGE, "sha256sum", remote).split()
+        size_output = self.call("exec-out", "run-as", self.package, "wc", "-c", remote).split()
+        hash_output = self.call("exec-out", "run-as", self.package, "sha256sum", remote).split()
         if not size_output or not re.fullmatch(rb"[0-9]+", size_output[0]) or not hash_output or not re.fullmatch(rb"[a-f0-9]{64}", hash_output[0]):
             raise ValueError("Invalid remote size/hash metadata")
         size = int(size_output[0])
@@ -110,7 +112,7 @@ class PrivateAdb:
     def read_private(self, remote: str, maximum: int) -> bytes:
         expected_size, expected_hash = self.remote_identity(remote, maximum)
         # Exact count bounds the result even if a concurrent writer grows the file.
-        data = self.call("exec-out", "run-as", PACKAGE, "dd", "if=" + remote, "bs=65536", "iflag=count_bytes", "count=" + str(expected_size), "status=none")
+        data = self.call("exec-out", "run-as", self.package, "dd", "if=" + remote, "bs=65536", "iflag=count_bytes", "count=" + str(expected_size), "status=none")
         if len(data) != expected_size or sha256(data) != expected_hash or self.remote_identity(remote, maximum) != (expected_size, expected_hash):
             raise ValueError("Private binary export changed/truncated; size/SHA256 mismatch")
         return data
@@ -119,17 +121,17 @@ class PrivateAdb:
         staging = remote + ".upload-" + uuid.uuid4().hex
         try:
             # count_bytes avoids the raw transport's final-block EOF ambiguity.
-            self.call("exec-in", "run-as", PACKAGE, "dd", "of=" + staging, "bs=65536", "iflag=count_bytes",
+            self.call("exec-in", "run-as", self.package, "dd", "of=" + staging, "bs=65536", "iflag=count_bytes",
                       "count=" + str(len(data)), "conv=fsync", "status=none", data=data)
-            self.call("exec-out", "run-as", PACKAGE, "chmod", "600", staging)
+            self.call("exec-out", "run-as", self.package, "chmod", "600", staging)
             if self.remote_identity(staging, len(data)) != (len(data), sha256(data)):
                 raise ValueError("Staged private fixture failed size/SHA256 validation")
-            self.call("exec-out", "run-as", PACKAGE, "mv", staging, remote)
+            self.call("exec-out", "run-as", self.package, "mv", staging, remote)
             if self.remote_identity(remote, len(data)) != (len(data), sha256(data)):
                 raise ValueError("Final private fixture failed size/SHA256 validation")
         finally:
             # Only this generated exact temporary file is removed, never candidates/models.
-            self.call("exec-out", "run-as", PACKAGE, "rm", "-f", staging)
+            self.call("exec-out", "run-as", self.package, "rm", "-f", staging)
 
 
 def validate_android_candidate(document: dict, filename: str, image: bytes):

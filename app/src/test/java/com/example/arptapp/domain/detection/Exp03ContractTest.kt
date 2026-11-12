@@ -16,23 +16,23 @@ class Exp03ContractTest {
         modelId = model.modelId, modelSha256 = model.sha256, modelStatus = "MODEL_MISSING",
         contractStatus = "NOT_VERIFIED", predictionEnabled = false, startedAt = 10, endedAt = 20)
 
-    @Test fun canonicalIdentityUsesMeasuredExp03SizeAndUserConfirmedHash() {
-        assertEquals("yolo26n_exp03_final_fp32", YoloModelPolicy.MODEL_ID)
-        assertEquals(9894032L, YoloModelPolicy.CANONICAL_MODEL_BYTES)
-        assertEquals(current.fileName, YoloModelPolicy.FILE_NAME)
-        assertEquals(current.sha256, YoloModelPolicy.CANONICAL_SHA256)
-        assertTrue(YoloModelIdentity.matches(current.fileName, current.bytes, current.sha256))
+    @Test fun experimentalExp03RetainsMeasuredIdentityIndependentlyOfProduction() {
+        assertEquals("yolo26n_exp03_final_fp32", current.modelId)
+        assertEquals(9894032L, current.bytes)
+        assertEquals("airptcoach_yolo26n_exp03_final_fp32.tflite", current.fileName)
+        assertEquals("3d2b6bc537d8aef5a19b671226d73c98b49411574a193be72e225086202d1167", current.sha256)
+        assertTrue(YoloModelIdentity.matches(current.fileName, current.bytes, current.sha256, current))
     }
     @Test fun wrongNameSizeAndHashAreIndependentlyRejected() {
-        assertFalse(YoloModelIdentity.matches(KnownYoloModels.EXP02.fileName, current.bytes, current.sha256))
-        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes - 1, current.sha256))
-        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes, KnownYoloModels.EXP02.sha256))
-        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes, current.sha256.uppercase()))
+        assertFalse(YoloModelIdentity.matches(KnownYoloModels.EXP02.fileName, current.bytes, current.sha256, current))
+        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes - 1, current.sha256, current))
+        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes, KnownYoloModels.EXP02.sha256, current))
+        assertFalse(YoloModelIdentity.matches(current.fileName, current.bytes, current.sha256.uppercase(), current))
     }
     @Test fun nativeByteValidationRejectsBadSizeAndSameSizeWrongHashWithoutMovingBuffer() {
         for (size in listOf(4, current.bytes.toInt())) {
             val buffer = ByteBuffer.allocate(size)
-            assertTrue(runCatching { YoloModelIdentity.validate(buffer) }.exceptionOrNull() is YoloModelIdentityMismatch)
+            assertTrue(runCatching { YoloModelIdentity.validate(buffer, current) }.exceptionOrNull() is YoloModelIdentityMismatch)
             assertEquals(0, buffer.position())
         }
     }
@@ -71,6 +71,7 @@ class Exp03ContractTest {
     }
     @Test fun currentContractGateRequiresDebugVerifiedAndReadyButFailuresStayClosed() {
         val native = object : YoloTensorRuntime {
+            override val modelId = current.modelId
             override fun metadata() = YoloTensorMetadata(listOf(TensorSpec(YoloModelPolicy.inputShape, "FLOAT32")),
                 listOf(TensorSpec(YoloModelPolicy.outputShape, "FLOAT32")))
             override fun run(input: ByteBuffer, output: ByteBuffer) = error("Initialization must not run inference")
@@ -90,9 +91,10 @@ class Exp03ContractTest {
             }
         }
     }
-    @Test fun verifiedLegacyContractCannotRunAgainstCurrentNativeIdentity() {
+    @Test fun verifiedExp02ContractCannotRunAgainstExp03NativeIdentity() {
         var calls = 0
         val native = object : YoloTensorRuntime {
+            override val modelId = current.modelId
             override fun metadata() = YoloTensorMetadata(listOf(TensorSpec(YoloModelPolicy.inputShape, "FLOAT32")),
                 listOf(TensorSpec(YoloModelPolicy.outputShape, "FLOAT32")))
             override fun run(input: ByteBuffer, output: ByteBuffer) { calls++ }

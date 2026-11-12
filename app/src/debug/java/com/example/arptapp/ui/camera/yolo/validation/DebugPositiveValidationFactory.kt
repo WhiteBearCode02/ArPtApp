@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
 import com.example.arptapp.BuildConfig
-import com.example.arptapp.domain.detection.Exp03YoloContract
+import com.example.arptapp.ui.camera.yolo.YoloBuildProfile
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -113,5 +113,5 @@ private class DebugPositiveValidation(context: Context) : Exp02PositiveValidatio
 
     private fun failure(candidate: PositiveCandidate?, code: String) = PositiveCandidateAnalysis(candidate, code,
         nativeInferenceExecuted = false, detections = emptyList(),
-        message = "검증 전용 · ${Exp03YoloContract.verification.name} 유지 · $code")
+        message = "검증 전용 · ${YoloBuildProfile.identity.modelId} · ${YoloBuildProfile.components().verification.name} 유지 · $code")
 }

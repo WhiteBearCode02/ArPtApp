@@ -46,7 +46,7 @@ test("candidate store bounds storage and only deletes allowlisted files without 
 
 test("native candidate tool uses the existing preprocessor decoder and NMS without a session bridge", () => {
   const source = read(base + "debug/" + feature + "DebugPositiveNativeInference.kt")
-  for (const component of ["YoloBitmapPreprocessor()", "YoloRaw640Algorithms.decoder()", "YoloRaw640Algorithms.postProcessor()", "TfliteYoloRuntime(DebugYoloModelSource.open(context))"]) {
+  for (const component of ["YoloBuildProfile.components()", "contract.preprocessor.preprocess(bitmap)", "contract.decoder.decode(output, prepared.transform)", "contract.postProcessor.process", "contract.profile.outputBytes", "TfliteYoloRuntime(DebugYoloModelSource.open(context, identity), identity)"]) {
     assert.ok(source.includes(component))
   }
   assert.match(source, /"predictionUsedForSession" to false/)

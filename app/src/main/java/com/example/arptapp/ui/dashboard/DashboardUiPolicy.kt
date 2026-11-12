@@ -10,9 +10,9 @@ import com.example.arptapp.domain.classifier.ExerciseType
  * makes a view re-render safe: it neither changes the active session nor starts a recording.
  */
 object DashboardUiPolicy {
-    /** Display order also defines the only two exercises available for personal-reference entry. */
+    /** Capability registry, never enum.entries: LUNGE remains non-production. */
     val referenceExerciseOptions: List<ExerciseType> =
-        listOf(ExerciseType.SQUAT, ExerciseType.SHOULDER_PRESS)
+        ExerciseType.supported.toList()
 
     /**
      * Project state into mutually exclusive setup and workout-summary sections.
@@ -47,7 +47,7 @@ object DashboardUiPolicy {
         isExercising: Boolean,
         isRecordingReference: Boolean
     ): Boolean = type in referenceExerciseOptions &&
-        cameraView != CameraView.UNKNOWN &&
+        cameraView != CameraView.UNKNOWN && !(type == ExerciseType.SIDE_BEND && cameraView != CameraView.FRONT) &&
         !isExercising &&
         !isRecordingReference
 }

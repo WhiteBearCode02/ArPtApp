@@ -1,6 +1,46 @@
 # AIRPTCoach YOLO26n Exercise Detection 모델 카드
 
-## 현재 canonical Shadow 모델: EXP03_FINAL (2026-11-05)
+## EXP04 · 7-class DEBUG Shadow 후보 (2026-11-12)
+
+기본 앱의 EXP02 선택은 유지합니다. EXP04는 `exp04Debug` / `com.example.arptapp.exp04`에만 명시적으로 선택되며 **NOT_VERIFIED**입니다. 모델 존재나 Colab PASS만으로 실제 카메라 추론을 허용하지 않습니다.
+
+| 항목 | 확인 범위 |
+|---|---|
+| ID / 파일 | `yolo26n_exp04_7class_fp32` / `airptcoach_yolo26n_exp04_7class_fp32.tflite` |
+| 실제 로컬 크기 / SHA256 | 9,898,949 bytes / `3e613e94fc1ef3aebbeba309d1b31d7ba6fc71a19274c9b2946793fe493eb84d` |
+| PC LiteRT로 관찰한 tensor | FLOAT32 `[1,3,640,640]` → FLOAT32 `[1,11,8400]`; load/allocate 확인, 이미지 inference 미실행 |
+| class ID 순서 | 0 SQUAT · 1 SHOULDER_PRESS · 2 BICEP_CURL · 3 PUSH_UP · 4 BENT_OVER_ROW · 5 TRICEPS_EXTENSION · 6 SIDE_BEND |
+| 사용자 제공 source PT SHA256 | `4134fd63e0dc87233bf1dfc9640d86a6e0cb644e92aba4cbb836815379e7f1d3` (이번 PT 파일 재검사 아님) |
+| 사용자 제공 데이터 출처 | Mendeley Data, “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels”, CC BY 4.0. 개별 입력의 출처·TEST 분할·권리 확인은 추후 manifest에 별도 기록 |
+| Android 상태 | native smoke / actual Golden / camera 모두 **NOT_RUN**. source-backed 후보 구현은 Android 검증 증거가 아님 |
+| 공개·저장 정책 | 모델·검증 사진·RGB·tensor·reference는 Git/APK 제외. DEBUG `noBackupFilesDir/yolo/`만 사용, EXP04 assets fallback 없음 |
+
+사용자 제공 Colab 결과이며 이번 PC/Android에서 재현한 수치가 아닙니다:
+
+| metric | PT test | FP32 LiteRT holdout |
+|---|---:|---:|
+| Precision | 0.8363 | 0.8312 |
+| Recall | 0.8546 | 0.8613 |
+| F1 | 0.8453 | 0.8460 |
+| mAP50 | 0.8865 | 0.8857 |
+| mAP50-95 | 0.7464 | 0.7460 |
+
+Holdout 9,031 images/labels, background/corrupt/subject leakage 각 0. PT↔LiteRT 35장(종목별 5장) parity: Top1 1.0, mean box IoU 1.0, mean confidence delta 0, missing 0, PASS. 제공된 mAP50/mAP50-95 drop은 0.0008/0.0003이며 반올림 지표로 다시 계산한 값으로 대체하지 않았습니다. 이 offline engineering gate PASS를 모바일 accuracy·FPS·발열·장시간 안정성으로 해석하지 않습니다.
+
+권리 확인된 실제 7종 TEST 프레임이 아직 없어 Golden prediction/reference를 생성하지 않았습니다. [계약](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md). 아래 EXP02/EXP03 역사 기록과 VERIFIED는 EXP04로 상속하지 않습니다.
+
+## 현재 최종 앱 선택 모델: EXP02 (2026-11-09)
+
+`yolo26n_exp02_fp32` · `airptcoach_yolo26n_exp02_fp32.tflite` · FP32 · 9,894,030 bytes.
+재계산 SHA256 `464cafe87c3d6e04ba71951e73efab8690367f77fb224105d4b1e50ab3d33749` 일치.
+실제 tensor는 input FLOAT32 `[1,3,640,640]`, output FLOAT32 `[1,6,8400]`, class0 SQUAT/class1 SHOULDER_PRESS입니다.
+기존 EXP02 전처리/계약으로 기본 앱을 복귀시켰습니다. 사용자 실기기 관찰에 따른 선택이며 정식 accuracy 측정이 아닙니다.
+Primary LANDMARK / DEBUG Shadow / release OFF는 유지합니다. 권리 자료 검토 전 모델 Git/APK 제외도 유지합니다.
+[선택 근거·실행 경로·검증·한계](docs/model-selection-exp02.md).
+
+## 보존된 실험 모델: EXP03_FINAL (아래는 2026-11-05~06 기록)
+
+아래 EXP03 수치와 PASS/FAIL 이력은 당시 기록이며, 현재 기본 앱 선택은 EXP02입니다.
 
 `yolo26n_exp03_final_fp32` · `airptcoach_yolo26n_exp03_final_fp32.tflite` · FP32.
 실제 파일 **9,894,032 bytes**, SHA256

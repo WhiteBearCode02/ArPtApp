@@ -4,10 +4,14 @@ package com.example.arptapp.domain.report
 data class RepPhaseSegmentation(val phases: List<MovementPhase?>, val durations: PhaseDurations)
 
 object RepPhaseSegmenter {
-    private const val TURN_BAND_DEG = 5.0
-    private const val MIN_TRAVEL_DEG = 10.0
+    private const val TURN_BAND_DEG = com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.TURN_BAND_DEG
+    private const val MIN_TRAVEL_DEG = com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.PHASE_TRAVEL_DEG
     fun segment(samples: List<RepFrameFeatures>, partial: Boolean): RepPhaseSegmentation =
-        if (samples.first().exerciseType == "SHOULDER_PRESS") press(samples, partial) else squat(samples, partial)
+        when (samples.first().exerciseType) {
+            "SHOULDER_PRESS", "TRICEPS_EXTENSION" -> press(samples, partial)
+            "SIDE_BEND" -> squat(samples.map { it.copy(representativeAngle = 180.0 - kotlin.math.abs(it.representativeAngle!!)) }, partial)
+            else -> squat(samples, partial)
+        }
 
     private fun squat(s: List<RepFrameFeatures>, partial: Boolean): RepPhaseSegmentation {
         val minimumIndex = s.indices.minBy { s[it].representativeAngle!! }

@@ -82,7 +82,9 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var shadowThermalStatus = -1
     private var lastShadowLogAt = 0L
     private val yoloSessionDiagnostics = if (BuildConfig.DEBUG)
-        YoloSessionDiagnosticsBridge(monotonicMs = SystemClock::uptimeMillis) else null
+        YoloSessionDiagnosticsBridge(
+            collector = YoloSessionDiagnosticsCollector(com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity),
+            monotonicMs = SystemClock::uptimeMillis) else null
     private var completedYoloDiagnosticsJson: String? = null
     private var tts: TextToSpeech? = null
     private lateinit var feedbackManager: FeedbackManager
@@ -257,7 +259,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 .setPositiveButton("삭제") { _, _ ->
                     if (isExercising || cameraView != selectedView ||
                         com.example.arptapp.data.remote.AuthSessionStore.current?.userId != userId) return@setPositiveButton
-                    listOf("SQUAT", "SHOULDER_PRESS").forEach { referenceRepository.remove(userId, it, selectedView) }
+                    ExerciseType.supportedNames.forEach { referenceRepository.remove(userId, it, selectedView) }
                     personalSequence = emptyList()
                 }.setNegativeButton("취소", null).show()
             true
@@ -369,11 +371,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private fun captureReferenceFrame(landmarks: List<NormalizedLandmark>) {
         val type = calibrationExercise ?: return
-        val angles = when (type) {
-            ExerciseType.SQUAT -> PoseAngleExtractor.extractSquatAngles(landmarks)
-            ExerciseType.SHOULDER_PRESS -> PoseAngleExtractor.extractShoulderPressAngles(landmarks)
-            else -> null
-        }
+        val angles = PoseAngleExtractor.extractExerciseAngles(type.name, landmarks, cameraView)
         if (angles == null || angles.any { !it.isFinite() }) {
             calibrationFrames.clear()
             binding.tvPoseFeedback.text = "관절이 가려졌습니다 · 동작을 처음부터 다시 기록해 주세요"
@@ -389,6 +387,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             Toast.makeText(this, "촬영 방향을 먼저 선택해 주세요.", Toast.LENGTH_SHORT).show()
             return
         }
+        val startingSpeech = com.example.arptapp.domain.report.ExerciseSpeechFormatter.sessionStart(detectedExerciseType)
+        feedbackManager.resetSession()
         sessionLocalOnlyValidation = debugValidationControls?.freezeLocalOnlyForSession() == true
         sessionOwnerId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
         isExercising = true
@@ -419,7 +419,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         binding.btnStartExercise.visibility = View.GONE
         binding.btnEndExercise.visibility = View.VISIBLE
 
-        speakOut("운동을 시작합니다")
+        speakOut(startingSpeech)
     }
 
     private fun endExercise() {
@@ -462,7 +462,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         AlertDialog.Builder(this)
             .setTitle("운동 리포트")
             .setMessage(
-                "운동: ${report.exerciseType}\n" +
+                "운동: ${ExerciseType.display(report.exerciseType)}\n" +
                     "총 반복: ${report.totalReps}회\n" +
                     "평균 점수: ${report.averageScore}점\n\n" +
                     report.feedbackMessage
@@ -558,8 +558,13 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         if (!BuildConfig.DEBUG) return
         val liveStats = yoloSessionDiagnostics?.current(System.currentTimeMillis(), SystemClock.uptimeMillis())
         val comparison = DetectorComparison(yoloShadowSnapshot, detectedExerciseType,
-            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps)
-        val text = DetectorComparisonFormatter.format(comparison)
+            sessionExerciseType, cameraView, posePeopleCount, shadowThermalStatus, liveStats?.averageProcessedFps,
+            modelId = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity.modelId,
+            processedFrames = liveStats?.processedFrames, holdFrames = liveStats?.stableDetectionCounts?.get("UNKNOWN"))
+        val modelProfile = com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity
+        val text = DetectorComparisonFormatter.format(comparison) +
+            "\n${if (BuildConfig.YOLO_AB_COMPARISON) "Comparison" else "Production Model"}: ${BuildConfig.YOLO_MODEL_VARIANT}\n" +
+            "Model File: ${modelProfile.fileName}"
         binding.yoloDiagnosticsPanel.updateComparison(comparison)
         binding.yoloDiagnosticsPanel.updateDiagnostics(text)
         val now = SystemClock.uptimeMillis()
@@ -628,18 +633,21 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             }
             ExerciseType.SHOULDER_PRESS -> PoseAngleExtractor.extractShoulderPressAngles(landmarks)
                 ?.let(currentRepAngles::add)
-            else -> Unit
+            else -> PoseAngleExtractor.extractExerciseAngles(sessionExerciseType.name, landmarks, cameraView, aspectRatio)
+                ?.let(currentRepAngles::add)
         }
 
         val exerciseType = sessionExerciseType.name
         val currentAngle = measurement.valueDeg ?: return
         // Submission timeline, not delayed UI callback time. Only relative times leave the engine.
         val timestamp = frameTimestampMs
-        repAnalysisEngine.observe(com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
+        val frameFeatures = com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
             poseData.landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
-            kneeObservation = assessment?.kneeValgus))
-        if (exerciseCounter.processAngle(exerciseType, currentAngle, timestamp)) {
-            repetitionCount = exerciseCounter.getRepCount()
+            kneeObservation = assessment?.kneeValgus)
+        repAnalysisEngine.observe(frameFeatures)
+        exerciseCounter.processMeasurement(exerciseType, currentAngle, timestamp,
+            frameFeatures.leftElbow, frameFeatures.rightElbow).forEach { completion ->
+            repetitionCount = completion.repNumber
             binding.tvCount.text = repetitionCount.toString()
 
             val referenceSimilarity = if (sessionExerciseType == ExerciseType.SQUAT || personalSequence.isNotEmpty()) calculateReferenceSimilarity() else {
@@ -648,14 +656,15 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             }
 
             // Structural metrics must exist BEFORE calculating the displayed local score.
-            val measured = repAnalysisEngine.complete(repetitionCount)
+            val measured = repAnalysisEngine.complete(repetitionCount, activeSide = completion.activeSide,
+                motionStartedAtMs = completion.motionStartedAtMs)
             val record = com.example.arptapp.model.RepRecord(
                 repNumber = repetitionCount,
-                maxAngle = exerciseCounter.getCurrentMaxAngle(),
+                maxAngle = completion.peakAngle,
                 swayX = currentMaxSwayX,
                 errorTags = currentRepErrorTags.toList(),
-                eccentricDurationMs = exerciseCounter.getLastEccentricDurationMs(),
-                concentricDurationMs = exerciseCounter.getLastConcentricDurationMs(),
+                eccentricDurationMs = completion.outwardDurationMs,
+                concentricDurationMs = completion.returnDurationMs,
                 poseScore = referenceSimilarity
             )
             val structured = mainViewModel.addCompletedRep(record, measured, cameraView.name, referenceSimilarity)

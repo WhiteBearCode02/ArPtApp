@@ -40,7 +40,7 @@ class MainViewModel : ViewModel() {
             return
         }
         _exerciseType.value = type.uppercase().let {
-            if (it == "SQUAT" || it == "SHOULDER_PRESS") it else "IDLE"
+            if (it in ExerciseType.supportedNames) it else "IDLE"
         }
     }
 

@@ -4,6 +4,11 @@ import com.example.arptapp.data.model.StandardPose
 
 /** Counts complete down/up repetitions for supported exercises. */
 class ExerciseCounter(private val requiredStableFrames: Int = 3, private val minimumRepDurationMs: Long = 600L) {
+    init { require(requiredStableFrames > 0 && minimumRepDurationMs >= 0) }
+    private val expanded = ExpandedExerciseCounter(requiredStableFrames, minimumRepDurationMs)
+    data class CompletedRep(val repNumber: Int, val activeSide: com.example.arptapp.domain.report.BodySide?,
+                            val peakAngle: Double, val outwardDurationMs: Long, val returnDurationMs: Long,
+                            val motionStartedAtMs: Long? = null)
     enum class State {
         UP,
         DOWN
@@ -21,6 +26,7 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
 
     /** Abandon an incomplete repetition after occlusion; preserve completed counts. */
     fun invalidatePendingRep() {
+        expanded.reset()
         currentState = State.UP
         currentMaxAngle = 0.0
         transitionFrames = 0
@@ -36,6 +42,8 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
         timestampMs: Long = System.currentTimeMillis()
     ): Boolean {
         val normalizedType = exerciseType.uppercase()
+        if (com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.forExercise(normalizedType) != null)
+            return processMeasurement(normalizedType, angle, timestampMs).isNotEmpty()
         if (normalizedType != "SQUAT" && normalizedType != "SHOULDER_PRESS") return false
         if (!angle.isFinite() || angle !in 0.0..180.0) {
             invalidatePendingRep()
@@ -59,6 +67,30 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
 
     fun getRepCount(): Int = repCount
 
+    /** Camera path: explicit bilateral scalars are mandatory for alternating curls. */
+    fun processMeasurement(exerciseType: String, angle: Double?, timestampMs: Long,
+                           leftElbow: Double? = null, rightElbow: Double? = null): List<CompletedRep> {
+        val type = exerciseType.uppercase()
+        if (type == "SQUAT" || type == "SHOULDER_PRESS") {
+            val completed = if (angle != null) processAngle(type, angle, timestampMs) else {
+                invalidatePendingRep(); false
+            }
+            return if (completed) listOf(CompletedRep(repCount, null, currentMaxAngle,
+                lastEccentricDurationMs, lastConcentricDurationMs)) else emptyList()
+        }
+        if (activeExerciseType != type) {
+            expanded.reset(); currentState = State.UP; transitionFrames = 0; currentMaxAngle = 0.0
+            activeExerciseType = type
+        }
+        return expanded.process(type, angle, leftElbow, rightElbow, timestampMs).map { completion ->
+            repCount++; currentMaxAngle = completion.peakAngle
+            lastEccentricDurationMs = completion.outwardDurationMs
+            lastConcentricDurationMs = completion.returnDurationMs
+            CompletedRep(repCount, completion.side, completion.peakAngle,
+                completion.outwardDurationMs, completion.returnDurationMs, completion.startedAtMs)
+        }
+    }
+
     fun getCurrentMaxAngle(): Double = currentMaxAngle
 
     fun getCurrentState(): State = currentState
@@ -68,6 +100,7 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
     fun getLastConcentricDurationMs(): Long = lastConcentricDurationMs
 
     fun resetSession() {
+        expanded.reset()
         activeExerciseType = null
         currentState = State.UP
         repCount = 0

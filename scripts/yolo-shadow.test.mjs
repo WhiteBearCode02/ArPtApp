@@ -10,7 +10,9 @@ const factory = read(root + "ui/camera/yolo/TfliteYoloRuntime.kt")
 
 test("production factory is DEBUG-only and approved contract is independent of runtime rollout", () => {
   assert.match(factory, /if \(!BuildConfig.DEBUG\) return null/)
-  assert.match(factory, /Exp03YoloContract.components\(YoloBitmapPreprocessor\(\)\)/)
+  assert.match(factory, /val identity = YoloBuildProfile.identity/)
+  assert.match(factory, /val contract = YoloBuildProfile.components\(\)/)
+  assert.match(read(root + "ui/camera/yolo/YoloBuildProfile.kt"), /KnownYoloModels.EXP03 -> Exp03YoloContract.components\(YoloBitmapPreprocessor\(\)\)/)
   assert.doesNotMatch(factory, /ExportContractVerification.VERIFIED|Yolo26Classifier\(/)
   const contract = read(root + "domain/detection/Exp02YoloContract.kt")
   assert.match(contract, /get\(\) = ExportContractVerification.VERIFIED/)

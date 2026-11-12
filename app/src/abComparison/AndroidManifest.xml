@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- Separate sandboxes must not intercept the production arptapp:// Auth/recovery URLs.
+             Comparison apps use existing email/password login, never a fabricated session. -->
+        <activity android:name=".MainActivity" android:exported="false" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name=".PasswordResetActivity" android:exported="false" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name=".ui.camera.CameraZoomVerificationActivity" android:exported="false" />
+    </application>
+</manifest>

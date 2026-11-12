@@ -2,7 +2,6 @@ package com.example.arptapp.ui.dashboard
 
 import android.content.Context
 import android.view.LayoutInflater
-import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import com.example.arptapp.R
@@ -26,6 +25,7 @@ object PersonalReferenceDialog {
         var selected = false
         fun select(type: ExerciseType) {
             if (selected || !dialog.isShowing) return
+            if (!DashboardUiPolicy.canBeginReference(type, cameraView, false, false)) return
             selected = true
             dialog.dismiss()
             onSelected(type)
@@ -33,11 +33,12 @@ object PersonalReferenceDialog {
         // One reusable row per supported policy entry. Adding an exercise never needs XML surgery,
         // but still requires explicit support in both the admission policy and the label mapping.
         DashboardUiPolicy.referenceExerciseOptions.forEach { type ->
-            val option = optionFor(type) ?: return@forEach
             val row = ItemPersonalReferenceOptionBinding.inflate(inflater, binding.referenceOptions, false)
-            row.tvReferenceOptionTitle.setText(option.title)
+            row.tvReferenceOptionTitle.text = type.displayName
             row.tvReferenceOptionSubtitle.setText(R.string.personal_reference_current_view_hint)
             ViewCompat.setScreenReaderFocusable(row.root, true)
+            row.root.isEnabled = DashboardUiPolicy.canBeginReference(type, cameraView, false, false)
+            if (!row.root.isEnabled) row.tvReferenceOptionSubtitle.setText(R.string.reference_front_only)
             row.root.setOnClickListener { select(type) }
             binding.referenceOptions.addView(row.root)
         }
@@ -47,12 +48,4 @@ object PersonalReferenceDialog {
         return dialog
     }
 
-    private data class ReferenceOption(@StringRes val title: Int)
-
-    /** Unsupported/unknown classifier results must never become capture choices implicitly. */
-    private fun optionFor(type: ExerciseType): ReferenceOption? = when (type) {
-        ExerciseType.SQUAT -> ReferenceOption(R.string.personal_reference_squat)
-        ExerciseType.SHOULDER_PRESS -> ReferenceOption(R.string.personal_reference_shoulder_press)
-        else -> null
-    }
 }
