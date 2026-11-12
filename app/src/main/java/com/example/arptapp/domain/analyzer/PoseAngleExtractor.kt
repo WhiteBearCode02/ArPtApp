@@ -28,6 +28,8 @@ object PoseAngleExtractor {
         exerciseType: String, poseData: PoseData,
         view: CameraView = CameraView.UNKNOWN, imageAspectRatio: Double = 1.0
     ): AngleMeasurement {
+        ExerciseMeasurements.measure(exerciseType.uppercase(), poseData.landmarks, view, imageAspectRatio)
+            ?.let { return it.representative }
         val joints = when (exerciseType.uppercase()) {
             "SQUAT" -> listOf(listOf(23, 25, 27), listOf(24, 26, 28))
             "SHOULDER_PRESS" -> listOf(listOf(11, 13, 15), listOf(12, 14, 16))
@@ -69,6 +71,22 @@ object PoseAngleExtractor {
         val leftElbow = calculate3DAngle(landmarks[11], landmarks[13], landmarks[15]) ?: return null
         val rightElbow = calculate3DAngle(landmarks[12], landmarks[14], landmarks[16]) ?: return null
         return floatArrayOf(leftElbow, rightElbow)
+    }
+
+    /** View-qualified comparison vectors. Never fabricate an occluded arm as zero. */
+    fun extractExerciseAngles(type: String, landmarks: List<NormalizedLandmark>, view: CameraView,
+                              aspect: Double = 1.0): FloatArray? = when (type) {
+        "SQUAT" -> extractSquatAngles(landmarks)
+        "SHOULDER_PRESS" -> extractShoulderPressAngles(landmarks)
+        else -> ExerciseMeasurements.measure(type, landmarks.map {
+            com.example.arptapp.data.model.Landmark(it.x(), it.y(), it.z(), it.visibility().orElse(0f))
+        }, view, aspect)?.let { measured ->
+            if (type == "SIDE_BEND") measured.lateralFlexion?.let { floatArrayOf(kotlin.math.abs(it).toFloat()) }
+            else if (view == CameraView.SIDE) listOfNotNull(measured.leftElbow, measured.rightElbow)
+                .singleOrNull()?.let { floatArrayOf(it.toFloat()) }
+            else if (measured.leftElbow != null && measured.rightElbow != null)
+                floatArrayOf(measured.leftElbow.toFloat(), measured.rightElbow.toFloat()) else null
+        }
     }
 
     private fun calculate3DAngle(

@@ -7,18 +7,36 @@ import kotlinx.serialization.Serializable
 @Serializable enum class BodySide { LEFT, RIGHT }
 @Serializable enum class FormErrorType {
     KNEE_VALGUS, FORWARD_LEAN, KNEE_ASYMMETRY, HIP_ASYMMETRY,
-    ELBOW_ASYMMETRY, SHALLOW_DEPTH, INCOMPLETE_EXTENSION
+    ELBOW_ASYMMETRY, SHALLOW_DEPTH, INCOMPLETE_EXTENSION,
+    UPPER_ARM_POSITION_VARIATION, TRUNK_POSITION_VARIATION, BODY_LINE_VARIATION,
+    LATERAL_RANGE_ASYMMETRY, RETURN_TO_NEUTRAL_VARIATION
 }
 @Serializable data class PhaseDurations(val descentMs: Long? = null, val bottomMs: Long? = null, val ascentMs: Long? = null)
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable data class JointMetrics(
     val leftKneeMinAngle: Double? = null, val rightKneeMinAngle: Double? = null,
     val leftHipMinAngle: Double? = null, val rightHipMinAngle: Double? = null,
     val leftElbowMaxAngle: Double? = null, val rightElbowMaxAngle: Double? = null,
-    val torsoLeanMaxDeg: Double? = null
+    val torsoLeanMaxDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val leftElbowMinAngle: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val rightElbowMinAngle: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val leftElbowRomDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val rightElbowRomDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val upperArmDriftLeftDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val upperArmDriftRightDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val torsoInclinationDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val torsoInclinationChangeDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val bodyLineDeviationDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val shoulderHeightDifferenceDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val peakLateralFlexionDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val returnToNeutralDeviationDeg: Double? = null
 )
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable data class AsymmetryMetrics(
     val kneeAngleDifferenceDeg: Double? = null, val hipAngleDifferenceDeg: Double? = null,
-    val elbowAngleDifferenceDeg: Double? = null
+    val elbowAngleDifferenceDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val contralateralRomDifferenceDeg: Double? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val lateralRangeDifferenceDeg: Double? = null
 )
 @Serializable data class FormErrorEvent(
     val type: FormErrorType, val phase: MovementPhase? = null, val side: BodySide? = null,
@@ -42,7 +60,10 @@ import kotlinx.serialization.Serializable
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val localScore: RepScoreBreakdown? = null,
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val referenceSimilarity: Float? = null
+    val referenceSimilarity: Float? = null,
+    /** V2 only: measured anatomical limb/bend direction, never screen-left after mirroring. */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val activeSide: BodySide? = null
 )
 @Serializable data class StructuredWorkoutAnalysis(
     val schemaVersion: Int = 1, val exerciseType: String, val totalReps: Int,
@@ -61,5 +82,8 @@ data class RepFrameFeatures(
     val leftKneeValgusObserved: Boolean = false, val rightKneeValgusObserved: Boolean = false,
     // Transient scalars: ratios and visible-side selector never enter serialized LLM input.
     val leftKneeValgusRatio: Double? = null, val rightKneeValgusRatio: Double? = null,
-    val visibleSide: BodySide? = null
+    val visibleSide: BodySide? = null,
+    val upperArmLeft: Double? = null, val upperArmRight: Double? = null,
+    val torsoInclination: Double? = null, val bodyLineDeviation: Double? = null,
+    val lateralFlexion: Double? = null, val shoulderHeightDifference: Double? = null
 )

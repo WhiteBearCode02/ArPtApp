@@ -8,9 +8,12 @@ import com.example.arptapp.domain.analyzer.CoordinateSpace
 /** Scalar fallback input, never a server DTO. Null is unavailable, not a straight/normal joint. */
 data class ExerciseSideFeatures(
     val knee: Double? = null, val hip: Double? = null, val elbow: Double? = null,
-    val wristAboveShoulder: Boolean? = null, val legVisibility: Float = 0f, val armVisibility: Float = 0f
+    val wristAboveShoulder: Boolean? = null, val legVisibility: Float = 0f, val armVisibility: Float = 0f,
+    val torsoInclination: Double? = null, val upperArmDownInclination: Double? = null,
+    val upperArmUpInclination: Double? = null
 )
-data class ExerciseFeatures(val left: ExerciseSideFeatures, val right: ExerciseSideFeatures)
+data class ExerciseFeatures(val left: ExerciseSideFeatures, val right: ExerciseSideFeatures,
+                            val signedLateralInclination: Double? = null)
 
 object ExerciseFeatureExtractor {
     fun extract(points: List<Landmark>, view: CameraView, aspect: Double = 1.0): ExerciseFeatures {
@@ -27,8 +30,12 @@ object ExerciseFeatureExtractor {
             val leg = visibility(11, 23, 25, 27)
             val arm = visibility(11, 13, 15)
             return ExerciseSideFeatures(angle(23, 25, 27), angle(11, 23, 25), angle(11, 13, 15),
-                if (arm >= 0.65f) points[15 + offset].y < points[11 + offset].y - 0.015f else null, leg, arm)
+                if (arm >= 0.65f) points[15 + offset].y < points[11 + offset].y - 0.015f else null, leg, arm,
+                com.example.arptapp.domain.analyzer.ExerciseMeasurements.inclination(points, 11 + offset, 23 + offset, aspect),
+                com.example.arptapp.domain.analyzer.ExerciseMeasurements.inclination(points, 13 + offset, 11 + offset, aspect, upward = false),
+                com.example.arptapp.domain.analyzer.ExerciseMeasurements.inclination(points, 13 + offset, 11 + offset, aspect))
         }
-        return ExerciseFeatures(side(0), side(1))
+        return ExerciseFeatures(side(0), side(1), if (view == CameraView.FRONT)
+            com.example.arptapp.domain.analyzer.ExerciseMeasurements.signedLateral(points, aspect) else null)
     }
 }

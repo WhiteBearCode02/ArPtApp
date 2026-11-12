@@ -19,6 +19,7 @@ object YoloSessionDiagnosticsCodec {
     const val MAX_JSON_CHARS = 16_384
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
     private val exercises = setOf("SQUAT", "SHOULDER_PRESS", "UNKNOWN")
+    private val sessionExercises = com.example.arptapp.domain.classifier.ExerciseType.supportedNames + "UNKNOWN"
 
     fun encode(value: YoloSessionDiagnostics?): String? = value?.let { sanitize(it) }?.let {
         runCatching { json.encodeToString(it).takeIf { raw -> raw.length <= MAX_JSON_CHARS } }.getOrNull()
@@ -37,12 +38,14 @@ object YoloSessionDiagnosticsCodec {
     private fun sanitize(value: YoloSessionDiagnostics): YoloSessionDiagnostics? = value.run {
         if (schemaVersion != 1 || !KnownYoloModels.matches(modelId, modelSha256) ||
             modelStatus !in DetectorStatus.entries.map { it.name } || contractStatus !in ExportContractVerification.entries.map { it.name } ||
-            cameraView !in CameraView.entries.map { it.name } || expectedSessionExercise !in exercises ||
+            cameraView !in CameraView.entries.map { it.name } || expectedSessionExercise !in sessionExercises ||
             predictionEnabled && (modelStatus != DetectorStatus.READY.name || contractStatus != ExportContractVerification.VERIFIED.name)) return null
         // Historical documents omit the gate. New documents must not contradict the independent policy.
         if (shadowRuntimeEnabled != null && predictionEnabled != (shadowRuntimeEnabled &&
                 modelStatus == DetectorStatus.READY.name && contractStatus == ExportContractVerification.VERIFIED.name)) return null
         if (shadowRuntimeEnabled == false && processedFrames > 0L) return null
+        if (comparisonApplicability == "UNSUPPORTED_EXERCISE" &&
+            (matchingStableFrames != 0L || mismatchingStableFrames != 0L || unknownStableFrames != 0L)) return null
         val counts = listOf(totalFramesSeen, admittedFrames, processedFrames, activeDurationMs, confidenceSampleCount,
             matchingStableFrames, mismatchingStableFrames, unknownStableFrames, unknownSessionFrames)
         if (counts.any { it < 0 } || admittedFrames > totalFramesSeen || processedFrames > admittedFrames ||

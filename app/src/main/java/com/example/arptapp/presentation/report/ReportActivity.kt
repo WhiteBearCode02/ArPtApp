@@ -43,11 +43,7 @@ class ReportActivity : AppCompatActivity() {
     }
 
     private fun setupSummary(report: WorkoutReportData, analyses: List<RepAnalysis>, structured: StructuredWorkoutAnalysis?) {
-        binding.tvExerciseType.text = when (report.exerciseType) {
-            "SQUAT" -> "스쿼트"
-            "SHOULDER_PRESS" -> "숄더 프레스"
-            else -> report.exerciseType
-        }
+        binding.tvExerciseType.text = com.example.arptapp.domain.classifier.ExerciseType.display(report.exerciseType)
         binding.tvWorkoutDate.text = report.workoutDate.ifBlank { "운동 일시 정보 없음" }
         binding.tvTotalCount.text = getString(R.string.report_summary_count, report.totalCount)
         binding.tvDuration.text = getString(R.string.report_summary_duration,

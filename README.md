@@ -6,6 +6,8 @@
 
 ### AI Personal Trainer · 실시간 운동 자세 분석 Android 앱
 
+> 2026-11-12: 관절 기반 분석 파이프라인을 **7종 운동**으로 확장했습니다. 스쿼트 · 숄더 프레스 · 바이셉 컬 · 푸시업 · 벤트오버 로우 · 트라이셉스 익스텐션 · 사이드 벤드. [구현·검증 범위](docs/EXERCISE_EXPANSION_7.md) / [논문 근거와 한계](docs/BIOMECHANICS_REFERENCES_7.md). 신규 규칙은 초기 공학 기준이며 실사용 인식 정확도는 기기 검증이 필요합니다. EXP02 YOLO는 기존 **2종 Shadow** 그대로입니다.
+
 카메라 속 사용자를 추적하고, 관절 좌표와 운동별 분석 규칙을 이용해<br>
 반복 횟수·자세 품질·교정 피드백을 제공하는 온디바이스 퍼스널 트레이너입니다.
 
@@ -53,7 +55,7 @@
 | Pose Tracking | MediaPipe Pose Landmarker로 33개 관절의 `x/y/z/visibility` 추출 | ✅ |
 | Visual Feedback | 추적 중인 사람의 관절점과 스켈레톤을 카메라 위에 표시 | ✅ |
 | Person Selection | 검출된 포즈 중 가장 큰 관절 영역의 사용자를 우선 선택 | 🧪 |
-| Exercise Analysis | 스쿼트·숄더프레스 관절 각도 추출 및 초기 운동별 분석 | 🧪 |
+| Exercise Analysis | 7종 관절 기반 측정·회차 카운터·상세 분석 (신규 기준은 초기 공학값, 실기기 검증 필요) | 🧪 |
 | Rep Counter | 관절 각도와 `UP/DOWN` 상태 머신을 이용한 반복 횟수 계산 | ✅ |
 | Form Feedback | 무릎 모임과 상체 숙임 등 초기 자세 오류 규칙 분석 | 🧪 |
 | Session Report | 횟수, 수행 시간, 평균 점수, 회차별 기록 생성 | ✅ |
@@ -133,7 +135,7 @@ RGB/BCHW·`/255`·normalized center xywh·sigmoid class score·external NMS는 s
 | `RepReportAnalyzer` | Android와 분리된 회차 점수·관찰 설명·세션 피드백 계산 |
 | `OverlayView` | 관절점과 관절 연결선을 카메라 위에 렌더링 |
 | `ExerciseClassifier` | 랜드마크 기반 임시 운동 분류 fallback |
-| `PoseAngleExtractor` | 스쿼트·숄더프레스의 2D 내각 및 정규화 랜드마크 벡터각 계산 |
+| `PoseAngleExtractor` | 기존 두 운동 측정 유지 + 신규 5종의 촬영 방향별 측정 전략 연결 |
 | `ExerciseCounter` | 운동별 임계값과 상태 전환으로 repetition 계산 |
 | `FormErrorAnalyzer` | 관절 위치 관계를 이용한 자세 오류 후보 검출 |
 | `CoordinateNormalizer` | 골반 중심 이동과 신체 크기 기반 좌표 정규화 |
@@ -388,6 +390,8 @@ python -m unittest discover -s ai_module/tests -v
 - [x] MediaPipe 33개 관절 추출
 - [x] 대상 사용자 선택 및 스켈레톤 오버레이
 - [x] 스쿼트·숄더프레스 각도 추출
+- [x] 신규 5종 측정·좌우 독립 카운터·회차 리포트·V2 저장 계약 연결 ([검증 기록](docs/EXERCISE_EXPANSION_7_VALIDATION.md))
+- [ ] 7종 실제 사용자 인식·횟수·음성 및 두 기기 History 동기화 검증
 - [x] repetition 상태 머신과 세션 리포트
 - [x] Supabase 로그인, 운동 세션·횟수별 분석, 신체 이력 및 알림 설정 동기화
 - [x] 현재 분석 흐름과 생체역학 근거·한계 문서화

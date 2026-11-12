@@ -15,12 +15,14 @@ import com.example.arptapp.model.SessionReport
 class RepReportAnalyzer {
     fun analyze(records: List<RepRecord>, exerciseType: String,
                 structured: List<StructuredRepAnalysis> = emptyList()): List<RepAnalysis> =
-        if (exerciseType.uppercase() !in listOf("SQUAT", "SHOULDER_PRESS")) emptyList() else records.mapIndexedNotNull { index, record ->
+        if (exerciseType.uppercase() !in com.example.arptapp.domain.classifier.ExerciseType.supportedNames) emptyList() else records.mapIndexedNotNull { index, record ->
         val measured = structured.firstOrNull { it.repNumber == record.repNumber && it.exerciseType == exerciseType.uppercase() }
         if (measured?.localScore != null) {
             // New records never fall back to old DTW/angle formulas when local measurements are unavailable.
             return@mapIndexedNotNull measured.score?.let { RepAnalysis(record.repNumber, it, RepScoreDescription.format(measured)) }
         }
+        // New exercises have no legacy angle/DTW grading formula. Missing structure stays unscored.
+        if (exerciseType.uppercase() !in listOf("SQUAT", "SHOULDER_PRESS")) return@mapIndexedNotNull null
         RepAnalysis(
             repNumber = record.repNumber.takeIf { it > 0 } ?: index + 1,
             score = scoreRep(record, exerciseType.uppercase()).toFloat(),

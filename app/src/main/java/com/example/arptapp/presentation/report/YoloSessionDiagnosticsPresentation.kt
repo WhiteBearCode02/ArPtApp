@@ -42,12 +42,15 @@ object YoloSessionDiagnosticsPresentation {
                 "\nAndroid가 알리는 기기 제한 단계입니다. 섭씨 온도나 체온이 아니며, 미측정은 제한 없음과 다릅니다.")
         )),
         MetricGroupUiModel("앱이 확정한 운동과 같은가요?", listOf(
-            row("비교 결과", "같음 ${value.matchingStableFrames}장 / 다름 ${value.mismatchingStableFrames}장 / 판단 보류 ${value.unknownStableFrames}장"),
+            row("비교 결과", if (value.comparisonApplicability == "UNSUPPORTED_EXERCISE")
+                "비교 대상 아님 · 이 2종 모델은 해당 운동을 지원하지 않아 오답이나 불일치로 판단하지 않습니다." else
+                "같음 ${value.matchingStableFrames}장 / 다름 ${value.mismatchingStableFrames}장 / 판단 보류 ${value.unknownStableFrames}장"),
             row("판단 가능한 결과끼리의 일치 비율", (value.knownMatchRate?.let { YoloDiagnosticGuide.confidence(it) } ?: "비교 표본 없음") +
                 "\n같음 / (같음 + 다름). 판단 보류는 제외합니다. 실제 정답과 비교한 모델 정확도가 아닙니다."),
             row("판단 보류 비율", (value.unknownStableRate?.let { YoloDiagnosticGuide.confidence(it) } ?: "비교 표본 없음") +
                 "\n보류 / (같음 + 다름 + 보류). 앱의 운동이 확정된 뒤의 표본만 비교합니다."),
-            row("비교하지 않은 화면", "${value.unknownSessionFrames}장 · 앱에서 운동을 확정하기 전이므로 비교 대상에서 제외했습니다.")
+            row("비교하지 않은 화면", "${value.unknownSessionFrames}장 · " + if (value.comparisonApplicability == "UNSUPPORTED_EXERCISE")
+                "운동 미확정 또는 모델이 지원하지 않는 운동이므로 비교에서 제외했습니다." else "앱에서 운동을 확정하기 전이므로 비교 대상에서 제외했습니다.")
         ))
     )
 
@@ -60,6 +63,7 @@ object YoloSessionDiagnosticsPresentation {
     fun technicalGroups(value: YoloSessionDiagnostics): List<MetricGroupUiModel> = listOf(
         MetricGroupUiModel("모델·세션", listOf(
             row("모델", value.modelId),
+            row("운동 비교 적용", value.comparisonApplicability),
             row("모델 기준 SHA256 · 실제 로드 증명 아님", value.modelSha256.ifBlank { "정보 없음" }),
             row("모델 상태", value.modelStatus),
             row("Export 계약", value.contractStatus),

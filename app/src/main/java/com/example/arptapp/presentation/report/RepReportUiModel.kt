@@ -88,7 +88,8 @@ object RepReportUiMapper {
 
     private fun structuredCard(rep: StructuredRepAnalysis, legacy: RepAnalysis?): RepReportUiModel {
         val score = validScore(rep.score)
-        val strengths = rep.strengths.filter { it in strengthKeys }.distinct().map(LocalRepFeedback::strength)
+        val strengths = rep.strengths.filter { it in strengthKeys }.distinct()
+            .map { com.example.arptapp.domain.report.ExerciseReportLanguage.strength(rep.exerciseType, it) }
         val events = rep.errorEvents.sortedWith(eventOrder)
         val eventTypes = events.map { it.type }.toSet()
         // New/unknown keys are intentionally hidden, not interpreted as evidence or shown raw.
@@ -157,6 +158,7 @@ object RepReportUiMapper {
     }
 
     private fun metricGroups(rep: StructuredRepAnalysis): List<MetricGroupUiModel> = buildList {
+        addAll(ExpandedRepMetricGroups.create(rep))
         fun group(title: String, rows: List<MetricRowUiModel?>) {
             rows.filterNotNull().takeIf { it.isNotEmpty() }?.let { add(MetricGroupUiModel(title, it)) }
         }
@@ -207,7 +209,14 @@ object RepReportUiMapper {
 
     /** All enum identifiers remain internal; severity/frame counts affect ordering, not wording. */
     private fun issueObservation(event: FormErrorEvent, exerciseType: String): String {
-        val phase = when (event.phase) {
+        if (event.type in com.example.arptapp.domain.report.ExerciseMetricPolicy.expandedEvents) {
+            return event.phase?.let { "${com.example.arptapp.domain.report.ExerciseReportLanguage.phase(exerciseType, it)}에서 " }.orEmpty() +
+                event.side?.let { "${if (it == BodySide.LEFT) "왼쪽" else "오른쪽"} " }.orEmpty() +
+                com.example.arptapp.domain.report.ExerciseReportLanguage.observation(event.type)
+        }
+        val phase = if (exerciseType !in listOf("SQUAT", "SHOULDER_PRESS")) {
+            event.phase?.let { "${com.example.arptapp.domain.report.ExerciseReportLanguage.phase(exerciseType, it)}에서 " }.orEmpty()
+        } else when (event.phase) {
             MovementPhase.DESCENT -> "내려가는 구간에서 "
             MovementPhase.BOTTOM -> if (exerciseType == "SHOULDER_PRESS") "전환 구간에서 " else "하단 구간에서 "
             MovementPhase.ASCENT -> "올라가는 구간에서 "
@@ -225,6 +234,7 @@ object RepReportUiMapper {
                 else "${side}팔꿈치와 반대쪽 팔꿈치의 각도 차이가 관찰되었습니다."
             FormErrorType.SHALLOW_DEPTH -> "${side}동작 깊이를 다시 확인할 후보가 관찰되었습니다."
             FormErrorType.INCOMPLETE_EXTENSION -> "${side}동작의 펴는 범위를 다시 확인할 후보가 관찰되었습니다."
+            else -> com.example.arptapp.domain.report.ExerciseReportLanguage.observation(event.type)
         }
         return phase + observation
     }

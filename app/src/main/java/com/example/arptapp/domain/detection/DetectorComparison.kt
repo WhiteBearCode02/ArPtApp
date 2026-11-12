@@ -25,6 +25,8 @@ object DetectorComparisonFormatter {
         } ?: "미측정")
         append(" · stable=${data.yolo.stableExercise}\n")
         append("fallback=${data.fallbackDetected} · session=${data.sessionExerciseType} · view=${data.cameraView}\n")
+        if (data.sessionExerciseType in ExerciseType.supported && data.sessionExerciseType !in YoloModelPolicy.supported)
+            append("comparison=UNSUPPORTED_EXERCISE · NOT_APPLICABLE · two-class model, no agreement/accuracy judgement\n")
         val t = result.timings
         append(if (t == null) "pre/infer/post/total=미측정" else
             "pre=${t.preprocessMs}ms infer=${t.inferenceMs}ms post=${t.postprocessMs}ms total=${t.totalMs}ms")

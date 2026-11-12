@@ -8,13 +8,17 @@ data class YoloLiveDiagnosticsUi(val status: String, val recognition: String, va
 object YoloLiveDiagnosticsPresentation {
     fun present(data: DetectorComparison): YoloLiveDiagnosticsUi {
         val result = data.yolo.result
-        val hasPrediction = result.predictionAllowed && result.timings != null
+        val unsupported = data.sessionExerciseType in com.example.arptapp.domain.classifier.ExerciseType.supported &&
+            data.sessionExerciseType !in com.example.arptapp.domain.detection.YoloModelPolicy.supported
+        val hasPrediction = !unsupported && result.predictionAllowed && result.timings != null
         val status = when {
+            unsupported -> "YOLO 비교 대상 아님 · 이 모델은 스쿼트와 숄더 프레스만 지원합니다. 새 운동의 판정은 관절 분석이 담당합니다."
             !result.predictionAllowed -> YoloDiagnosticGuide.status(result.status.name) + "\nYOLO 실행은 비활성입니다. 관절 기반 운동 판정과는 별개입니다."
             result.timings == null -> "모델 준비 완료 · 첫 분석 결과를 기다려요"
             else -> "YOLO 분석 결과를 받았어요 · 시험 인식 중"
         }
         val recognition = buildString {
+            if (unsupported) append("UNSUPPORTED_EXERCISE · 이 운동의 YOLO 예측은 일치/오답 평가에 사용하지 않습니다.\n")
             append("이번 화면: ${if (hasPrediction) YoloDiagnosticGuide.exercise(result.exerciseType.name) else "분석 결과 대기"}")
             append("\n모델 확신도: ${YoloDiagnosticGuide.confidence(if (hasPrediction) result.selected?.confidence?.toDouble() else null)}")
             append("\n연속 화면의 판단: ${YoloDiagnosticGuide.exercise(if (hasPrediction) data.yolo.stableExercise.name else "UNKNOWN")}")

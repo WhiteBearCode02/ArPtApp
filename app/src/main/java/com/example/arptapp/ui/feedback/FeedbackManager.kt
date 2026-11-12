@@ -11,6 +11,8 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
     private val vibrator = requireNotNull(ContextCompat.getSystemService(context, Vibrator::class.java))
     private val textToSpeech = TextToSpeech(context.applicationContext, this)
     private var isTtsReady = false
+    private var lastAnnouncedRep = 0
+    fun resetSession() { lastAnnouncedRep = 0 }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
@@ -19,10 +21,12 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
     }
 
     fun announceRep(repNumber: Int, priorityFeedback: String? = null) {
+        if (repNumber <= lastAnnouncedRep) return
+        lastAnnouncedRep = repNumber
         vibrate()
         if (isTtsReady) {
             textToSpeech.speak(
-                "${repNumber}회 완료. ${priorityFeedback.orEmpty()}",
+                com.example.arptapp.domain.report.ExerciseSpeechFormatter.repCompleted(repNumber, priorityFeedback),
                 TextToSpeech.QUEUE_FLUSH,
                 null,
                 "rep-$repNumber"

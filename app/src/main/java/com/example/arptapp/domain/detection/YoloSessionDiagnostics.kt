@@ -51,6 +51,12 @@ data class YoloSessionDiagnostics(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val shadowRuntimeEnabled: Boolean? = null
 ) {
+    /** EXP02/03 remain two-class exports; new exercises are never labelled a YOLO mismatch. */
+    val comparisonApplicability: String get() = when {
+        expectedSessionExercise in YoloModelPolicy.supported.map { it.name } -> "SUPPORTED"
+        expectedSessionExercise in ExerciseType.supportedNames -> "UNSUPPORTED_EXERCISE"
+        else -> "SESSION_NOT_LOCKED"
+    }
     /** UNKNOWN is not a negative label and is excluded from this denominator. */
     val knownMatchRate: Double? get() = (matchingStableFrames + mismatchingStableFrames)
         .takeIf { it > 0 }?.let { matchingStableFrames.toDouble() / it }
@@ -154,7 +160,7 @@ class YoloSessionDiagnosticsCollector(private val modelIdentity: YoloModelDescri
             minConfidence = state.confidence.min, maxConfidence = state.confidence.max,
             maxThermalStatus = state.maxThermal, rawDetectionCounts = state.raw.frozen(),
             stableDetectionCounts = state.stable.frozen(),
-            expectedSessionExercise = supportedOrUnknown(expectedSessionExercise).name,
+            expectedSessionExercise = expectedSessionExercise.takeIf { it in ExerciseType.supported }?.name ?: "UNKNOWN",
             matchingStableFrames = state.matching, mismatchingStableFrames = state.mismatching,
             unknownStableFrames = state.unknown, unknownSessionFrames = state.unknownSession,
             cameraView = state.view.name, startedAt = state.epochStart,

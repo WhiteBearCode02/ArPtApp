@@ -12,6 +12,15 @@ object RepFrameFeatureExtractor {
     fun extract(points: List<Landmark>, exercise: String, view: CameraView, aspect: Double,
                 timestampMs: Long, representative: Double?, kneeValgus: Boolean = false,
                 kneeObservation: FormErrorAnalyzer.KneeValgusObservation? = null): RepFrameFeatures {
+        com.example.arptapp.domain.analyzer.ExerciseMeasurements.measure(exercise, points, view, aspect)?.let { m ->
+            val side = if (view == CameraView.SIDE)
+                if (com.example.arptapp.domain.analyzer.PoseAngleExtractor.visibleSideOffset(points, exercise) == 0) BodySide.LEFT else BodySide.RIGHT else null
+            return RepFrameFeatures(timestampMs, exercise, view, representative,
+                leftElbow = m.leftElbow, rightElbow = m.rightElbow, visibleSide = side,
+                upperArmLeft = m.upperArmLeft, upperArmRight = m.upperArmRight,
+                torsoInclination = m.torsoInclination, bodyLineDeviation = m.bodyLineDeviation,
+                lateralFlexion = m.lateralFlexion, shoulderHeightDifference = m.shoulderHeightDifference)
+        }
         fun angle(vararg indices: Int) = JointAngleMeasurement.measure(points, indices.toList(),
             "rep_joint", view = view, imageAspectRatio = aspect).valueDeg
         // In side view keep only the side whose required joints have higher usable visibility.

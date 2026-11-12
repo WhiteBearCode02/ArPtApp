@@ -32,6 +32,9 @@ object RepScorePolicy {
 /** Structured measurements first, local score second. DTW/referenceSimilarity never enters this formula. */
 object RepScoreCalculator {
     fun calculate(rep: StructuredRepAnalysis): RepScoreBreakdown {
+        com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.forExercise(rep.exerciseType)?.let {
+            return ExpandedRepScoreCalculator.calculate(rep, it.comparisonRomDeg)
+        }
         val supported = rep.exerciseType in listOf("SQUAT", "SHOULDER_PRESS") && rep.cameraView in listOf("FRONT", "SIDE") && rep.observedFrames >= 3
         fun angle(v: Double?) = v?.takeIf { it.isFinite() && it in 0.0..180.0 }
         val squat = rep.exerciseType == "SQUAT"

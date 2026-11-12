@@ -1,10 +1,15 @@
 // Pure, dependency-free contract. Keep parity with Android StructuredAnalysis/AiReportValidator.
 import { directionalClaims, eventKey, localEventFeedback } from "./event-claims.ts"
-type ObjectValue = Record<string, unknown>
+import { exact, number, list, member, object } from "./contract-values.ts"
+import type { ObjectValue } from "./contract-values.ts"
+import { EXERCISES, EXTRA_ISSUES, EXERCISE_PATTERNS, V2_JOINTS, V2_ASYMMETRIES } from "./exercise-matrix.ts"
+import { validateV2Input } from "./contracts-v2.ts"
+import { metricClaims } from "./metric-claims.ts"
+export { object } from "./contract-values.ts"
+export { EXERCISES } from "./exercise-matrix.ts"
 export const MAX_INPUT_BYTES = 131_072
 export const MAX_OUTPUT_BYTES = 32_768
-export const EXERCISES = ["SQUAT", "SHOULDER_PRESS"]
-export const ISSUES = ["KNEE_VALGUS", "FORWARD_LEAN", "KNEE_ASYMMETRY", "HIP_ASYMMETRY", "ELBOW_ASYMMETRY", "SHALLOW_DEPTH", "INCOMPLETE_EXTENSION"]
+export const ISSUES = ["KNEE_VALGUS", "FORWARD_LEAN", "KNEE_ASYMMETRY", "HIP_ASYMMETRY", "ELBOW_ASYMMETRY", "SHALLOW_DEPTH", "INCOMPLETE_EXTENSION", ...EXTRA_ISSUES]
 const STRENGTHS = ["KNEE_SYMMETRY_OBSERVED", "ELBOW_SYMMETRY_OBSERVED", "BOTH_PHASES_CAPTURED"]
 const LOCAL_FEEDBACK = [
   "다음 회차에서는 무릎 방향을 발 방향에 맞춰 보세요.",
@@ -16,38 +21,18 @@ const LOCAL_FEEDBACK = [
 const JOINTS = ["leftKneeMinAngle", "rightKneeMinAngle", "leftHipMinAngle", "rightHipMinAngle", "leftElbowMaxAngle", "rightElbowMaxAngle", "torsoLeanMaxDeg"]
 const ASYMMETRIES = ["kneeAngleDifferenceDeg", "hipAngleDifferenceDeg", "elbowAngleDifferenceDeg"]
 const PHASES = ["descentMs", "bottomMs", "ascentMs"]
-export function object(value: unknown): ObjectValue {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid object")
-  return value as ObjectValue
-}
-function exact(value: unknown, keys: string[], optional: string[] = []): ObjectValue {
-  const obj = object(value)
-  if (Object.keys(obj).some(k => !keys.includes(k) && !optional.includes(k)) || keys.some(k => !Object.hasOwn(obj, k))) throw new Error("Invalid fields")
-  return obj
-}
-function number(value: unknown, min: number, max: number, integer = false, nullable = false): void {
-  if (nullable && value === null) return
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max || (integer && !Number.isInteger(value))) throw new Error("Invalid number")
-}
-function list(value: unknown, max: number): unknown[] {
-  if (!Array.isArray(value) || value.length > max) throw new Error("Invalid list")
-  return value
-}
-function member(value: unknown, values: string[], nullable = false): void {
-  if (nullable && value === null) return
-  if (typeof value !== "string" || !values.includes(value)) throw new Error("Invalid enum")
-}
 export type WorkoutInput = ObjectValue & { exerciseType: string, repAnalyses: ObjectValue[] }
 export function validateInput(value: unknown): WorkoutInput {
+  if (object(value).schemaVersion === 2) return validateV2Input(value) as WorkoutInput
   const input = exact(value, ["schemaVersion", "exerciseType", "totalReps", "averageScore", "bestRepNumber", "weakestRepNumber", "dominantIssues", "repAnalyses", "omittedReps"])
   if (input.schemaVersion !== 1) throw new Error("Unsupported schema")
-  member(input.exerciseType, EXERCISES)
+  member(input.exerciseType, ["SQUAT", "SHOULDER_PRESS"])
   number(input.totalReps, 1, 10000, true)
   number(input.averageScore, 0, 100, false, true)
   number(input.bestRepNumber, 1, input.totalReps as number, true, true)
   number(input.weakestRepNumber, 1, input.totalReps as number, true, true)
   number(input.omittedReps, 0, input.totalReps as number, true)
-  list(input.dominantIssues, 7).forEach(x => member(x, ISSUES))
+  list(input.dominantIssues, 7).forEach(x => member(x, ISSUES.slice(0, 7)))
   const reps = list(input.repAnalyses, 50)
   if (reps.length === 0 || reps.length + (input.omittedReps as number) !== input.totalReps) throw new Error("Invalid rep count")
   const seen = new Set<number>()
@@ -116,10 +101,11 @@ export function validateInput(value: unknown): WorkoutInput {
 export function evidenceKeys(rep: ObjectValue): Set<string> {
   const keys = new Set<string>()
   for (const k of ["score", "totalDurationMs"]) if (rep[k] !== null) keys.add(k)
-  for (const [name, members] of [["jointMetrics", JOINTS], ["asymmetryMetrics", ASYMMETRIES], ["phaseDurations", PHASES]] as const) {
+  for (const [name, members] of [["jointMetrics", [...JOINTS, ...V2_JOINTS]], ["asymmetryMetrics", [...ASYMMETRIES, ...V2_ASYMMETRIES]], ["phaseDurations", PHASES]] as const) {
     const values = object(rep[name])
-    for (const k of members) if (values[k] !== null) keys.add(`${name}.${k}`)
+    for (const k of members) if (typeof values[k] === "number" && Number.isFinite(values[k])) keys.add(`${name}.${k}`)
   }
+  if (rep.activeSide === "LEFT" || rep.activeSide === "RIGHT") keys.add("activeSide")
   for (const x of rep.strengths as string[]) keys.add(`strength:${x}`)
   for (const x of rep.errorEvents as ObjectValue[]) { keys.add(`issue:${x.type}`); keys.add(eventKey(x)) }
   return keys
@@ -159,12 +145,13 @@ function measuredClaims(texts: unknown[], reps: ObjectValue[], references?: Set<
 export function validateReport(value: unknown, input: WorkoutInput): ObjectValue {
   const report = exact(value, ["exerciseType", "summary", "strengths", "improvements", "priority", "nextWorkoutGoal", "repFeedback"])
   if (report.exerciseType !== input.exerciseType) throw new Error("Wrong exercise")
-  const wrongExercise = input.exerciseType === "SQUAT" ? /숄더.?프레스|shoulder.?press/i : /스쿼트|squat/i
+  const wrongExercise = (text: string) => Object.entries(EXERCISE_PATTERNS).some(([type, pattern]) => type !== input.exerciseType && pattern.test(text.replace(/\s+/g, "")))
   function text(v: unknown): void {
-    if (typeof v !== "string" || !v.trim() || v.length > 500 || /진단|치료|질환|부상|완벽|완전히 안전|diagnos|cure|injur|perfect/i.test(v) || wrongExercise.test(v) || /[\x00-\x09\x0b-\x1f\x7f]/.test(v)) throw new Error("Invalid text")
+    if (typeof v !== "string" || !v.trim() || v.length > 500 || /진단|치료|질환|부상|완벽|정상|안전하|안전한|안전합|전문가.*자세|근활성|근육 활성|척추 부하|scapular|spinal load|muscle activation|\bsafe\b|\bnormal\b|diagnos|cure|injur|perfect/i.test(v) || wrongExercise(v) || /[\x00-\x09\x0b-\x1f\x7f]/.test(v)) throw new Error("Invalid text")
   }
   text(report.summary); text(report.priority); text(report.nextWorkoutGoal)
   list(report.strengths, 5).forEach(text); list(report.improvements, 5).forEach(text)
+  metricClaims([report.summary, report.priority, report.nextWorkoutGoal, ...report.strengths as unknown[], ...report.improvements as unknown[]],input.repAnalyses)
   directionalClaims([report.summary, report.priority, report.nextWorkoutGoal, ...report.strengths as unknown[], ...report.improvements as unknown[]], input.repAnalyses)
   measuredClaims([report.summary, report.priority, report.nextWorkoutGoal, ...report.strengths as unknown[], ...report.improvements as unknown[]],
     input.repAnalyses, undefined, [input.totalReps, input.omittedReps, input.bestRepNumber, input.weakestRepNumber].filter(v => typeof v === "number") as number[], input.averageScore)
@@ -180,6 +167,7 @@ export function validateReport(value: unknown, input: WorkoutInput): ObjectValue
     const keys = list(feedback.evidenceKeys, 12)
     const allowed = evidenceKeys(rep)
     if (!keys.length || new Set(keys).size !== keys.length || keys.some(k => typeof k !== "string" || !allowed.has(k))) throw new Error("Unobserved evidence")
+    metricClaims([feedback.summary,feedback.positive,feedback.improvement],[rep],new Set(keys as string[]))
     directionalClaims([feedback.summary, feedback.positive, feedback.improvement], [rep], new Set(keys as string[]))
     measuredClaims([feedback.summary, feedback.positive, feedback.improvement], [rep], new Set(keys as string[]))
   }

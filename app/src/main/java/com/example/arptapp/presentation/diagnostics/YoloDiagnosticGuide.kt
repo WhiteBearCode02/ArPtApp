@@ -8,7 +8,8 @@ import java.util.Locale
 object YoloDiagnosticGuide {
     const val ROLE = "YOLO는 운동 종류를 시험 인식하는 보조 AI입니다. 현재 운동 점수와 자세 분석 판정에는 사용되지 않습니다. 실제 운동 판정은 관절 분석이 담당합니다."
     fun exercise(value: String): String = when (value) {
-        "SQUAT" -> "스쿼트"; "SHOULDER_PRESS" -> "숄더 프레스"; else -> "아직 판단하지 못함"
+        else -> com.example.arptapp.domain.classifier.ExerciseType.fromName(value)
+            ?.takeIf { it in com.example.arptapp.domain.classifier.ExerciseType.supported }?.displayName ?: "아직 판단하지 못함"
     }
     fun direction(value: String): String = when (value) {
         "FRONT" -> "정면"; "SIDE" -> "측면"; else -> "선택 전"
