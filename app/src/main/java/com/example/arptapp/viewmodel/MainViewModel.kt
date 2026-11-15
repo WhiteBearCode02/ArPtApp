@@ -12,6 +12,7 @@ import com.example.arptapp.domain.report.RepReportAnalyzer
 import com.example.arptapp.domain.report.*
 import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.domain.session.SessionExerciseLock
+import com.example.arptapp.domain.session.SessionExerciseLockChange
 
 /**
  * 운동 세션의 화면 상태와 수집 기록만 소유합니다.
@@ -26,6 +27,22 @@ class MainViewModel : ViewModel() {
     /** Only call with the classifier's stable result during an active session. */
     fun observeDetectedExercise(type: ExerciseType): Boolean = sessionLock.observe(type).also { locked ->
         if (locked) _exerciseType.value = sessionExerciseType.name
+    }
+
+    /**
+     * Landmark-only live admission. An unfinished initial mistake may be corrected once, but
+     * neither a stale stable value nor a reset external counter can change a completed session.
+     * Records are NOT cleared here: their presence is an independent completed-rep boundary.
+     */
+    fun observeStableDetectedExercise(
+        stableDetectedExercise: ExerciseType,
+        currentCandidate: ExerciseType,
+        completedRepCount: Int
+    ): SessionExerciseLockChange {
+        val completed = if (completedRepCount < 0) completedRepCount else maxOf(completedRepCount, records.size)
+        return sessionLock.observeStable(stableDetectedExercise, completed, currentCandidate).also { change ->
+            if (change != SessionExerciseLockChange.NONE) _exerciseType.value = sessionExerciseType.name
+        }
     }
     private fun effectiveType(legacyType: String) = if (sessionExerciseType in SessionExerciseLock.supported)
         sessionExerciseType.name else legacyType.uppercase()

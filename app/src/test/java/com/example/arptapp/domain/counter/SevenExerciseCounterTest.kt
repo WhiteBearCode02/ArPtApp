@@ -107,3 +107,86 @@ class SideAwareCounterTest {
         assertEquals(listOf(BodySide.RIGHT),out.map { it.activeSide })
     }
 }
+
+/** User-reported signed trajectory, not a classifier/YOLO or real-camera validation fixture. */
+class SideBendSignedSequenceCounterTest {
+    private val rightSequence = listOf(0.0, 5.0, 10.0, 16.0, 20.0, 25.0, 20.0, 10.0, 4.0, 0.0)
+
+    private class Frames {
+        val counter = ExerciseCounter()
+        val completed = mutableListOf<ExerciseCounter.CompletedRep>()
+        private var timestamp = 0L
+
+        fun sample(angle: Double?, frames: Int = 3) = repeat(frames) {
+            completed += counter.processMeasurement("SIDE_BEND", angle, timestamp)
+            timestamp += 150L // contiguous camera frames: below MAX_FRAME_GAP_MS, not a timing override
+        }
+    }
+
+    private fun assertHeldSequence(sign: Double, expectedSide: BodySide) {
+        val frames = Frames()
+        // Each requested sample is held for the default three-frame stable transition. This
+        // preserves the exact 15/5 degree hysteresis and the default minimum 600 ms duration.
+        rightSequence.forEach { frames.sample(it * sign) }
+        assertEquals(1, frames.counter.getRepCount())
+        val completed = frames.completed.single()
+        assertEquals(1, completed.repNumber)
+        assertEquals(expectedSide, completed.activeSide)
+        assertEquals(25.0, completed.peakAngle, 0.0)
+        assertNotNull(completed.motionStartedAtMs)
+        assertTrue(completed.outwardDurationMs > 0)
+        assertTrue(completed.returnDurationMs > 0)
+        assertTrue(completed.outwardDurationMs + completed.returnDurationMs >= 600L)
+    }
+
+    @Test fun exactPositiveHeldSequenceCountsOneRightRepetition() {
+        assertHeldSequence(1.0, BodySide.RIGHT)
+    }
+
+    @Test fun exactNegativeHeldSequenceCountsOneLeftRepetition() {
+        assertHeldSequence(-1.0, BodySide.LEFT)
+    }
+
+    @Test fun oneFramePerRequestedSampleDoesNotInventInitialStableBaseline() {
+        for (sign in listOf(1.0, -1.0)) {
+            val frames = Frames()
+            rightSequence.forEach { frames.sample(it * sign, frames = 1) }
+            // Initial 0/5 and final 4/0 each provide only two neutral frames, not the required three.
+            assertEquals("$sign: default baseline dwell must not be bypassed", 0, frames.counter.getRepCount())
+            assertTrue(frames.completed.isEmpty())
+        }
+    }
+
+    @Test fun preArmedSingleFrameSequenceStillNeedsThreeReturnFrames() {
+        for (sign in listOf(1.0, -1.0)) {
+            val frames = Frames()
+            frames.sample(0.0) // establish the initial three-frame baseline, without changing policy
+            rightSequence.forEach { frames.sample(it * sign, frames = 1) }
+            assertEquals("$sign: final 4/0 is only two stable return frames", 0, frames.counter.getRepCount())
+            frames.sample(0.0, frames = 1)
+            assertEquals(1, frames.counter.getRepCount())
+            assertEquals(if (sign < 0) BodySide.LEFT else BodySide.RIGHT, frames.completed.single().activeSide)
+        }
+    }
+
+    @Test fun directionSwitchWithoutNeutralCannotStitchTwoSidesIntoARepetition() {
+        val frames = Frames()
+        listOf(0.0, 10.0, 20.0, -20.0, 0.0).forEach { frames.sample(it) }
+        assertEquals(0, frames.counter.getRepCount())
+        rightSequence.forEach { frames.sample(-it) }
+        assertEquals(1, frames.counter.getRepCount())
+        assertEquals(BodySide.LEFT, frames.completed.single().activeSide)
+    }
+
+    @Test fun unavailableMeasurementDropsPendingBendWithoutInventingNeutral() {
+        val frames = Frames()
+        listOf(0.0, 10.0, 20.0).forEach { frames.sample(it) }
+        frames.sample(null, frames = 1)
+        frames.sample(0.0)
+        assertEquals(0, frames.counter.getRepCount())
+        assertTrue(frames.completed.isEmpty())
+        rightSequence.forEach { frames.sample(-it) }
+        assertEquals(1, frames.counter.getRepCount())
+        assertEquals(BodySide.LEFT, frames.completed.single().activeSide)
+    }
+}

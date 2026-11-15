@@ -2,8 +2,10 @@ package com.example.arptapp.viewmodel
 
 import com.example.arptapp.domain.analyzer.CameraView
 import com.example.arptapp.domain.classifier.ExerciseType
+import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.domain.report.*
+import com.example.arptapp.domain.session.SessionExerciseLockChange
 import com.example.arptapp.model.RepRecord
 import org.junit.Assert.*
 import org.junit.Test
@@ -95,5 +97,89 @@ class LockedSessionTest {
         vm.addCompletedRep(RepRecord(2, 80.0, 0f), RepScenarioFixtures.squat().copy(repNumber = 2), "FRONT")
         assertEquals(2, vm.getRepAnalyses("SQUAT").single().repNumber)
         assertEquals(2, vm.generateLockedSessionReport()!!.totalReps)
+    }
+
+    @Test fun zeroRepInitialCorrectionUpdatesObservableTypeAndRoutesNewSideBendReport() {
+        val vm = MainViewModel()
+        assertTrue(vm.observeDetectedExercise(ExerciseType.SQUAT))
+        repeat(ExerciseClassifier.DEFAULT_REQUIRED_STABLE_FRAMES - 1) {
+            assertEquals(SessionExerciseLockChange.NONE, vm.observeStableDetectedExercise(
+                ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+            assertEquals("SQUAT", vm.exerciseType.value)
+        }
+        assertEquals(SessionExerciseLockChange.CORRECTED, vm.observeStableDetectedExercise(
+            ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+        assertEquals(ExerciseType.SIDE_BEND, vm.sessionExerciseType)
+        assertEquals("SIDE_BEND", vm.exerciseType.value)
+        assertTrue(vm.getRepRecords().isEmpty())
+        assertNull(vm.generateLockedSessionReport())
+
+        // Fresh engines represent the Activity's correction-only reset, not a physical exercise test.
+        val counter = ExerciseCounter()
+        val engine = RepAnalysisEngine()
+        var timestamp = 1_000L
+        listOf(0.0, 10.0, 25.0, 10.0, 0.0).forEach { angle -> repeat(3) {
+            engine.observe(RepFrameFeatures(timestamp, "SIDE_BEND", CameraView.FRONT, angle,
+                lateralFlexion = angle))
+            counter.processMeasurement("SIDE_BEND", angle, timestamp).forEach { completion ->
+                assertNotNull(vm.addCompletedRep(RepRecord(completion.repNumber, completion.peakAngle, 0f),
+                    engine.complete(completion.repNumber, activeSide = completion.activeSide,
+                        motionStartedAtMs = completion.motionStartedAtMs), "FRONT"))
+            }
+            timestamp += 150L
+        } }
+        assertEquals(1, counter.getRepCount())
+        val report = requireNotNull(vm.generateLockedSessionReport())
+        assertEquals("SIDE_BEND", report.exerciseType)
+        assertEquals(1, report.totalReps)
+        assertEquals("SIDE_BEND", vm.structuredReport("SQUAT").exerciseType)
+        assertEquals(1, vm.getRepAnalyses("SQUAT").size)
+    }
+
+    @Test fun completedRecordBlocksCorrectionEvenWhenExternalCounterIncorrectlyReportsZero() {
+        val vm = MainViewModel()
+        vm.observeDetectedExercise(ExerciseType.SQUAT)
+        assertNotNull(vm.addCompletedRep(RepRecord(1, 80.0, 0f),
+            RepScenarioFixtures.squat().copy(repNumber = 1), "FRONT"))
+        val before = vm.getRepRecords()
+        repeat(ExerciseClassifier.DEFAULT_REQUIRED_STABLE_FRAMES * 3) {
+            assertEquals(SessionExerciseLockChange.NONE, vm.observeStableDetectedExercise(
+                ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+        }
+        assertEquals(ExerciseType.SQUAT, vm.sessionExerciseType)
+        assertEquals("SQUAT", vm.exerciseType.value)
+        assertEquals(before, vm.getRepRecords())
+        assertEquals("SQUAT", vm.generateLockedSessionReport()!!.exerciseType)
+        assertEquals(1, vm.generateLockedSessionReport()!!.totalReps)
+    }
+
+    @Test fun unscoredCompletedRecordAlsoProtectsLockedTypeAndIsNotErased() {
+        val vm = MainViewModel()
+        vm.observeDetectedExercise(ExerciseType.SQUAT)
+        assertNotNull(vm.addCompletedRep(RepRecord(1, 80.0, 0f), null, "FRONT"))
+        val before = vm.getRepRecords()
+        repeat(ExerciseClassifier.DEFAULT_REQUIRED_STABLE_FRAMES * 2) {
+            assertEquals(SessionExerciseLockChange.NONE, vm.observeStableDetectedExercise(
+                ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+        }
+        assertEquals(ExerciseType.SQUAT, vm.sessionExerciseType)
+        assertEquals(before, vm.getRepRecords())
+        assertNull(vm.generateLockedSessionReport())
+    }
+
+    @Test fun observedCompletionWithoutStoredRecordLatchesUntilExplicitSessionReset() {
+        val vm = MainViewModel()
+        vm.observeDetectedExercise(ExerciseType.SQUAT)
+        assertEquals(SessionExerciseLockChange.NONE, vm.observeStableDetectedExercise(
+            ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 1))
+        repeat(ExerciseClassifier.DEFAULT_REQUIRED_STABLE_FRAMES * 2) {
+            assertEquals(SessionExerciseLockChange.NONE, vm.observeStableDetectedExercise(
+                ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+        }
+        assertEquals(ExerciseType.SQUAT, vm.sessionExerciseType)
+        vm.resetSession()
+        assertEquals(SessionExerciseLockChange.LOCKED, vm.observeStableDetectedExercise(
+            ExerciseType.SIDE_BEND, ExerciseType.SIDE_BEND, 0))
+        assertEquals("SIDE_BEND", vm.exerciseType.value)
     }
 }

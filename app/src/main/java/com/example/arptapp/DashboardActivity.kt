@@ -29,6 +29,7 @@ import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.classifier.ExerciseType
+import com.example.arptapp.domain.session.SessionExerciseLockChange
 import com.example.arptapp.data.model.Landmark
 import com.example.arptapp.data.model.PoseData
 import com.example.arptapp.data.model.toAngleSequence
@@ -45,6 +46,7 @@ import com.example.arptapp.ui.camera.LandmarkExerciseDetector
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.example.arptapp.ui.dashboard.DashboardUiPolicy
+import com.example.arptapp.ui.dashboard.WorkoutExerciseUiFormatter
 import com.example.arptapp.ui.dashboard.CameraZoomUi
 import com.example.arptapp.ui.dashboard.PersonalReferenceDialog
 import com.example.arptapp.ui.dashboard.DebugValidationControls
@@ -730,24 +732,46 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private fun updateCurrentExerciseType(nextExerciseType: ExerciseType) {
         detectedExerciseType = nextExerciseType
-        updateDetectedExerciseUi(nextExerciseType)
-        if (!isExercising || !mainViewModel.observeDetectedExercise(nextExerciseType)) return
-        val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
-        personalSequence = referenceRepository.load(userId, sessionExerciseType.name, cameraView)?.sequence().orEmpty()
-        binding.tvCountUnit.text = sessionExerciseType.displayName
-        binding.tvDashboardTitle.text = "${sessionExerciseType.displayName} 운동 중"
+        if (isExercising) {
+            val change = mainViewModel.observeStableDetectedExercise(
+                nextExerciseType, fallbackExerciseClassifier.candidateExercise,
+                maxOf(repetitionCount, exerciseCounter.getRepCount()))
+            if (change == SessionExerciseLockChange.CORRECTED) discardUnconfirmedExerciseState()
+            if (change != SessionExerciseLockChange.NONE) {
+                val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
+                personalSequence = referenceRepository.load(userId, sessionExerciseType.name, cameraView)?.sequence().orEmpty()
+            }
+        }
         updateDetectedExerciseUi(nextExerciseType)
     }
 
     private fun updateDetectedExerciseUi(exerciseType: ExerciseType) {
-        val displayName = if (exerciseType == ExerciseType.IDLE) {
-            ExerciseType.UNKNOWN.displayName
-        } else {
-            exerciseType.displayName
-        }
-        binding.tvDetectedExercise.text = if (isExercising && sessionExerciseType != ExerciseType.UNKNOWN)
-            "세션: ${sessionExerciseType.displayName} · 감지: $displayName" else "인식 중: $displayName"
+        val state = WorkoutExerciseUiFormatter.format(isExercising, sessionExerciseType, exerciseType)
+        binding.tvDetectedExercise.text = state.detectedText
+        state.title?.let { binding.tvDashboardTitle.text = it }
+        state.countUnit?.let { binding.tvCountUnit.text = it }
         renderWorkoutSummary()
+    }
+
+    /**
+     * Called ONLY after the domain admits its one zero-rep correction, before this frame is
+     * measured with the new type. Keep elapsed session time, classifier evidence and saved data.
+     * Drop unfinished old-type angles/feedback so squat knee coaching cannot leak into side bend.
+     */
+    private fun discardUnconfirmedExerciseState() {
+        exerciseCounter.resetSession()
+        repAnalysisEngine.reset()
+        currentRepAngles.clear()
+        currentRepErrorTags.clear()
+        currentMaxSwayX = 0f
+        lastAccelerationX = null
+        repFeedbackUntilMs = 0L
+        repPriorityFeedback = ""
+        feedbackManager.resetSession()
+        tts?.stop()
+        val message = "${sessionExerciseType.displayName} 측정 대기 · 중립 자세에서 시작해 주세요"
+        binding.overlayView.setFeedback(com.example.arptapp.domain.analyzer.CoachingFeedback(false, emptySet(), message, emptyList()))
+        binding.tvPoseFeedback.text = message
     }
 
     private fun checkCameraPermission() {
