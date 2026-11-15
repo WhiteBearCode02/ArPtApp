@@ -62,7 +62,7 @@ DEBUG 자동 감지: SQUAT (진단이며 라우팅 권한 없음)
 
 ## 검증 상태
 
-2026-11-15 현재 작업 트리로 실행한 결과다. 합성·로컬 검증과 실제 기기 검증을 구분한다.
+2026-11-15 수동 선택 구현 때 실행한 회귀 테스트와, candidate를 보존한 별도 lint/패키징 재검증 결과다. 이번 검증에서는 앱 소스와 Gradle/JVM 프로젝트 설정을 변경하지 않았다. 합성·로컬 검증과 실제 기기 검증을 구분한다.
 
 | 검사 | 결과 |
 |---|---|
@@ -72,32 +72,49 @@ DEBUG 자동 감지: SQUAT (진단이며 라우팅 권한 없음)
 | Node 정적·정책 검사 | **PASS: 171개**, 실패/skip 0 |
 | Android serializer → 로컬 server contract fixture | **PASS: 19개**, 이번 JVM 실행에서 생성한 데이터로 검사. 원격 DB 검증 아님 |
 | `assembleDebug` | **PASS**, 수동 선택 코드가 포함된 DEBUG APK 조립 완료 |
-| `lintDebug` | **미완료: `lintAnalyzeDebug` 180초 무출력으로 2회 중단**, 보고서 없음. 오류 0/PASS로 해석하지 않음 |
+| `lintDebug` | **PASS: Fatal 0 / Error 0 / Warning 300**, 정상 종료 코드 0, BUILD SUCCESSFUL in 7m 1s |
 | APK packaging 검사 | **PASS**, 조립된 APK에서 private 모델/Golden/tensor 제외 및 MediaPipe task·OpenCV NOTICE 유지 확인 |
 | 실기기 화면·5회 운동·음성·저장/History | **NOT_RUN — 사용자 체크 필요** |
 
 `ManualSelectedExercisePipelineTest`는 `ExerciseType.supported`에서 7종을 파라미터화한다. 생성한 수학적 관절 좌표를 실제 `PoseAngleExtractor`와 scalar extractor에 넣고, 기존 체류/시간 정책으로 5회 synthetic cycle을 수행한다. 프레임마다 다른 자동 감지 결과를 넣어도 선택 종목이 분석·시작/완료 음성 문구·SessionReport·WorkoutReportData·기록 DTO 재열기까지 유지되는지 검증한다. 원격 저장소/실제 Room DB/TTS 엔진/카메라 정확도를 검증하는 테스트는 아니다.
 
+### 기존 warning 비교
+
+기준은 `build/sidebend-fix-verification/reports/lint-results-debug.xml`의 **299개**다. 이번 보고서는 `build/manual-selection-verification/reports/lint-results-debug.xml` / `.html`에 있다.
+
+- 현재 **300개(+1)**. 기존 299개는 ID·메시지·상대 파일 기준으로 모두 유지됐고 해소된 경고는 없다.
+- 신규 1개: `UseKtx`, `ui/dashboard/WorkoutSelectionDialog.kt:69`, `View.isVisible` 사용 권고. fatal/error가 아닌 스타일 권고이므로 candidate 보존 요청에 따라 수정하지 않았다.
+- 기존 `DashboardActivity.kt`의 `SetTextI18n` 3개는 행 위치만 바뀌었다. 위치 이동을 신규 경고로 세지 않았다.
+- `announceForAccessibility`의 이전 컴파일 사용 중단 예정 경고는 별개이며, 이번 작업에서 이를 이유로 소스나 의존성을 변경하지 않았다.
+
 ## 시연 APK
 
-목표 산출물: `build/deliverables/AIRPTCoach-7Exercises-ManualSelection-demo-debug.apk`
+최종 산출물: `build/deliverables/AIRPTCoach-7Exercises-ManualSelection-demo-debug.apk`
 
-**최종 시연용 이름으로의 복사는 보류했다.** 사용자 요청의 "최종 PASS 후 생성" 조건에 따라 lint 미완료 상태에서 위 산출물을 만들지 않았다. 기존 `AIRPTCoach-7Exercises-SideBendFix-debug.apk`는 삭제하거나 덮어쓰지 않았다. 7종 수동 선택과 Landmark 기반 측정은 YOLO 모델과 독립적이다.
+**lint 정상 완료와 모든 로컬 조건의 PASS를 확인한 후 최종 시연용 파일을 생성했다.** 앱을 다시 빌드하거나 변경하지 않고 기존 candidate를 새 경로에 복사했으며, 원본과 복사본의 크기·SHA256이 일치한다. 기존 candidate와 `AIRPTCoach-7Exercises-SideBendFix-debug.apk`는 삭제하거나 덮어쓰지 않았다. 7종 수동 선택과 Landmark 기반 측정은 YOLO 모델과 독립적이다.
 
-조립된 검증 중 APK는 `build/manual-selection-verification/outputs/apk/debug/app-debug.apk`다. 36,793,835 bytes이며 수동 선택 UI/라우팅 코드가 포함돼 있다. 최종 시연본이 아니며 실제 기기 화면·음성·저장은 미검증이다.
+원본 candidate는 `build/manual-selection-verification/outputs/apk/debug/app-debug.apk`다. candidate와 최종 시연본은 모두 **36,793,835 bytes**이며 수동 선택 UI/라우팅 코드가 포함돼 있다. 로컬 검증의 완료는 실제 기기 화면·음성·저장의 PASS를 뜻하지 않는다. 실기기는 계속 미검증이다.
 
 - SHA256: `6f62c08f7d3be9708190df9e7ee82a1cd2c8da0ef6fd6ee83b15b8842ecf7f33`.
 - `com.example.arptapp` DEBUG / 기본 EXP02 Shadow / `YOLO_PRIVATE_BUNDLED=false`. EXP04로 전환하거나 승격하지 않았다.
 - `lockSelectedExercise`, `beginSession`, `WorkoutSelectionDialog`, `formatManualSession`, `MANUAL_SELECTED`가 실제 APK DEX에 포함돼 있다.
 - 기존 보호 대상 31개 파일 및 SideBendFix APK의 SHA256이 유지됐다. private 입력의 Git tracked 파일은 0개이며, Golden 이미지의 encoded SHA256과 APK 항목도 대조해 일치 항목이 없음을 확인했다.
-- 이번 변경 공개 파일은 18개다. 새 비밀정보·외부 통신·유료 SDK·권한 경로를 발견하지 못한 범위 제한 검토이며, 전체 저장소/원격 서비스의 보안을 보증하지 않는다.
-- 현재 미완료를 포함한 로컬 근거: `local_validation/manual_selection/partial_verification_01.json`. `requestedVerificationComplete=false`, `demoApkCreated=false`, `lint=INTERRUPTED_NO_REPORT`로 기록했다.
+- 수동 선택 구현 당시 변경한 공개 파일은 18개다. 이번 검증은 앱 변경 없이 문서·산출물 검증만 추가했다. 새 비밀정보·외부 통신·유료 SDK·권한 경로를 발견하지 못한 범위 제한 검토이며, 전체 저장소/원격 서비스의 보안을 보증하지 않는다.
+- 과거 중단 근거인 `local_validation/manual_selection/partial_verification_01.json`은 수정하지 않았다. 이번 최종 근거는 `final_verification_01.json`이며 `requestedVerificationComplete=true`, `demoApkCreated=true`, `devicePhysicalValidation=NOT_RUN`이다.
 
 로컬 검증 근거는 ignored `local_validation/manual_selection/`에 보존한다. `build-01`은 기존 Gradle 캐시 lock 접근 권한 오류였고, 허용된 캐시 접근으로 `build-02`에서 JVM/조립을 마쳤다. 다만 `build-02`와 상세 로그 `build-03` 모두 `lintAnalyzeDebug` 180초 무출력에 따라 **이 작업의 명령 트리만 중단**했다. IDE·사용자 프로세스 종료/clean/기존 APK 삭제/의존성 변경은 하지 않았다. 기존 캐시를 오프라인으로 재사용하고 기존 산출물과 구분되는 프로젝트 내 출력 폴더를 사용했다.
 
-가용 RAM 조회는 약 0.8GB였으나, 이것만으로 lint 지연의 원인을 확정하지 않는다. 프로그램을 저장·종료해 자원을 확보한 뒤 같은 출력 폴더에서 lint를 재개하고, 완료된 결과를 확인한 뒤 최종 시연 APK를 복사해야 한다. 새 선택창의 `announceForAccessibility` 호출에는 컴파일 사용 중단 예정 경고가 있었으며, 완성된 lint 보고서가 없어 전체 경고 수는 아직 확정할 수 없다.
+이후 사용자 지시에 따라 `lint-monitored-01`에서는 시간만으로 종료하지 않았다. Gradle 로그와 해당 프로세스 CPU·메모리, 가용 RAM·디스크를 약 45초 간격으로 확인했다. CPU 사용이 이어지는 동안 관찰을 유지했고 앱·Android 테스트·JVM 테스트 소스의 lint 분석을 거쳐 **정상 종료 코드 0**을 확인했다. candidate의 실행 전후 SHA256도 동일했다. 이 결과는 긴 무출력만으로 lint 실패를 판단할 수 없음을 보여주며, 특정 메모리 문제를 확정 진단한 것은 아니다.
+
+모니터링 근거는 ignored `lint-monitored-01.log`, `.monitor.jsonl`, `.json`에 보존한다. 검증 중 실제 사용자 앱을 실행/강제 종료하지 않았고, 앱 데이터·로그인·History를 읽거나 삭제하지 않았다.
+
+### 기존 Git 추적 파일에 대한 별도 주의
+
+`app/src/main/assets/yolo11n-pose_int8.tflite`는 기존 Git 추적 파일이다. 이번 작업에서 추가/삭제/untrack하지 않았으며 candidate와 최종 시연 APK에는 포함되지 않았다. private EXP 모델/Golden의 tracked 파일 수 0이라는 결과를 모든 과거 모델 파일이 Git에 없다는 뜻으로 확대하지 않는다. 이 문서는 해당 기존 파일의 권리 검토를 대신하지 않는다.
 
 ## 실기기 사용 순서
+
+선택/session/detected의 실제 관측값과 실패 위치까지 기록하는 빈 양식은 [`MANUAL_SESSION_DEVICE_RESULTS.md`](MANUAL_SESSION_DEVICE_RESULTS.md)에 준비했다. 현재 7종 모두 `USER_NOT_TESTED`다.
 
 1. 새 APK를 설치하고 로그인한다. 기존 앱을 삭제하면 로컬 기록을 잃을 수 있으므로 단순 업데이트를 먼저 시도한다. 서명 충돌이 생기면 삭제하지 말고 확인한다.
 2. 운동 준비에서 몸 전체가 보이는 구도와 촬영 방향을 설정한다. 전면/후면 렌즈를 바꿔도 몸의 정면/측면 선택과는 별개다.
