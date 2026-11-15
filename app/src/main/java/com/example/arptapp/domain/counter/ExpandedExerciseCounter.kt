@@ -14,10 +14,18 @@ data class MotionCompletion(val side: BodySide?, val peakAngle: Double,
 internal class ExpandedExerciseCounter(private val stableFrames: Int, private val minimumMs: Long) {
     private data class Cycle(var armed: Boolean = false, var turned: Boolean = false, var frames: Int = 0,
         var started: Long? = null, var turnAt: Long = 0, var peak: Double = 0.0, var direction: Double = 0.0,
-        var lastAt: Long? = null, var baselineFrames: Int = 0)
+        val continuity: MeasurementContinuity = MeasurementContinuity(), var baselineFrames: Int = 0)
     private var type: String? = null
     private val cycles = mutableMapOf<BodySide?, Cycle>()
     fun reset() { cycles.clear(); type = null }
+    fun diagnosticPhase(): String = cycles.entries.joinToString(" · ") { (side, c) ->
+        "${side?.name ?: "REP"}=" + when {
+            c.turned -> "TURNED"
+            c.started != null -> "MOVING"
+            c.armed -> "ARMED"
+            else -> "WAIT_BASELINE"
+        } + " (${c.frames}/$stableFrames)"
+    }.ifEmpty { "WAIT_BASELINE" }
     fun process(exercise: String, angle: Double?, left: Double?, right: Double?, time: Long): List<MotionCompletion> {
         val policy = ExerciseMotionPolicy.forExercise(exercise) ?: return emptyList()
         if (type != exercise) { reset(); type = exercise }
@@ -26,12 +34,10 @@ internal class ExpandedExerciseCounter(private val stableFrames: Int, private va
             val value = when (side) { BodySide.LEFT -> left; BodySide.RIGHT -> right; null -> angle }
             val previous = cycles.getOrPut(side) { Cycle() }
             val range = if (exercise == "SIDE_BEND") -ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG..ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG else 0.0..180.0
-            if (value == null || !value.isFinite() || value !in range || time < 0 ||
-                previous.lastAt?.let { time <= it || time - it > ExerciseMotionPolicy.MAX_FRAME_GAP_MS } == true) {
-                cycles[side] = Cycle(); return@mapNotNull null
-            }
-            val c = previous
-            c.lastAt = time
+            val decision = previous.continuity.observe(value != null && value.isFinite() && value in range, time)
+            // Preserve the timer while clearing motion state, including on long missing runs.
+            val c = if (decision.resetPending) Cycle(continuity = previous.continuity).also { cycles[side] = it } else previous
+            if (!decision.evaluable || value == null) return@mapNotNull null
             val lateral = exercise == "SIDE_BEND"
             val extension = exercise == "TRICEPS_EXTENSION"
             val baseline = if (lateral) abs(value) <= policy.returnDeg else if (extension) value <= policy.turnDeg else value >= policy.returnDeg

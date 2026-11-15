@@ -34,10 +34,10 @@ class SevenExerciseCounterTest(private val type: String) {
         assertEquals(0, counter.getRepCount())
     }
     @Test fun tooFastFakeCycleCannotCount() { cycle(step = 10); assertEquals(0, counter.getRepCount()) }
-    @Test fun visibilityLossInvalidatesIncompleteCycle() {
+    @Test fun prolongedVisibilityLossInvalidatesIncompleteCycle() {
         hold(baseline); hold((baseline + turn) / 2); hold(turn)
         val alreadyCompleted = counter.getRepCount()
-        feed(null); hold(baseline, 5)
+        hold(null, 9); hold(baseline, 5) // >= MAX_FRAME_GAP_MS; one absent frame now preserves state.
         assertEquals(alreadyCompleted, counter.getRepCount())
         if (type != "TRICEPS_EXTENSION") assertEquals(0, alreadyCompleted)
     }
@@ -178,10 +178,10 @@ class SideBendSignedSequenceCounterTest {
         assertEquals(BodySide.LEFT, frames.completed.single().activeSide)
     }
 
-    @Test fun unavailableMeasurementDropsPendingBendWithoutInventingNeutral() {
+    @Test fun prolongedUnavailableMeasurementDropsPendingBendWithoutInventingNeutral() {
         val frames = Frames()
         listOf(0.0, 10.0, 20.0).forEach { frames.sample(it) }
-        frames.sample(null, frames = 1)
+        frames.sample(null, frames = 9)
         frames.sample(0.0)
         assertEquals(0, frames.counter.getRepCount())
         assertTrue(frames.completed.isEmpty())

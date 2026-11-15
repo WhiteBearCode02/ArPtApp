@@ -48,10 +48,11 @@ test('measurement, squat-only assessment, counter and analyzer use the selected 
   assert.match(process, /measurePose\(sessionExerciseType.name,/)
   assert.match(process, /sessionExerciseType == ExerciseType.SQUAT && measurement.isEvaluable/)
   assert.match(process, /val exerciseType = sessionExerciseType.name/)
-  assert.match(process, /exerciseCounter.processMeasurement\(exerciseType,/)
+  assert.match(process, /exerciseCounter.processFrame\(sessionExerciseType.name,/)
+  assert.match(process, /frameFeatures\?\.leftElbow, frameFeatures\?\.rightElbow/)
   assert.match(process, /RepFrameFeatureExtractor.extract\(\s*poseData.landmarks, exerciseType,/)
   assert.match(process, /mainViewModel.addCompletedRep/)
-  assert.doesNotMatch(process, /measurePose\(detected|processMeasurement\(detected|val exerciseType = detected|yoloShadowSnapshot/)
+  assert.doesNotMatch(process, /measurePose\(detected|process(?:Measurement|Frame)\(detected|val exerciseType = detected|yoloShadowSnapshot/)
   assert.match(dashboard, /exerciseType = ExerciseType.display\(report.exerciseType\)/)
 })
 

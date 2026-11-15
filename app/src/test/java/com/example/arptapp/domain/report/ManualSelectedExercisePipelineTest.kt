@@ -106,6 +106,38 @@ class ManualSelectedExercisePipelineTest(private val selected: ExerciseType) {
         assertTrue(vm.getRepRecords().isEmpty())
     }
 
+    @Test fun briefLowVisibilityThroughRealMeasurementPathPreservesSelectedCounterAndAnalysis() {
+        val counter = ExerciseCounter()
+        val engine = RepAnalysisEngine()
+        var time = 1000L
+        var completed = 0
+        fun feed(angle: Double, visible: Boolean = true) {
+            val landmarks = points(angle).let { if (visible) it else it.map { p -> p.copy(visibility = .1f) } }
+            val measurement = PoseAngleExtractor.measurePose(selected.name, SevenPoseFixtures.pose(landmarks), view)
+            val features = if (measurement.isEvaluable) RepFrameFeatureExtractor.extract(landmarks, selected.name, view,
+                1.0, time, measurement.valueDeg) else null
+            val result = counter.processFrame(selected.name, measurement.valueDeg, time, features?.leftElbow, features?.rightElbow)
+            time += 150
+            assertFalse("Short visibility dropout must not reset $selected", result.pendingReset)
+            if (!visible) { assertFalse(result.evaluable); assertTrue(result.completions.isEmpty()); return }
+            engine.observe(requireNotNull(features))
+            for (rep in result.completions) {
+                val analysis = requireNotNull(engine.complete(rep.repNumber, activeSide = rep.activeSide,
+                    motionStartedAtMs = rep.motionStartedAtMs))
+                assertEquals(selected.name, analysis.exerciseType)
+                completed++
+            }
+        }
+        repeat(3) { feed(baseline) }
+        repeat(2) { feed((baseline + turningPoint) / 2) }
+        repeat(2) { feed(turningPoint, visible = false) }
+        repeat(3) { feed(turningPoint) }
+        repeat(3) { feed((baseline + turningPoint) / 2) }
+        repeat(3) { feed(baseline) }
+        assertEquals(1, counter.getRepCount())
+        assertEquals(1, completed)
+    }
+
     @Test fun fiveSelectedCyclesPreserveTypeThroughMeasurementAnalysisSpeechReportAndHistoryDto() {
         val vm = MainViewModel()
         val counter = ExerciseCounter()
