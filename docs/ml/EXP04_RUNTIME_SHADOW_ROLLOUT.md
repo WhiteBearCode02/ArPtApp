@@ -2,7 +2,7 @@
 
 기준: 2026-11-12. **준비된 구조, NOT_VERIFIED. 실제 EXP04 camera prediction 비활성.**
 
-2026-11-15 실행 업데이트: 최초 기본 입력 PASS 후 별도 디코딩 검사에서 `PIL` 부재로 중단했습니다. 이후 승인된 지정 venv에 Pillow 13.0.0만 복구/import했으나 기존 의존성 누락으로 **pip check FAIL**하여 이후 단계를 중단했습니다. reference·ADB·APK 설치·provisioning·Android native/Golden·camera는 실행하지 않았습니다. [검증 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 상세](EXP04_ENVIRONMENT_REPAIR.md). 기존 rollout/contract gate는 변경하지 않았습니다.
+2026-11-15 최신 재개: 사용자 요청으로 `pip check` 경고는 보존하되 Golden gate에서 제외했습니다. 추가 설치 없이 실제 runtime/source/입력·Python reference·bundle 검증 PASS 후, 승인된 SM-S908N에서 `.exp04` 설치/private provisioning·Android native·7장 전처리 exact parity·actual Golden도 **PASS**했습니다. **contract NOT_VERIFIED / Camera NOT_RUN 유지**입니다. [PC 결과](EXP04_GOLDEN_RUN_20261115.md) · [Android 결과](EXP04_ANDROID_GOLDEN_RUN_20261115.md) · [이전 이력](EXP04_ACTUAL_GOLDEN_VALIDATION.md). Android rollout/contract gate는 변경하지 않았습니다.
 
 ## 상태와 모델 선택
 
@@ -35,7 +35,7 @@ YOLO는 어떤 운동 결과·반복 횟수·점수·TTS·Supabase exercise도 �
 
 EXP04 빌드에 `-PprivateExp02Apk=true`를 사용하지 마세요. 해당 기존 옵션은 EXP02 소유자 전용 별도 산출물 정책이며 EXP04 재배포 허가가 아닙니다. 일반 APK에는 loose YOLO weight·RGB·tensor·검증 사진이 포함되지 않습니다.
 
-## 이후 기기 단계 (이번에 미실행)
+## 기기 실행 절차 (2026-11-15 승인된 실기기에서 완료)
 
 운동/기록 저장 중이 아닐 때에만 본인 한 대를 연결하고 USB 허용 후 진행합니다. 설치·instrumentation은 앱을 재시작할 수 있습니다. 기존 기본 앱은 삭제/초기화하지 않습니다.
 
@@ -52,7 +52,7 @@ $serial = 'adb devices에서 확인한 본인 기기 serial'
 
 실제 모델 목적지는 앱 private `noBackupFilesDir/yolo/airptcoach_yolo26n_exp04_7class_fp32.tflite`입니다. exact 이름·크기·hash, 각 parent의 canonical path를 확인하고 private temporary file→chmod600→size/hash→atomic mv→final hash 순서입니다. 공유 저장소/외부 서버/원본 삭제/다른 모델 덮어쓰기 없음.
 
-다음은 [실제 Golden 절차](EXP04_ANDROID_INFERENCE_CONTRACT.md)입니다. **현재 7종 TEST 입력은 제공됐지만 디코딩 사전 검사 환경 차단으로 NOT_RUN**입니다. native smoke만으로 VERIFIED/운동 인식 성공을 주장하지 않습니다.
+다음은 [실제 Golden 절차](EXP04_ANDROID_INFERENCE_CONTRACT.md)입니다. **Python reference/bundle과 Android native/전처리/actual Golden은 PASS**입니다. 자동 VERIFIED 승격이나 카메라 인식 성공을 주장하지 않으며, 실제 Camera Shadow 7종 검증은 별도 단계로 남아 있습니다. 기존 remote run/result를 재실행으로 덮어쓰지 마세요.
 
 ## 진단 UI / 실패 처리
 

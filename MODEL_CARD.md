@@ -2,7 +2,7 @@
 
 ## EXP04 · 7-class DEBUG Shadow 후보 (2026-11-12)
 
-2026-11-15: 실제 7종 TEST 입력 제공·최초 기본 입력 PASS 후 Pillow 부재로 별도 디코딩 검사를 중단했습니다. 승인된 지정 venv에 Pillow 13.0.0만 설치/import했으나 기존 의존성 누락으로 **pip check FAIL**하여 후속 단계는 중단했습니다. 실제 Python reference·Android native·Golden·camera는 NOT_RUN이고 계약은 NOT_VERIFIED입니다. [실행 기록](docs/ml/EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 상세](docs/ml/EXP04_ENVIRONMENT_REPAIR.md). 아래 Colab 수치나 이전 빌드 통과를 이번 실행 증거로 대체하지 않습니다.
+2026-11-15: 사용자 요청으로 `pip check` 경고를 보존하되 Golden gate에서 제외했습니다. 추가 설치 없이 PC runtime/source/입력/reference/bundle PASS 후, SM-S908N에서 **Android native·7장 전처리 exact parity·actual Golden PASS**를 확인했습니다. top semanticMatch는 7/7이나 SIDE_BEND에 BICEP_CURL 추가 검출이 있어 전체 정확도로 해석하지 않습니다. **계약 NOT_VERIFIED / Camera NOT_RUN 유지**입니다. [PC 실제 결과](docs/ml/EXP04_GOLDEN_RUN_20261115.md) · [Android 실제 결과](docs/ml/EXP04_ANDROID_GOLDEN_RUN_20261115.md) · [이전 이력](docs/ml/EXP04_ACTUAL_GOLDEN_VALIDATION.md). 아래 Colab 수치나 이전 빌드 통과를 이번 실행 증거로 대체하지 않습니다.
 
 기본 앱의 EXP02 선택은 유지합니다. EXP04는 `exp04Debug` / `com.example.arptapp.exp04`에만 명시적으로 선택되며 **NOT_VERIFIED**입니다. 모델 존재나 Colab PASS만으로 실제 카메라 추론을 허용하지 않습니다.
 
@@ -10,11 +10,11 @@
 |---|---|
 | ID / 파일 | `yolo26n_exp04_7class_fp32` / `airptcoach_yolo26n_exp04_7class_fp32.tflite` |
 | 실제 로컬 크기 / SHA256 | 9,898,949 bytes / `3e613e94fc1ef3aebbeba309d1b31d7ba6fc71a19274c9b2946793fe493eb84d` |
-| PC LiteRT로 관찰한 tensor | FLOAT32 `[1,3,640,640]` → FLOAT32 `[1,11,8400]`; load/allocate 확인, 이미지 inference 미실행 |
+| PC LiteRT로 관찰한 tensor | FLOAT32 `[1,3,640,640]` → FLOAT32 `[1,11,8400]`; load/allocate 및 실제 7장 inference·reference 생성 PASS |
 | class ID 순서 | 0 SQUAT · 1 SHOULDER_PRESS · 2 BICEP_CURL · 3 PUSH_UP · 4 BENT_OVER_ROW · 5 TRICEPS_EXTENSION · 6 SIDE_BEND |
 | 사용자 제공 source PT SHA256 | `4134fd63e0dc87233bf1dfc9640d86a6e0cb644e92aba4cbb836815379e7f1d3` (이번 PT 파일 재검사 아님) |
-| 사용자 제공 데이터 출처 | Mendeley Data, “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels”, CC BY 4.0. 개별 입력의 출처·TEST 분할·권리 확인은 추후 manifest에 별도 기록 |
-| Android 상태 | native smoke / actual Golden / camera 모두 **NOT_RUN**. source-backed 후보 구현은 Android 검증 증거가 아님 |
+| 사용자 제공 데이터 출처 | Mendeley Data, “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels”, CC BY 4.0. 7개 입력 manifest/provenance의 권리·TEST 선언과 이미지 hash 일치 확인; 원본 split의 독립 재현은 아님 |
+| Android 상태 | SM-S908N(SDK36) native smoke **PASS**, 전처리 exact parity **7/7 PASS**, actual Golden **7/7 PASS**. Camera NOT_RUN / contract NOT_VERIFIED |
 | 공개·저장 정책 | 모델·검증 사진·RGB·tensor·reference는 Git/APK 제외. DEBUG `noBackupFilesDir/yolo/`만 사용, EXP04 assets fallback 없음 |
 
 사용자 제공 Colab 결과이며 이번 PC/Android에서 재현한 수치가 아닙니다:
@@ -29,7 +29,7 @@
 
 Holdout 9,031 images/labels, background/corrupt/subject leakage 각 0. PT↔LiteRT 35장(종목별 5장) parity: Top1 1.0, mean box IoU 1.0, mean confidence delta 0, missing 0, PASS. 제공된 mAP50/mAP50-95 drop은 0.0008/0.0003이며 반올림 지표로 다시 계산한 값으로 대체하지 않았습니다. 이 offline engineering gate PASS를 모바일 accuracy·FPS·발열·장시간 안정성으로 해석하지 않습니다.
 
-2026-11-15 현재 실제 7종 TEST 프레임·권리 선언은 제공됐지만, Pillow 복구 후에도 pip check가 실패해 Golden prediction/reference를 생성하지 않았습니다. [계약](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md). 아래 EXP02/EXP03 역사 기록과 VERIFIED는 EXP04로 상속하지 않습니다.
+2026-11-15 현재 `exp04_actual_01` PC reference/bundle과 Android native/전처리/actual Golden을 완료했습니다. 최종 native confidence 최대 차이 **3.5762787e-7**, bbox 최대 차이 **0.0001373291px**, count/class/ordering 모두 일치합니다. 이는 실제 카메라 성능/정확도나 VERIFIED 승격을 의미하지 않습니다. [계약](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md). 아래 EXP02/EXP03 역사 기록과 VERIFIED는 EXP04로 상속하지 않습니다.
 
 ## 현재 최종 앱 선택 모델: EXP02 (2026-11-09)
 

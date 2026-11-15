@@ -2,11 +2,11 @@
 
 작업: 2026-11-12~13 / 기존 `ai-v2` 브랜치 / 자동 commit·push·PR·merge 없음.
 
-> 2026-11-15 actual Golden 실행 시도: 최초 기본 입력 PASS 후 추가 디코딩 검사에서 Pillow 부재로 중단했습니다. 이후 사용자 승인으로 Pillow 13.0.0만 복구/import했으나 **pip check FAIL**로 후속 단계를 중단했습니다. reference·Android native·Golden·camera는 NOT_RUN입니다. [실행 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 로그](EXP04_ENVIRONMENT_REPAIR.md). 아래 빌드/테스트 수치는 11월12~13일의 역사 기록이며 이번 재실행 결과가 아닙니다. contract NOT_VERIFIED와 Landmark Primary는 유지합니다.
+> 2026-11-15 최신 재개: 사용자 요청으로 `pip check`를 Golden 필수 gate에서 제외하고 경고는 보존했습니다. 추가 설치 없이 실제 PC runtime/source/입력/reference/bundle PASS 후, SM-S908N에서 `.exp04` 설치/private provisioning·native·전처리 exact parity·actual Golden 7장 모두 PASS했습니다. **contract NOT_VERIFIED / Camera NOT_RUN**입니다. [PC 결과](EXP04_GOLDEN_RUN_20261115.md) · [Android 실제 결과](EXP04_ANDROID_GOLDEN_RUN_20261115.md) · [이전 실패 이력](EXP04_ACTUAL_GOLDEN_VALIDATION.md). 아래 빌드/테스트 수치는 11월12~13일의 역사 기록이며 이번 fresh build 결과가 아닙니다.
 
 ## 결론
 
-7-class 모델별 profile·DEBUG Shadow 연결 기반·private provisioning·실제 Golden 도구를 구현했습니다. **실제 EXP04 실시간 prediction 활성화 아님: contract NOT_VERIFIED, actual Golden / Android native / camera NOT_RUN**입니다. 최초 구현(2026-11-12~13) 당시 실제 7종 TEST 이미지가 없어 임의 이미지 다운로드·생성·외부 업로드·reference 결과 생성은 하지 않았습니다. 2026-11-15 실제 입력 제공 후 Pillow 부재, 복구 후 pip check 실패 순으로 사전 검사가 차단됐습니다.
+7-class 모델별 profile·DEBUG Shadow 연결 기반·private provisioning·실제 Golden 도구를 구현했습니다. **실제 EXP04 실시간 prediction 활성화 아님: contract NOT_VERIFIED, Camera NOT_RUN**입니다. 최초 구현(2026-11-12~13) 당시 실제 7종 TEST 이미지가 없어 임의 이미지 다운로드·생성·외부 업로드·reference 결과 생성은 하지 않았습니다. 2026-11-15에는 이전 환경 차단 이력을 보존하고 사용자 승인 후 PC reference/bundle과 Android native·전처리·actual Golden을 완료했습니다.
 
 기본 앱 EXP02, EXP03 비교 빌드·기존 모델/Golden 증거, Landmark Primary와 기존 7종 관절 분석·카운트·TTS·리포트·V2 저장 구조를 유지했습니다. 최초 구현(2026-11-12~13) 범위에서는 새 외부 API·유료 서비스·LLM/provider·SDK/의존성 설치·Supabase migration/배포·billing 변경이 없었습니다. 후속 승인된 Pillow 한정 복구는 위 최신 기록으로 구분합니다. 기존 서비스의 일반 사용 비용/원격 보안은 이번 로컬 ML 변경 검사로 보장하지 않습니다.
 
@@ -14,11 +14,11 @@
 
 - 로컬 파일: `app/src/main/assets/airptcoach_yolo26n_exp04_7class_fp32.tflite` (원본 보존, Git ignored, APK 제외).
 - 실제 9,898,949 bytes, SHA256 `3e613e94fc1ef3aebbeba309d1b31d7ba6fc71a19274c9b2946793fe493eb84d`.
-- PC LiteRT load/allocate로 관찰: FLOAT32 `[1,3,640,640]` → FLOAT32 `[1,11,8400]`. 이번 EXP04 이미지 inference 없음.
+- PC LiteRT load/allocate로 관찰: FLOAT32 `[1,3,640,640]` → FLOAT32 `[1,11,8400]`. 최초 구현에서는 이미지 inference가 없었고 2026-11-15 후속 재개에서 실제 7회 inference·reference/bundle PASS. Android와 별도 구분합니다.
 - ID 0~6: SQUAT / SHOULDER_PRESS / BICEP_CURL / PUSH_UP / BENT_OVER_ROW / TRICEPS_EXTENSION / SIDE_BEND.
 - 사용자 제공 Colab: holdout 9,031장/labels, 35/35 PT↔LiteRT parity Top1=1 / IoU=1 / confidence delta=0 / missing=0. PT mAP50=.8865/mAP50-95=.7464, LiteRT=.8857/.7460. P/R/F1 및 출처는 [모델 카드](../../MODEL_CARD.md). 이번에 재현한 성능 수치가 아니며 모바일 성능 증거 아님.
 
-## 테스트 결과
+## 최초 구현 테스트 결과 (2026-11-12~13 역사 기록)
 
 | 항목 | 결과 / 범위 |
 |---|---|
