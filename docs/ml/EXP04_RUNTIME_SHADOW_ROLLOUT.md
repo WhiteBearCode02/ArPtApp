@@ -2,6 +2,8 @@
 
 기준: 2026-11-12. **준비된 구조, NOT_VERIFIED. 실제 EXP04 camera prediction 비활성.**
 
+2026-11-15 실행 업데이트: 실제 7종 TEST 입력이 제공되어 기본 입력 검사는 PASS했으나, 추가 디코딩 검사에서 `PIL` 부재로 중단했습니다. reference·ADB·설치·provisioning·Android native/Golden·camera는 이번에 실행하지 않았습니다. [검증 차단 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md). 기존 rollout/contract gate는 변경하지 않았습니다.
+
 ## 상태와 모델 선택
 
 | 빌드 | 모델 / 패키지 | 정책 |
@@ -50,7 +52,7 @@ $serial = 'adb devices에서 확인한 본인 기기 serial'
 
 실제 모델 목적지는 앱 private `noBackupFilesDir/yolo/airptcoach_yolo26n_exp04_7class_fp32.tflite`입니다. exact 이름·크기·hash, 각 parent의 canonical path를 확인하고 private temporary file→chmod600→size/hash→atomic mv→final hash 순서입니다. 공유 저장소/외부 서버/원본 삭제/다른 모델 덮어쓰기 없음.
 
-다음은 [실제 Golden 절차](EXP04_ANDROID_INFERENCE_CONTRACT.md)입니다. **7종 TEST 이미지 미제공으로 현재 NOT_RUN**. native smoke만으로 VERIFIED/운동 인식 성공을 주장하지 않습니다.
+다음은 [실제 Golden 절차](EXP04_ANDROID_INFERENCE_CONTRACT.md)입니다. **현재 7종 TEST 입력은 제공됐지만 디코딩 사전 검사 환경 차단으로 NOT_RUN**입니다. native smoke만으로 VERIFIED/운동 인식 성공을 주장하지 않습니다.
 
 ## 진단 UI / 실패 처리
 

@@ -2,6 +2,8 @@
 
 ## EXP04 · 7-class DEBUG Shadow 후보 (2026-11-12)
 
+2026-11-15: 실제 7종 TEST 입력과 provenance가 제공됐으나, 기본 입력 검사 PASS 뒤 추가 디코딩 검사에서 Pillow/PIL 부재로 중단했습니다. 실제 Python reference·Android native·Golden·camera는 NOT_RUN이고 계약은 NOT_VERIFIED입니다. [실제 실행 기록](docs/ml/EXP04_ACTUAL_GOLDEN_VALIDATION.md). 아래 Colab 수치나 이전 빌드 통과를 이번 실행 증거로 대체하지 않습니다.
+
 기본 앱의 EXP02 선택은 유지합니다. EXP04는 `exp04Debug` / `com.example.arptapp.exp04`에만 명시적으로 선택되며 **NOT_VERIFIED**입니다. 모델 존재나 Colab PASS만으로 실제 카메라 추론을 허용하지 않습니다.
 
 | 항목 | 확인 범위 |
@@ -27,7 +29,7 @@
 
 Holdout 9,031 images/labels, background/corrupt/subject leakage 각 0. PT↔LiteRT 35장(종목별 5장) parity: Top1 1.0, mean box IoU 1.0, mean confidence delta 0, missing 0, PASS. 제공된 mAP50/mAP50-95 drop은 0.0008/0.0003이며 반올림 지표로 다시 계산한 값으로 대체하지 않았습니다. 이 offline engineering gate PASS를 모바일 accuracy·FPS·발열·장시간 안정성으로 해석하지 않습니다.
 
-권리 확인된 실제 7종 TEST 프레임이 아직 없어 Golden prediction/reference를 생성하지 않았습니다. [계약](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md). 아래 EXP02/EXP03 역사 기록과 VERIFIED는 EXP04로 상속하지 않습니다.
+2026-11-15 현재 실제 7종 TEST 프레임·권리 선언은 제공됐지만, 추가 디코딩 사전 검사에서 Pillow가 없어 Golden prediction/reference를 생성하지 않았습니다. [계약](docs/ml/EXP04_ANDROID_INFERENCE_CONTRACT.md) · [rollout](docs/ml/EXP04_RUNTIME_SHADOW_ROLLOUT.md). 아래 EXP02/EXP03 역사 기록과 VERIFIED는 EXP04로 상속하지 않습니다.
 
 ## 현재 최종 앱 선택 모델: EXP02 (2026-11-09)
 

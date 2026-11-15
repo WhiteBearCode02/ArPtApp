@@ -1,6 +1,8 @@
 # EXP04 Android inference contract
 
-기준: 2026-11-12. **NOT_VERIFIED / Android actual Golden NOT_RUN**.
+최신 확인: 2026-11-15. **NOT_VERIFIED / Android actual Golden NOT_RUN**.
+
+실제 TEST 이미지 7장과 manifest/provenance는 제공됐습니다. 기본 입력 검사 PASS 후 추가 디코딩 사전 검사에서 `PIL` 의존성 부재로 중단했습니다. 실제 reference/native/Golden은 아직 실행하지 않았습니다. [실제 실행·차단 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md).
 
 ## 1. 확인한 것과 아직 확인하지 않은 것
 
@@ -8,8 +10,8 @@
 |---|---|
 | 사용자 Colab holdout·PT/LiteRT parity | 제공값 PASS, 이번에 재실행하지 않음. [모델 카드](../../MODEL_CARD.md) |
 | 실제 PC 파일 / LiteRT load·allocate | 9,898,949 bytes·아래 SHA256 일치. 실제 tensor shape/dtype 확인. 이미지 inference 미실행 |
-| Android native smoke | NOT_RUN; 테스트 구현/컴파일과 실행은 별개 |
-| Android actual-image Golden | NOT_RUN; 실제 7종 입력 미제공 |
+| Android native smoke | NOT_RUN; 2026-11-15 입력 사전 검사에서 환경 차단 |
+| Android actual-image Golden | NOT_RUN; 실제 7종 입력 제공됨, Pillow 부재로 디코딩 사전 검사 미완료 |
 | Android camera accuracy/FPS/thermal | NOT_RUN; offline 수치로 대신하지 않음 |
 
 ID `yolo26n_exp04_7class_fp32`, 파일 `airptcoach_yolo26n_exp04_7class_fp32.tflite`.
@@ -33,9 +35,9 @@ Tensor shape만으로 계약을 역추론하지 않았습니다. 기존 EXP03에
 
 threshold는 기존 초기 공학 기준을 유지합니다: raw confidence `> .10`, NMS IoU `.70`, maxDetections 300, stable confidence `.60` 및 기존 시간 안정화. holdout 최적값이라는 뜻이 아니며 FAIL 후 자동 조정하지 않습니다.
 
-## 3. 실제 입력 제공 전: fixture 템플릿
+## 3. Fixture 템플릿과 실제 입력 상태
 
-현재 아래 폴더에는 이미지가 없고 `manifest.json`의 rightsCleared는 모두 false입니다. 전체 `local_validation/`은 Git ignored이며 APK source가 아닙니다.
+공개 manifest example은 rightsCleared=false인 템플릿입니다. 실제 ignored 로컬 manifest에는 사용자가 제공한 7장과 권리·TEST provenance가 있으며 rightsCleared=true입니다. 이미지 decode/bounds/hash 검증은 아직 미완료입니다. 전체 `local_validation/`은 Git ignored이며 APK source가 아닙니다.
 
 ```text
 local_validation/exp04_golden/
@@ -48,14 +50,14 @@ local_validation/exp04_golden/
 │  ├─ 4_BENT_OVER_ROW/
 │  ├─ 5_TRICEPS_EXTENSION/
 │  └─ 6_SIDE_BEND/
-└─ runs/<unique-id>/       # 아직 실제 reference 없음
+└─ runs/<unique-id>/       # 실제 reference 아직 없음: 사전 검사 환경 차단
 ```
 
 공개 원본은 [manifest example](exp04-actual-golden.manifest.example.json)입니다. 다른 PC에서는 이 예시를 위 ignored 경로로 복사하고 해당 inputs 폴더를 생성하세요. 기존 manifest/검증 결과를 덮어쓰지 마세요.
 
-사용자가 직접 제공할 자료: 종목별 TEST 원본 대표 프레임 최소 1장, 실제 운동/촬영 방향, 데이터셋 출처·버전·TEST split·원본 영상/프레임 식별자를 rightsBasis에 기록하고 권리 확인 후에만 rightsCleared=true. 사용자 제공 출처는 Mendeley의 “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels” / CC BY 4.0이며 이번 작업에서 개별 자료의 권리·영상 분할을 독립적으로 확인하지 않았습니다. 무작위 인터넷 이미지·생성 이미지를 대체 입력으로 사용하지 않습니다.
+실제 입력은 종목별 TEST 원본 대표 프레임 최소 1장, 실제 운동/촬영 방향, 데이터셋 출처·버전·TEST split·원본 영상/프레임 식별자를 rightsBasis에 기록하고 권리 확인 후에만 rightsCleared=true여야 합니다. 2026-11-15 사용자 제공 7종 manifest에는 이 선언이 채워져 있습니다. 출처는 Mendeley의 “A Multi-View Raw Video Dataset of Seven Fitness Exercises with Good/Bad Form Labels” / CC BY 4.0이며 이번 작업에서 개별 자료의 권리·영상 분할을 독립적으로 확인하지 않았습니다. 무작위 인터넷 이미지·생성 이미지를 대체 입력으로 사용하지 않습니다.
 
-## 4. 이미지 제공 후 PC reference (이번에는 실행하지 않음)
+## 4. PC reference (사전 검사 완료 후 실행)
 
 기존 로컬 venv/공식 `ai_edge_litert.interpreter.Interpreter`, NumPy, Torch, Pillow, OpenCV **4.13.0**을 사용합니다. 새 runtime/패키지는 설치하지 않았습니다. exact source wheel이 없으면 중단하며 자동 다운로드하지 않습니다.
 
@@ -65,7 +67,7 @@ local_validation\.venv\Scripts\python.exe scripts/generate-exp04-actual-golden.p
 local_validation\.venv\Scripts\python.exe scripts/transfer-exp04-actual-golden.py check-bundle --bundle local_validation/exp04_golden/runs/exp04_actual_01
 ```
 
-`--check-inputs`는 모델을 실행하지 않습니다. 현재 템플릿은 rights 미확인으로 의도적으로 실패합니다. 본 실행은 실제 모델 identity→tensor metadata→실제 inference 후에만 RGB/input.f32/output.f32/reference.json을 새 run에 기록합니다. reference.json은 마지막에 생성합니다. 오류가 발생한 부분 run은 성공 증거가 아니며 새 ID로 다시 실행해야 합니다. 오래된 결과를 삭제/덮어쓰지 않습니다.
+`--check-inputs`는 모델을 실행하지 않으며 실제 로컬 manifest의 기본 검사는 PASS했습니다. 다만 이 옵션만으로는 이미지 decode/bounds/내용 중복·provenance hash까지 검사하지 않으므로 추가 사전 검사가 필요합니다. 2026-11-15에는 이 추가 검사에서 Pillow가 없어 중단했습니다. 공개 템플릿은 별도로 권리 미확인 상태를 유지합니다. 본 실행은 실제 모델 identity→tensor metadata→실제 inference 후에만 RGB/input.f32/output.f32/reference.json을 새 run에 기록합니다. reference.json은 마지막에 생성합니다. 오류가 발생한 부분 run은 성공 증거가 아니며 새 ID로 다시 실행해야 합니다. 오래된 결과를 삭제/덮어쓰지 않습니다.
 
 ## 5. Android 실행 준비 (기기 작업은 별도 동의 후)
 
