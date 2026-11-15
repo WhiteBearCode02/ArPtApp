@@ -42,15 +42,30 @@ object ExerciseMeasurements {
     }
 
     /** Anatomical RIGHT is positive even if x is mirrored. Both anatomical axes must be visible. */
-    fun signedLateral(points: List<Landmark>, aspect: Double): Double? {
-        if (!valid(points, aspect, 11, 12, 23, 24)) return null
+    fun signedLateral(points: List<Landmark>, aspect: Double): Double? = lateralObservation(points, aspect).angle
+
+    /** Shared geometry verdict for measurement and DEBUG reasons. No relaxed visibility/ROM. */
+    internal data class LateralObservation(val angle: Double?, val reason: String, val minVisibility: Float)
+    internal fun lateralObservation(points: List<Landmark>, aspect: Double): LateralObservation {
+        val joints = listOf(11, 12, 23, 24).mapNotNull(points::getOrNull)
+        val visibility = joints.map { it.visibility }.filter { it.isFinite() }.minOrNull() ?: 0f
+        fun invalid(reason: String) = LateralObservation(null, reason, visibility)
+        if (joints.size != 4) return invalid("MISSING_LANDMARK")
+        if (!aspect.isFinite() || aspect <= 0 || joints.any {
+                !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() || !it.visibility.isFinite()
+            }) return invalid("NON_FINITE_OR_ASPECT")
+        if (joints.any { it.visibility < ExerciseMotionPolicy.VISIBILITY || it.visibility > 1f }) return invalid("LOW_VISIBILITY")
         val shoulderWidth = (points[12].x - points[11].x) * aspect
         val hipWidth = (points[24].x - points[23].x) * aspect
-        if (abs(shoulderWidth) < ExerciseMotionPolicy.MIN_SHOULDER_AXIS_WIDTH || abs(hipWidth) < ExerciseMotionPolicy.MIN_HIP_AXIS_WIDTH || sign(shoulderWidth) != sign(hipWidth)) return null
+        if (abs(shoulderWidth) < ExerciseMotionPolicy.MIN_SHOULDER_AXIS_WIDTH) return invalid("SHOULDER_AXIS_TOO_NARROW")
+        if (abs(hipWidth) < ExerciseMotionPolicy.MIN_HIP_AXIS_WIDTH) return invalid("HIP_AXIS_TOO_NARROW")
+        if (sign(shoulderWidth) != sign(hipWidth)) return invalid("AXIS_SIGN_MISMATCH")
         val dx = ((points[11].x + points[12].x - points[23].x - points[24].x) / 2) * aspect
         val dy = (points[23].y + points[24].y - points[11].y - points[12].y) / 2
-        if (dy <= 1e-5) return null
-        return Math.toDegrees(atan2(dx * sign(shoulderWidth), dy.toDouble())).takeIf { abs(it) <= ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG }
+        if (dy <= 1e-5) return invalid("TORSO_VERTICAL_DEGENERATE")
+        val angle = Math.toDegrees(atan2(dx * sign(shoulderWidth), dy.toDouble()))
+        return if (abs(angle) <= ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG)
+            LateralObservation(angle, "VALID", visibility) else invalid("OUTSIDE_60_DEG_RANGE")
     }
 
     internal fun elbows(type: String, points: List<Landmark>, view: CameraView, aspect: Double): ExerciseMeasurement {
@@ -62,7 +77,7 @@ object ExerciseMeasurements {
         val l = elbow(0); val r = elbow(1)
         val representative = listOfNotNull(l, r).filter { it.isEvaluable }.let { values ->
             if (type == "BICEP_CURL") values.minByOrNull { it.valueDeg!! } else values.maxByOrNull { it.minVisibility }
-        } ?: unavailable(view)
+        } ?: listOfNotNull(l, r).maxByOrNull { it.minVisibility } ?: unavailable(view)
         fun upper(side: Int) = if ((if (side == 0) l else r)?.isEvaluable == true)
             inclination(points, 13 + side, 11 + side, aspect, upward = type == "TRICEPS_EXTENSION") else null
         val line = if (type == "PUSH_UP" && view == CameraView.SIDE)

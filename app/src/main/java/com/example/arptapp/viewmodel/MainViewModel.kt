@@ -12,6 +12,8 @@ import com.example.arptapp.domain.report.RepReportAnalyzer
 import com.example.arptapp.domain.report.*
 import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.domain.session.SessionExerciseLock
+import com.example.arptapp.domain.session.SessionExerciseLockChange
+import com.example.arptapp.domain.session.SessionExerciseSelectionSource
 
 /**
  * 운동 세션의 화면 상태와 수집 기록만 소유합니다.
@@ -22,10 +24,41 @@ class MainViewModel : ViewModel() {
     private val reportAnalyzer = RepReportAnalyzer()
     private val sessionLock = SessionExerciseLock()
     val sessionExerciseType: ExerciseType get() = sessionLock.sessionExerciseType
+    val sessionSelectionSource: SessionExerciseSelectionSource get() = sessionLock.selectionSource
 
-    /** Only call with the classifier's stable result during an active session. */
+    /**
+     * Explicit user-choice boundary. Validation and admission precede every destructive reset:
+     * cancelling, unsupported input, or a duplicate start cannot erase an active session's reps.
+     * The Activity resets its counter/analysis components only after this method returns true.
+     */
+    fun beginSession(selectedExercise: ExerciseType): Boolean {
+        if (!sessionLock.lockSelectedExercise(selectedExercise)) return false
+        records.clear()
+        structuredReps.clear()
+        _exerciseType.value = selectedExercise.name
+        return true
+    }
+
+    /** Legacy automatic path only; user-selected sessions treat classifier results as diagnostics. */
     fun observeDetectedExercise(type: ExerciseType): Boolean = sessionLock.observe(type).also { locked ->
         if (locked) _exerciseType.value = sessionExerciseType.name
+    }
+
+    /**
+     * Legacy landmark-only admission; manual sessions cannot be changed through this API.
+     * An automatically selected unfinished initial mistake may be corrected once, but
+     * neither a stale stable value nor a reset external counter can change a completed session.
+     * Records are NOT cleared here: their presence is an independent completed-rep boundary.
+     */
+    fun observeStableDetectedExercise(
+        stableDetectedExercise: ExerciseType,
+        currentCandidate: ExerciseType,
+        completedRepCount: Int
+    ): SessionExerciseLockChange {
+        val completed = if (completedRepCount < 0) completedRepCount else maxOf(completedRepCount, records.size)
+        return sessionLock.observeStable(stableDetectedExercise, completed, currentCandidate).also { change ->
+            if (change != SessionExerciseLockChange.NONE) _exerciseType.value = sessionExerciseType.name
+        }
     }
     private fun effectiveType(legacyType: String) = if (sessionExerciseType in SessionExerciseLock.supported)
         sessionExerciseType.name else legacyType.uppercase()

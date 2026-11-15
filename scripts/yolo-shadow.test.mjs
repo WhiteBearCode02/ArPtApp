@@ -49,10 +49,12 @@ test("shadow UI and logging are unreachable in non-debug activity paths", () => 
   assert.match(read("app/src/main/res/layout/view_yolo_diagnostics_panel.xml"), /id="@\+id\/tvYoloDiagnostics"/)
 })
 
-test("only the original classifier adapter feeds workout type selection", () => {
+test("original landmark adapter remains diagnostic while manual selection owns session routing", () => {
   assert.match(dashboard, /updateCurrentExerciseType\(primaryExerciseDetector.detect\(LandmarkDetectionFrame/)
   assert.match(dashboard, /primaryExerciseDetector = LandmarkExerciseDetector\(fallbackExerciseClassifier\)/)
   assert.doesNotMatch(dashboard, /observeDetectedExercise\(yolo|updateCurrentExerciseType\(.*yolo/i)
+  assert.doesNotMatch(dashboard, /mainViewModel.observe(?:Stable)?DetectedExercise\(/)
+  assert.match(dashboard, /mainViewModel.beginSession\(selectedExercise\)/)
 })
 
 test("unavailable shadow paths cannot copy source frames and use a dedicated lifecycle", () => {

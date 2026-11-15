@@ -29,6 +29,7 @@ import com.example.arptapp.domain.analyzer.PoseAngleExtractor
 import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.domain.classifier.ExerciseClassifier
 import com.example.arptapp.domain.classifier.ExerciseType
+import com.example.arptapp.domain.session.ExerciseCameraViewPolicy
 import com.example.arptapp.data.model.Landmark
 import com.example.arptapp.data.model.PoseData
 import com.example.arptapp.data.model.toAngleSequence
@@ -45,6 +46,8 @@ import com.example.arptapp.ui.camera.LandmarkExerciseDetector
 import com.example.arptapp.domain.detection.*
 import com.example.arptapp.ui.feedback.FeedbackManager
 import com.example.arptapp.ui.dashboard.DashboardUiPolicy
+import com.example.arptapp.ui.dashboard.WorkoutExerciseUiFormatter
+import com.example.arptapp.ui.dashboard.WorkoutSelectionDialog
 import com.example.arptapp.ui.dashboard.CameraZoomUi
 import com.example.arptapp.ui.dashboard.PersonalReferenceDialog
 import com.example.arptapp.ui.dashboard.DebugValidationControls
@@ -81,6 +84,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private var posePeopleCount = 0
     private var shadowThermalStatus = -1
     private var lastShadowLogAt = 0L
+    private var lastMeasurementDiagnosticAt = 0L
     private val yoloSessionDiagnostics = if (BuildConfig.DEBUG)
         YoloSessionDiagnosticsBridge(
             collector = YoloSessionDiagnosticsCollector(com.example.arptapp.ui.camera.yolo.YoloBuildProfile.identity),
@@ -112,6 +116,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
     private val calibrationFrames = mutableListOf<List<Float>>()
     private var calibrationExercise: ExerciseType? = null
     private var referenceChoiceDialog: AlertDialog? = null
+    private var exerciseChoiceDialog: AlertDialog? = null
     private var yoloDiagnosticsExpanded = false
     private var debugValidationControls: DebugValidationControls? = null
     private var sessionLocalOnlyValidation = false
@@ -298,7 +303,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         // 운동 시작 버튼
         binding.btnStartExercise.setOnClickListener {
             if (calibrationExercise != null) return@setOnClickListener
-            startExercise()
+            showExerciseSelection()
         }
 
         // 운동 종료 버튼
@@ -381,41 +386,47 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         binding.tvPoseFeedback.text = "${type.displayName} 기준 기록 ${calibrationFrames.size}/300 · 한 동작을 마치고 기준 저장을 누르세요"
     }
 
-    private fun startExercise() {
+    /** Opening/cancelling the picker never starts or resets a session. */
+    private fun showExerciseSelection() {
+        if (isFinishing || isDestroyed || exerciseChoiceDialog?.isShowing == true ||
+            !DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null).startExerciseEnabled) return
+        val selectedView = cameraView
+        exerciseChoiceDialog = WorkoutSelectionDialog.show(this, selectedView) { selectedExercise ->
+            if (cameraView != selectedView) return@show
+            startExercise(selectedExercise)
+        }.also { dialog -> dialog.setOnDismissListener { exerciseChoiceDialog = null } }
+    }
+
+    /** The user's supported selection, never a detector prediction, owns the whole session. */
+    private fun startExercise(selectedExercise: ExerciseType) {
+        if (isFinishing || isDestroyed) return
         if (!DashboardUiPolicy.buttonState(isExercising, calibrationExercise != null).startExerciseEnabled) return
-        if (cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN) {
-            Toast.makeText(this, "촬영 방향을 먼저 선택해 주세요.", Toast.LENGTH_SHORT).show()
+        if (!ExerciseCameraViewPolicy.canStart(selectedExercise, cameraView)) {
+            Toast.makeText(this, "선택한 운동에 맞는 촬영 방향을 확인해 주세요.", Toast.LENGTH_SHORT).show()
             return
         }
-        val startingSpeech = com.example.arptapp.domain.report.ExerciseSpeechFormatter.sessionStart(detectedExerciseType)
-        feedbackManager.resetSession()
+        // A completed report remains available until a NEW valid selection is confirmed.
+        // The disabled start control and repeated state checks prevent restarting an active session.
+        mainViewModel.resetSession()
+        if (!mainViewModel.beginSession(selectedExercise)) return
+        val startingSpeech = com.example.arptapp.domain.report.ExerciseSpeechFormatter.sessionStart(selectedExercise)
         sessionLocalOnlyValidation = debugValidationControls?.freezeLocalOnlyForSession() == true
         sessionOwnerId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
         isExercising = true
         setYoloDiagnosticsExpanded(false) // Start with the camera and workout information, not debug details.
-        mainViewModel.resetSession()
         completedYoloDiagnosticsJson = null
         yoloSessionDiagnostics?.begin(System.currentTimeMillis(), SystemClock.uptimeMillis(), cameraView)
         cameraController.invalidateShadowEvidence()
-        repAnalysisEngine.reset()
-        repFeedbackUntilMs = 0L
+        resetSessionMeasurementState()
         startTime = System.currentTimeMillis()
         repetitionCount = 0
-        currentRepAngles.clear()
-        currentRepErrorTags.clear()
-        currentMaxSwayX = 0f
-        lastAccelerationX = null
-
-        exerciseCounter.resetSession()
         fallbackExerciseClassifier.reset()
         detectedExerciseType = ExerciseType.UNKNOWN
-        personalSequence = emptyList()
+        personalSequence = referenceRepository.load(sessionOwnerId, selectedExercise.name, cameraView)?.sequence().orEmpty()
         applyDashboardControlState()
         binding.tvCount.text = "0"
-        binding.tvCountUnit.text = getString(R.string.dashboard_count_waiting)
         updateDetectedExerciseUi(ExerciseType.UNKNOWN)
 
-        binding.tvDashboardTitle.text = "운동 중"
         binding.btnStartExercise.visibility = View.GONE
         binding.btnEndExercise.visibility = View.VISIBLE
 
@@ -475,7 +486,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
         // 결과/기록/상세 화면이 같은 키·단위·구버전 읽기 계약을 사용한다.
         val data = WorkoutReportData.create(
-            exerciseType = sessionExerciseType.displayName,
+            exerciseType = ExerciseType.display(report.exerciseType),
             totalCount = report.totalReps,
             durationSeconds = elapsedTime,
             analysesJson = com.example.arptapp.data.StructuredReportCodec.encode(
@@ -529,7 +540,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val mainPersonLandmarks = MainPersonSelector.select(frame.people, { it.x() }, { it.y() })
         if (mainPersonLandmarks != null) {
             captureReferenceFrame(mainPersonLandmarks)
-            // ONLY the existing landmark classifier can feed the workout lock. YOLO is observational.
+            // Diagnostic only: neither landmark predictions nor YOLO can select/relock this session.
             updateCurrentExerciseType(primaryExerciseDetector.detect(LandmarkDetectionFrame(mainPersonLandmarks, cameraView,
                 frame.imageWidth.toDouble() / frame.imageHeight)).exerciseType)
             if (isExercising) {
@@ -541,14 +552,18 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
                 calibrationFrames.clear()
                 binding.tvPoseFeedback.text = "관절을 다시 찾는 중 · 기준 동작을 처음부터 반복해 주세요"
             }
-            invalidatePendingAnalysis()
+            if (isExercising) {
+                val counterFrame = exerciseCounter.processFrame(sessionExerciseType.name, null, frame.timestampMs)
+                if (counterFrame.pendingReset) clearPendingAnalysisFrames()
+                renderMeasurementDiagnostic(counterFrame, null, null, null, frame.imageWidth.toDouble() / frame.imageHeight)
+            }
             fallbackExerciseClassifier.reset()
             binding.tvPoseFeedback.text = "측정 대기 · 전신이 화면에 들어오도록 위치를 조정해 주세요"
             updateCurrentExerciseType(ExerciseType.UNKNOWN)
             binding.overlayView.clearResults()
         }
         posePeopleCount = frame.people.size
-        // Primary lock remains authoritative; shadow callbacks only read this admission context.
+        // The manually selected lock is authoritative; shadow callbacks only read this context.
         yoloSessionDiagnostics?.updateContext(sessionExerciseType, shadowThermalStatus)
         renderYoloShadowDiagnostic()
     }
@@ -596,20 +611,36 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     /** 관절 유실/촬영 방향 변경 시 미완성 회차를 폐기해 서로 다른 동작을 합산하지 않는다. */
     private fun invalidatePendingAnalysis() {
-        repAnalysisEngine.reset()
         exerciseCounter.invalidatePendingRep()
+        clearPendingAnalysisFrames()
+    }
+
+    /** Reset unfinished analysis only when the counter's shared continuity boundary expires. */
+    private fun clearPendingAnalysisFrames() {
+        repAnalysisEngine.reset()
         currentRepAngles.clear()
         currentRepErrorTags.clear()
+        currentMaxSwayX = 0f
     }
 
     /**
      * 측정 가능 여부 → 코칭 → 회차 카운팅 → 회차 기록의 순서를 유지한다.
-     * 측정 불가능한 프레임은 회차를 중단하며, DTW 입력은 최대 300프레임으로 제한한다.
+     * 짧은 측정 누락은 건너뛰고, 1초 이상 유실 시 미완성 회차만 중단한다. DTW는 최대 300프레임.
      */
     private fun processLandmarks(landmarks: List<NormalizedLandmark>, aspectRatio: Double, frameTimestampMs: Long) {
         if (sessionExerciseType !in com.example.arptapp.domain.session.SessionExerciseLock.supported) return
         val poseData = landmarks.toPoseData()
         val measurement = poseAngleExtractor.measurePose(sessionExerciseType.name, poseData, cameraView, aspectRatio)
+        val frameFeatures = if (measurement.isEvaluable) com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
+            poseData.landmarks, sessionExerciseType.name, cameraView, aspectRatio, frameTimestampMs, measurement.valueDeg)
+            else null
+        // Count admission and analysis share ONE continuity verdict, including recovery after
+        // a gap without callbacks. Only real valid samples reach either engine.
+        val counterFrame = exerciseCounter.processFrame(sessionExerciseType.name,
+            measurement.valueDeg.takeIf { measurement.isEvaluable }, frameTimestampMs,
+            frameFeatures?.leftElbow, frameFeatures?.rightElbow)
+        if (counterFrame.pendingReset) clearPendingAnalysisFrames()
+        renderMeasurementDiagnostic(counterFrame, measurement, frameFeatures, poseData.landmarks, aspectRatio)
         val assessment = if (sessionExerciseType == ExerciseType.SQUAT && measurement.isEvaluable) {
             FormErrorAnalyzer.assessSquat(landmarks, cameraView, aspectRatio)
         } else null
@@ -620,8 +651,7 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         binding.overlayView.setFeedback(feedback)
         binding.tvPoseFeedback.text = if (measurement.isEvaluable && SystemClock.uptimeMillis() < repFeedbackUntilMs)
             repPriorityFeedback else feedback.message
-        if (!measurement.isEvaluable) {
-            invalidatePendingAnalysis()
+        if (!counterFrame.evaluable) {
             return
         }
         // 긴 정지 구간에도 DTW 메모리/계산량이 무한히 증가하지 않도록 최근 프레임만 보관한다.
@@ -641,12 +671,15 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         val currentAngle = measurement.valueDeg ?: return
         // Submission timeline, not delayed UI callback time. Only relative times leave the engine.
         val timestamp = frameTimestampMs
-        val frameFeatures = com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
-            poseData.landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
-            kneeObservation = assessment?.kneeValgus)
-        repAnalysisEngine.observe(frameFeatures)
-        exerciseCounter.processMeasurement(exerciseType, currentAngle, timestamp,
-            frameFeatures.leftElbow, frameFeatures.rightElbow).forEach { completion ->
+        // Keep the squat coaching observation identical to the measured assessment; the scalar
+        // counter inputs above do not depend on form errors.
+        val analyzedFeatures = requireNotNull(frameFeatures).let { features ->
+            if (assessment == null) features else com.example.arptapp.domain.report.RepFrameFeatureExtractor.extract(
+                poseData.landmarks, exerciseType, cameraView, aspectRatio, timestamp, currentAngle,
+                kneeObservation = assessment.kneeValgus)
+        }
+        repAnalysisEngine.observe(analyzedFeatures)
+        counterFrame.completions.forEach { completion ->
             repetitionCount = completion.repNumber
             binding.tvCount.text = repetitionCount.toString()
 
@@ -680,6 +713,35 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
             currentRepErrorTags.clear()
 
         }
+    }
+
+    /** Two updates/second maximum, local DEBUG scalars only; no frames, identity or network. */
+    private fun renderMeasurementDiagnostic(
+        frame: ExerciseCounter.FrameResult,
+        measurement: com.example.arptapp.domain.analyzer.AngleMeasurement?,
+        features: com.example.arptapp.domain.report.RepFrameFeatures?,
+        points: List<Landmark>?, aspect: Double
+    ) {
+        if (!BuildConfig.DEBUG) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastMeasurementDiagnosticAt < 500L) return
+        lastMeasurementDiagnosticAt = now
+        val lateral = if (sessionExerciseType == ExerciseType.SIDE_BEND && points != null &&
+            cameraView == com.example.arptapp.domain.analyzer.CameraView.FRONT)
+            com.example.arptapp.domain.analyzer.ExerciseMeasurements.lateralObservation(points, aspect) else null
+        val snapshot = com.example.arptapp.presentation.diagnostics.MeasurementDiagnosticSnapshot(
+            selected = sessionExerciseType.name, detected = detectedExerciseType.name, view = cameraView,
+            evaluable = frame.evaluable, representative = measurement?.valueDeg,
+            invalidDurationMs = frame.invalidDurationMs, count = exerciseCounter.getRepCount(),
+            phase = exerciseCounter.diagnosticPhase(),
+            reason = if (points == null) "NO_PERSON" else if (cameraView == com.example.arptapp.domain.analyzer.CameraView.UNKNOWN ||
+                (sessionExerciseType == ExerciseType.SIDE_BEND && cameraView != com.example.arptapp.domain.analyzer.CameraView.FRONT))
+                "UNSUPPORTED_CAMERA_VIEW" else lateral?.reason ?: measurement?.quality?.name ?: "MISSING",
+            minimumVisibility = lateral?.minVisibility ?: measurement?.minVisibility,
+            leftElbow = features?.leftElbow, rightElbow = features?.rightElbow, torsoInclination = features?.torsoInclination)
+        val text = com.example.arptapp.presentation.diagnostics.MeasurementDiagnosticFormatter.format(snapshot)
+        binding.yoloDiagnosticsPanel.updateMeasurement(text)
+        Log.d("RepTrace", text)
     }
 
     private fun List<NormalizedLandmark>.toPoseData(): PoseData = PoseData(
@@ -730,24 +792,38 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
 
     private fun updateCurrentExerciseType(nextExerciseType: ExerciseType) {
         detectedExerciseType = nextExerciseType
-        updateDetectedExerciseUi(nextExerciseType)
-        if (!isExercising || !mainViewModel.observeDetectedExercise(nextExerciseType)) return
-        val userId = com.example.arptapp.data.remote.AuthSessionStore.current?.userId.orEmpty()
-        personalSequence = referenceRepository.load(userId, sessionExerciseType.name, cameraView)?.sequence().orEmpty()
-        binding.tvCountUnit.text = sessionExerciseType.displayName
-        binding.tvDashboardTitle.text = "${sessionExerciseType.displayName} 운동 중"
+        // Retain automatic classification for DEBUG comparison, not routing or user-facing labels.
         updateDetectedExerciseUi(nextExerciseType)
     }
 
+    @Suppress("UNUSED_PARAMETER") // Detection continues to be recorded by the DEBUG panel separately.
     private fun updateDetectedExerciseUi(exerciseType: ExerciseType) {
-        val displayName = if (exerciseType == ExerciseType.IDLE) {
-            ExerciseType.UNKNOWN.displayName
-        } else {
-            exerciseType.displayName
-        }
-        binding.tvDetectedExercise.text = if (isExercising && sessionExerciseType != ExerciseType.UNKNOWN)
-            "세션: ${sessionExerciseType.displayName} · 감지: $displayName" else "인식 중: $displayName"
+        val state = WorkoutExerciseUiFormatter.formatManualSession(isExercising, sessionExerciseType)
+        binding.tvDetectedExercise.text = state.detectedText
+        state.title?.let { binding.tvDashboardTitle.text = it }
+        state.countUnit?.let { binding.tvCountUnit.text = it }
         renderWorkoutSummary()
+    }
+
+    /**
+     * Clear old-type pending angles/feedback BEFORE the first frame of a selected session.
+     * This never selects a type or deletes saved records. Detector callbacks cannot call it.
+     */
+    private fun resetSessionMeasurementState() {
+        lastMeasurementDiagnosticAt = 0L
+        exerciseCounter.resetSession()
+        repAnalysisEngine.reset()
+        currentRepAngles.clear()
+        currentRepErrorTags.clear()
+        currentMaxSwayX = 0f
+        lastAccelerationX = null
+        repFeedbackUntilMs = 0L
+        repPriorityFeedback = ""
+        feedbackManager.resetSession()
+        tts?.stop()
+        val message = "${sessionExerciseType.displayName} 측정 대기 · 중립 자세에서 시작해 주세요"
+        binding.overlayView.setFeedback(com.example.arptapp.domain.analyzer.CoachingFeedback(false, emptySet(), message, emptyList()))
+        binding.tvPoseFeedback.text = message
     }
 
     private fun checkCameraPermission() {
@@ -766,6 +842,8 @@ class DashboardActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Sens
         debugValidationControls = null
         referenceChoiceDialog?.dismiss()
         referenceChoiceDialog = null
+        exerciseChoiceDialog?.dismiss()
+        exerciseChoiceDialog = null
         yoloSessionDiagnostics?.finish(System.currentTimeMillis(), SystemClock.uptimeMillis(), sessionExerciseType, shadowThermalStatus)
         // 모델/카메라를 먼저 닫아 native 결과가 종료 중인 화면에 도착하는 것을 차단한다.
         if (::cameraController.isInitialized) cameraController.close()

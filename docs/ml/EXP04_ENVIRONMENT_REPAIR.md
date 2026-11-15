@@ -3,6 +3,8 @@
 2026-11-15 / `ai-v2`. **Pillow 복구 성공, 환경 검사 FAIL로 후속 검증 중단.**
 EXP04 contract는 **NOT_VERIFIED**이며 Production/Primary 변경은 없습니다.
 
+> 이 문서는 당시 Pillow 한정 복구와 `pip check` 차단의 **역사 기록**입니다. 이후 사용자가 `pip check`를 Golden 필수 gate에서 제외하도록 명시적으로 요청했습니다. 추가 설치 없이 실제 runtime/source/입력 검사를 통과해 Python reference·bundle을 생성/검증했고, 기기 재연결 후 Android native·전처리 exact parity·actual Golden도 PASS했습니다. 경고와 아래 원본 로그는 그대로 보존했습니다. [PC 재개 결과](EXP04_GOLDEN_RUN_20261115.md) · [Android 결과](EXP04_ANDROID_GOLDEN_RUN_20261115.md).
+
 ## 1. 이전 오류가 발생한 단계
 
 - 공식 `scripts/generate-exp04-actual-golden.py --check-inputs`: 이전 시도 **PASS**. 이 경로는 PIL 없이 manifest·파일 존재 등을 검사합니다.

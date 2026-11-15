@@ -83,6 +83,13 @@ class YoloDiagnosticsPanel @JvmOverloads constructor(
         setTextIfChanged(binding.tvPerformance, text)
     }
 
+    /** Local-only counter scalars; release callers cannot reveal this view. */
+    internal fun updateMeasurement(text: String) {
+        if (!BuildConfig.DEBUG) return
+        binding.tvMeasurementDiagnostics.visibility = View.VISIBLE
+        setTextIfChanged(binding.tvMeasurementDiagnostics, text)
+    }
+
     /** Debug variant content remains inside the existing bounded scroll viewport, never an overlay. */
     fun attachValidationControls(view: View) {
         if (BuildConfig.DEBUG) (binding.root.getChildAt(0) as? ViewGroup)?.addView(view)

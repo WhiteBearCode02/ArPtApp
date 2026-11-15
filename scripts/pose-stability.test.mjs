@@ -26,11 +26,11 @@ test("physical lens never selects body view in the analysis path", () => {
 
 test("counting and structural analysis use only the locked session type", () => {
   assert.match(dashboard, /val exerciseType = sessionExerciseType.name/)
-  assert.match(dashboard, /exerciseCounter.processMeasurement\(exerciseType, currentAngle, timestamp,/)
-  assert.match(dashboard, /frameFeatures.leftElbow, frameFeatures.rightElbow/)
+  assert.match(dashboard, /exerciseCounter.processFrame\(sessionExerciseType.name,/)
+  assert.match(dashboard, /frameFeatures\?\.leftElbow, frameFeatures\?\.rightElbow/)
   const counter = source("java/com/example/arptapp/domain/counter/ExerciseCounter.kt")
   assert.match(counter, /if \(type == "SQUAT" \|\| type == "SHOULDER_PRESS"\)/)
-  assert.match(counter, /processAngle\(type, angle, timestampMs\)/)
+  assert.match(counter, /processLegacyAngle\(type, requireNotNull\(angle\), timestampMs\)/)
   assert.doesNotMatch(dashboard, /processAngle\(detected|currentExerciseType/)
   const update = dashboard.slice(dashboard.indexOf("private fun updateCurrentExerciseType("), dashboard.indexOf("private fun updateDetectedExerciseUi("))
   assert.doesNotMatch(update, /reset|clear\(|repetitionCount = 0/)

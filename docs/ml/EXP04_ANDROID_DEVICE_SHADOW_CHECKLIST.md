@@ -1,18 +1,18 @@
 # EXP04 실제 기기 Shadow 체크리스트
 
-현재 **NOT_RUN**. 이 템플릿은 실행 결과가 아닙니다. actual Golden/Android native가 검토되고 별도 코드 변경으로 contract를 승격하기 전에는 실시간 EXP04 prediction이 차단됩니다.
+현재 **실제 Camera Shadow는 NOT_RUN**입니다. 아래 카메라 관찰 양식은 실행 결과가 아닙니다. native·7장 전처리·actual Golden은 PASS했지만 별도 검토/코드 변경으로 contract를 승격하기 전에는 실시간 EXP04 prediction이 차단됩니다.
 
-2026-11-15: 7종 TEST 입력/권리·provenance 선언은 제공됐으나 최초 `PIL` 부재로 추가 디코딩 검사를 중단했습니다. 승인 후 Pillow 13.0.0만 복구/import했지만 **pip check FAIL**하여 후속 검사는 미실행입니다. 기기 연결 조회·설치·전송·native·Golden·camera 검증은 시작하지 않았으며 아래 체크 항목을 실행 완료로 표시하지 않았습니다. [실행 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 상세](EXP04_ENVIRONMENT_REPAIR.md).
+2026-11-15: 추가 설치 없이 핵심 runtime/source/입력·Python reference·bundle을 완료했고, 기기 재연결 후 SM-S908N에서 `.exp04` 설치/private provisioning·native·전처리 exact parity·actual Golden이 PASS했습니다. 사용자 요청으로 `pip check` 경고는 보존하되 Golden gate에서 제외했습니다. contract는 NOT_VERIFIED이며 아래 실제 운동/카메라 관찰 항목은 미실행입니다. [PC 결과](EXP04_GOLDEN_RUN_20261115.md) · [Android 결과](EXP04_ANDROID_GOLDEN_RUN_20261115.md).
 
 ## 선행 조건
 
 - [ ] 본인 기기·촬영 자료 사용 허가, 다른 사람이 프레임에 없음
 - [ ] 7종 실제 TEST 프레임의 출처/권리/subject split 확인; Git/APK/외부 업로드 없음
-- [ ] PC reference 실제 inference 및 Android exact tensor/final detection 비교 기록
-- [ ] exact 모델 load/metadata/Android native invoke 증거, 잘못된 모델 거부 확인
-- [ ] FAIL 증거 보존, confidence/NMS/stabilizer threshold 조작 없음
+- [x] PC reference 실제 inference 및 Android exact tensor/final detection 비교 기록
+- [x] exact 모델 load/metadata/Android native invoke 증거, EXP03 descriptor 불일치 거부 확인. 별도 EXP03 파일 역방향 테스트는 NOT_RUN
+- [x] FAIL 증거 보존, confidence/NMS/stabilizer threshold 조작 없음
 - [ ] 별도 검토 후 승격. 코드 생성/합성 테스트/Colab PASS만으로 승격하지 않음
-- [ ] 명시적 exp04Debug, 기존 앱/EXP02/03 증거·기록 보존, Landmark Primary / release OFF
+- [x] 명시적 exp04Debug, 기존 앱/EXP02/03 증거·기록 보존, Landmark Primary / release OFF
 
 ## 운동 순서와 최소 관찰 시간
 

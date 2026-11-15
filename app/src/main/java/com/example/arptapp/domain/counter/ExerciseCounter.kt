@@ -6,6 +6,10 @@ import com.example.arptapp.data.model.StandardPose
 class ExerciseCounter(private val requiredStableFrames: Int = 3, private val minimumRepDurationMs: Long = 600L) {
     init { require(requiredStableFrames > 0 && minimumRepDurationMs >= 0) }
     private val expanded = ExpandedExerciseCounter(requiredStableFrames, minimumRepDurationMs)
+    private val continuity = MeasurementContinuity()
+    /** Operational result lets the camera reset analysis at exactly the same boundary as counting. */
+    data class FrameResult(val completions: List<CompletedRep>, val evaluable: Boolean,
+                           val pendingReset: Boolean, val invalidDurationMs: Long)
     data class CompletedRep(val repNumber: Int, val activeSide: com.example.arptapp.domain.report.BodySide?,
                             val peakAngle: Double, val outwardDurationMs: Long, val returnDurationMs: Long,
                             val motionStartedAtMs: Long? = null)
@@ -26,6 +30,11 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
 
     /** Abandon an incomplete repetition after occlusion; preserve completed counts. */
     fun invalidatePendingRep() {
+        continuity.reset()
+        clearPendingRep()
+    }
+
+    private fun clearPendingRep() {
         expanded.reset()
         currentState = State.UP
         currentMaxAngle = 0.0
@@ -41,24 +50,11 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
         angle: Double,
         timestampMs: Long = System.currentTimeMillis()
     ): Boolean {
-        val normalizedType = exerciseType.uppercase()
-        if (com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.forExercise(normalizedType) != null)
-            return processMeasurement(normalizedType, angle, timestampMs).isNotEmpty()
-        if (normalizedType != "SQUAT" && normalizedType != "SHOULDER_PRESS") return false
-        if (!angle.isFinite() || angle !in 0.0..180.0) {
-            invalidatePendingRep()
-            return false
-        }
+        return processMeasurement(exerciseType, angle, timestampMs).isNotEmpty()
+    }
 
-        if (activeExerciseType != normalizedType) {
-            activeExerciseType = normalizedType
-            currentState = State.UP
-            currentMaxAngle = 0.0
-            transitionFrames = 0
-            upStartedAtMs = timestampMs
-        }
-
-        return when (normalizedType) {
+    private fun processLegacyAngle(type: String, angle: Double, timestampMs: Long): Boolean {
+        return when (type) {
             "SQUAT" -> processSquatAngle(angle, timestampMs)
             "SHOULDER_PRESS" -> processShoulderPressAngle(angle, timestampMs)
             else -> false
@@ -69,27 +65,54 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
 
     /** Camera path: explicit bilateral scalars are mandatory for alternating curls. */
     fun processMeasurement(exerciseType: String, angle: Double?, timestampMs: Long,
-                           leftElbow: Double? = null, rightElbow: Double? = null): List<CompletedRep> {
+                           leftElbow: Double? = null, rightElbow: Double? = null): List<CompletedRep> =
+        processFrame(exerciseType, angle, timestampMs, leftElbow, rightElbow).completions
+
+    /** Accept EVERY camera sample, including missing-person/null measurements. Invalid samples
+     * never count; only expiry resets unfinished work. Completed session counts are untouched.
+     */
+    fun processFrame(exerciseType: String, angle: Double?, timestampMs: Long,
+                     leftElbow: Double? = null, rightElbow: Double? = null): FrameResult {
         val type = exerciseType.uppercase()
-        if (type == "SQUAT" || type == "SHOULDER_PRESS") {
-            val completed = if (angle != null) processAngle(type, angle, timestampMs) else {
-                invalidatePendingRep(); false
-            }
-            return if (completed) listOf(CompletedRep(repCount, null, currentMaxAngle,
-                lastEccentricDurationMs, lastConcentricDurationMs)) else emptyList()
-        }
         if (activeExerciseType != type) {
-            expanded.reset(); currentState = State.UP; transitionFrames = 0; currentMaxAngle = 0.0
+            invalidatePendingRep(); continuity.reset()
             activeExerciseType = type
+            upStartedAtMs = timestampMs
         }
-        return expanded.process(type, angle, leftElbow, rightElbow, timestampMs).map { completion ->
+        val supported = type == "SQUAT" || type == "SHOULDER_PRESS" ||
+            com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.forExercise(type) != null
+        fun usable(value: Double?) = value != null && value.isFinite() && value in
+            (if (type == "SIDE_BEND") -com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG..
+                com.example.arptapp.domain.analyzer.ExerciseMotionPolicy.SIDE_BEND_MAX_MEASURABLE_DEG else 0.0..180.0)
+        val valid = supported && if (type == "BICEP_CURL") usable(leftElbow) || usable(rightElbow) else usable(angle)
+        val decision = continuity.observe(valid, timestampMs)
+        if (decision.resetPending) clearPendingRep()
+        fun result(completions: List<CompletedRep> = emptyList()) = FrameResult(completions,
+            decision.evaluable, decision.resetPending, decision.invalidDurationMs)
+        // Curl arms have independent clocks: even when both are absent, advance their dropout
+        // timers. Never supply the representative value as a fabricated left/right arm.
+        if (!decision.evaluable) {
+            if (type == "BICEP_CURL") expanded.process(type, null, null, null, timestampMs)
+            return result()
+        }
+        if (type == "SQUAT" || type == "SHOULDER_PRESS") {
+            val completed = processLegacyAngle(type, requireNotNull(angle), timestampMs)
+            return result(if (completed) listOf(CompletedRep(repCount, null, currentMaxAngle,
+                lastEccentricDurationMs, lastConcentricDurationMs)) else emptyList())
+        }
+        return result(expanded.process(type, angle, leftElbow, rightElbow, timestampMs).map { completion ->
             repCount++; currentMaxAngle = completion.peakAngle
             lastEccentricDurationMs = completion.outwardDurationMs
             lastConcentricDurationMs = completion.returnDurationMs
             CompletedRep(repCount, completion.side, completion.peakAngle,
                 completion.outwardDurationMs, completion.returnDurationMs, completion.startedAtMs)
-        }
+        })
     }
+
+    /** Scalar read-only snapshot, consumed only by DEBUG presentation; not a persistence API. */
+    internal fun diagnosticPhase(): String = if (activeExerciseType in listOf("SQUAT", "SHOULDER_PRESS"))
+        if (currentState == State.DOWN) "TURNED" else "WAIT_TURN ($transitionFrames/$requiredStableFrames)"
+        else expanded.diagnosticPhase()
 
     fun getCurrentMaxAngle(): Double = currentMaxAngle
 
@@ -100,6 +123,7 @@ class ExerciseCounter(private val requiredStableFrames: Int = 3, private val min
     fun getLastConcentricDurationMs(): Long = lastConcentricDurationMs
 
     fun resetSession() {
+        continuity.reset()
         expanded.reset()
         activeExerciseType = null
         currentState = State.UP

@@ -4,12 +4,15 @@ import com.example.arptapp.data.StructuredReportCodec
 import com.example.arptapp.data.RepAnalysisCodec
 import com.example.arptapp.data.history.WorkoutPayloadCodec
 import com.example.arptapp.domain.analyzer.CameraView
+import com.example.arptapp.domain.analyzer.PoseAngleExtractor
+import com.example.arptapp.domain.analyzer.SevenPoseFixtures
 import com.example.arptapp.domain.classifier.ExerciseType
 import com.example.arptapp.domain.counter.ExerciseCounter
 import com.example.arptapp.presentation.report.RepReportUiMapper
 import com.example.arptapp.presentation.report.WorkoutReportData
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.math.tan
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -133,5 +136,89 @@ class SevenExerciseCompatibilityTest {
     @Test fun newExerciseNeverUsesOldUnstructuredAngleGrading() {
         for(type in ExerciseType.supported.drop(2)) assertTrue(RepReportAnalyzer().analyze(
             listOf(com.example.arptapp.model.RepRecord(1,180.0,0f)),type.name).isEmpty())
+    }
+}
+
+/** Signed landmark-to-local-report regression. No model inference, cloud call or camera claim. */
+class SideBendSignedPipelineTest {
+    private val sequence = listOf(0.0, 5.0, 10.0, 16.0, 20.0, 25.0, 20.0, 10.0, 4.0, 0.0)
+
+    private fun assertSignedReport(sign: Double, side: BodySide, sideLabel: String) {
+        val counter = ExerciseCounter()
+        val engine = RepAnalysisEngine()
+        val completed = mutableListOf<StructuredRepAnalysis>()
+        var timestamp = 0L
+        for (sample in sequence) repeat(3) {
+            // Fixture shoulder-to-hip vertical span is .4; translate both shoulders equally to
+            // form the requested signed image-plane angle, keeping visibility and both axes valid.
+            val points = SevenPoseFixtures.points((tan(Math.toRadians(sample * sign)) * .4).toFloat())
+            val measurement = PoseAngleExtractor.measurePose("SIDE_BEND", SevenPoseFixtures.pose(points), CameraView.FRONT)
+            assertTrue(measurement.isEvaluable)
+            assertEquals(sample * sign, requireNotNull(measurement.valueDeg), .001)
+            val features = RepFrameFeatureExtractor.extract(points, "SIDE_BEND", CameraView.FRONT,
+                1.0, timestamp, measurement.valueDeg)
+            assertEquals(measurement.valueDeg, features.lateralFlexion)
+            assertNull(features.leftKnee)
+            assertNull(features.rightKnee)
+            engine.observe(features)
+            counter.processMeasurement("SIDE_BEND", measurement.valueDeg, timestamp).forEach { result ->
+                completed += RepScoreCalculator.score(requireNotNull(engine.complete(result.repNumber,
+                    activeSide = result.activeSide, motionStartedAtMs = result.motionStartedAtMs)))
+            }
+            timestamp += 150L // default dwell and 600 ms minimum remain unchanged
+        }
+
+        assertEquals(1, counter.getRepCount())
+        val rep = completed.single()
+        assertEquals("SIDE_BEND", rep.exerciseType)
+        assertEquals(side, rep.activeSide)
+        assertEquals(25.0, requireNotNull(rep.jointMetrics.peakLateralFlexionDeg), .001)
+        assertNull(rep.jointMetrics.leftKneeMinAngle)
+        assertNull(rep.jointMetrics.rightKneeMinAngle)
+        assertEquals(ExerciseReportLanguage.defaultFeedback("SIDE_BEND"), rep.localPriorityFeedback)
+
+        val card = RepReportUiMapper.map(emptyList(), listOf(rep)).single()
+        assertEquals(rep.localPriorityFeedback, card.priorityTip)
+        assertTrue(card.metricGroups.any { it.title == "몸통 측굴 관찰" })
+        assertEquals(sideLabel, card.metricGroups.single { it.title == "움직인 방향" }.rows.single().value)
+        assertTrue(card.metricGroups.flatMap { it.rows }.none { it.label.contains("무릎") })
+        val phaseLabels = card.metricGroups.single { it.title == "동작 시간" }.rows.map { it.label }
+        assertTrue(phaseLabels.contains("옆으로 기울이는 구간"))
+        assertTrue(phaseLabels.contains("중앙으로 돌아오는 구간"))
+        assertFalse(phaseLabels.contains("내려가는 구간"))
+
+        val structured = WorkoutAnalysisAggregator.aggregate("SIDE_BEND", listOf(rep))
+        val encoded = StructuredReportCodec.encode(emptyList(), structured)
+        val report = WorkoutReportData.create(exerciseType = ExerciseType.SIDE_BEND.displayName,
+            totalCount = 1, averageScore = requireNotNull(rep.score), analysesJson = encoded,
+            feedbackMessage = rep.localPriorityFeedback, workoutDate = "2026-11-15 12:00",
+            durationSeconds = 4, cloudEligible = false)
+        val restored = WorkoutReportData.fromRecord(report.toRecord("fixture-owner"))
+        assertEquals(ExerciseType.SIDE_BEND.displayName, restored.exerciseType)
+        assertEquals(1, restored.totalCount)
+        assertEquals(rep.localPriorityFeedback, restored.feedbackMessage)
+        assertEquals(structured, StructuredReportCodec.decode(restored.analysesJson))
+    }
+
+    @Test fun positiveLandmarkSequencePreservesRightSideFeedbackAndReportLabel() {
+        assertSignedReport(1.0, BodySide.RIGHT, "오른쪽")
+    }
+
+    @Test fun negativeLandmarkSequencePreservesLeftSideFeedbackAndReportLabel() {
+        assertSignedReport(-1.0, BodySide.LEFT, "왼쪽")
+    }
+
+    @Test fun anyRequiredShoulderOrHipOcclusionStaysUnavailableRatherThanNeutral() {
+        for (joint in listOf(11, 12, 23, 24)) {
+            val points = SevenPoseFixtures.points(.1f).toMutableList()
+            points[joint] = points[joint].copy(visibility = .64f)
+            val measurement = PoseAngleExtractor.measurePose("SIDE_BEND", SevenPoseFixtures.pose(points), CameraView.FRONT)
+            assertFalse("$joint must gate signed lateral measurement", measurement.isEvaluable)
+            assertNull(measurement.valueDeg)
+            val features = RepFrameFeatureExtractor.extract(points, "SIDE_BEND", CameraView.FRONT,
+                1.0, 0L, measurement.valueDeg)
+            assertNull(features.representativeAngle)
+            assertNull(features.lateralFlexion)
+        }
     }
 }

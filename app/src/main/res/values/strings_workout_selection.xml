@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workout_selection_title">운동 선택</string>
+    <string name="workout_selection_description">지금 할 운동을 선택해 주세요. 선택한 운동으로 횟수와 자세를 분석하며, 운동 중에는 자동 감지 결과가 달라도 바뀌지 않습니다.</string>
+    <string name="workout_selection_current_view">촬영 방향: %1$s</string>
+    <string name="workout_selection_view_unselected">선택 안 함</string>
+    <string name="workout_selection_either_view_hint">정면 또는 측면 촬영</string>
+    <string name="workout_selection_side_hint">측면 촬영 권장</string>
+    <string name="workout_selection_front_only_hint">정면 촬영 필요</string>
+    <string name="workout_selection_side_recommended">%1$s는 측면 촬영을 권장합니다. 정면에서도 팔꿈치 움직임은 측정하지만, 측면의 몸통·신체 정렬 관찰값은 제공하지 않습니다. 정면으로 계속할까요?</string>
+    <string name="workout_selection_front_required">덤벨 사이드 벤드는 정면에서 몸통의 좌우 기울기를 측정합니다. 준비 화면의 촬영 방향을 정면으로 바꾼 뒤 다시 운동을 선택해 주세요.</string>
+    <string name="workout_selection_choose_view_first">아직 촬영 방향을 선택하지 않았습니다. 준비 화면에서 정면 또는 측면을 선택한 뒤 다시 운동을 선택해 주세요. 촬영 방향은 전면·후면 카메라와 다릅니다.</string>
+    <string name="workout_selection_continue_front">정면으로 계속</string>
+    <string name="workout_selection_change_view">촬영 방향 선택으로 돌아가기</string>
+    <string name="workout_selection_cancel">취소</string>
+</resources>

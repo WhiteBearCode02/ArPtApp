@@ -1,8 +1,16 @@
 # EXP04 actual Golden 실행 기록
 
-날짜: **2026-11-15**, branch `ai-v2`, 시작 HEAD `a91725e`. 시작 시 working tree clean.
+최초 시도: **2026-11-15**, branch `ai-v2`, 시작 HEAD `a91725e`. 당시 시작 시 working tree clean.
 
-## 최신 후속 시도: Pillow 복구 성공 / pip check FAIL
+## 최신 재개: Python / bundle / Android native·전처리·actual Golden PASS
+
+사용자가 `pip check == 0`을 Golden gate에서 제외하도록 명시적으로 요청했습니다. 경고는 보존하고 패키지는 추가 설치하지 않았습니다. 핵심 runtime import·버전과 exact 8.4.202 wheel SHA256, 공식 preflight, 7장 decode/bounds/중복/SHA256/provenance 검사 모두 **PASS**입니다. 실제 EXP04 LiteRT 추론 7회로 새 `exp04_actual_01/reference.json`을 생성했고 bundle 22개 파일 검증도 **PASS**입니다.
+
+최상위 semanticMatch는 7/7이나 SIDE_BEND에 BICEP_CURL 추가 검출 1개가 있습니다. 숨기지 않았으며 이 7장을 전체 모델 accuracy로 표현하지 않습니다. 최초 ADB 조회는 0대였으나 사용자 재연결 후 삼성 SM-S908N 한 대를 확인했습니다. `.exp04` 앱/테스트 설치와 private provisioning, Native Contract, 7장 전처리 exact parity, 실제 Android Golden 모두 **PASS**입니다. contract **NOT_VERIFIED** 및 Camera **NOT_RUN** 유지.
+
+[PC 실제 수치·환경·명령 기록](EXP04_GOLDEN_RUN_20261115.md) · [실기기 결과와 수치 오차](EXP04_ANDROID_GOLDEN_RUN_20261115.md). 아래 복구 실패/최초 실패는 당시 원칙에 따른 역사이며 삭제하지 않았습니다.
+
+## 이전 후속 시도: Pillow 복구 성공 / pip check FAIL
 
 사용자의 Pillow 한정 설치 승인 후 지정 venv에 **Pillow 13.0.0만 추가**했습니다. import PASS, 기존 dependency 변경/삭제 0개, 보호 대상 31개 파일 SHA256 동일입니다. 그러나 `pip check`가 기존 Ultralytics 8.4.176의 미설치 의존성 10개로 **exit 1**을 반환하여 후속 preflight·이미지 검사·reference·ADB·Android 검증은 재개하지 않았습니다. contract **NOT_VERIFIED**를 유지합니다.
 

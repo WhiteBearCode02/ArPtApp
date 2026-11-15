@@ -15,7 +15,19 @@ object AdditionalExerciseClassifier {
         fun usable(s: ExerciseSideFeatures) = s.armVisibility >= P.VISIBILITY && s.elbow?.let { it.isFinite() && it in 0.0..180.0 } == true
         fun upright(s: ExerciseSideFeatures) = s.torsoInclination?.let { it in 0.0..P.UPRIGHT_CLASSIFIER_DEG } == true
         fun extendedLeg(s: ExerciseSideFeatures) = s.legVisibility >= P.VISIBILITY &&
-            s.knee?.let { it >= P.STRAIGHT_LEG_CLASSIFIER_DEG } == true
+            s.knee?.let { it.isFinite() && it in P.STRAIGHT_LEG_CLASSIFIER_DEG..180.0 } == true
+        val lateral = f.signedLateralInclination?.takeIf { it.isFinite() }?.let { abs(it) }
+        if (view == CameraView.FRONT && lateral != null && lateral >= P.sideBend.turnDeg &&
+            sides.all { extendedLeg(it) }) {
+            // A hip-side arm may be bent or occluded during a dumbbell side bend. Only the
+            // lowering arm needs usable/straight/below-shoulder evidence; both legs remain required.
+            // Resolve this signature before curl heuristics: the bent hip-side arm can match a curl.
+            val loweringArm = sides.any { usable(it) && it.elbow!! >= P.SIDE_BEND_ELBOW_MIN_DEG &&
+                it.wristAboveShoulder == false }
+            return if (lateral <= P.SIDE_BEND_CLASSIFIER_MAX_DEG && loweringArm) ExerciseType.SIDE_BEND
+            // Explicit abstention, not null: insufficient arm evidence must not enter squat fallback.
+            else ExerciseType.UNKNOWN
+        }
         val candidates = buildList {
             if (sides.all { usable(it) && it.elbow!! <= P.FLEXED_ELBOW_CLASSIFIER_DEG &&
                     it.upperArmUpInclination?.let { a -> a <= P.UPPER_ARM_CLASSIFIER_DEG } == true && upright(it) })
@@ -30,9 +42,6 @@ object AdditionalExerciseClassifier {
                     it.hip?.let { a -> a <= P.ROW_HIP_MAX_DEG } == true &&
                     it.torsoInclination?.let { a -> a in P.ROW_CLASSIFIER_MIN_DEG..P.ROW_CLASSIFIER_MAX_DEG } == true &&
                     it.elbow!! <= P.FLEXED_ELBOW_CLASSIFIER_DEG }) add(ExerciseType.BENT_OVER_ROW)
-            if (view == CameraView.FRONT && f.signedLateralInclination?.let { abs(it) in P.sideBend.turnDeg..P.SIDE_BEND_CLASSIFIER_MAX_DEG } == true &&
-                sides.all { usable(it) && extendedLeg(it) && it.elbow!! >= P.SIDE_BEND_ELBOW_MIN_DEG && it.wristAboveShoulder == false })
-                add(ExerciseType.SIDE_BEND)
         }
         return if (candidates.size > 1) ExerciseType.UNKNOWN else candidates.singleOrNull()
     }

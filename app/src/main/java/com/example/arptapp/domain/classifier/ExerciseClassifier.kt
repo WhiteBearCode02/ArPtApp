@@ -12,7 +12,11 @@ import kotlin.math.abs
  * dashboard or Analyzer API. Until then, a type must be observed in consecutive
  * frames before it can select a repetition counter.
  */
-class ExerciseClassifier(private val requiredStableFrames: Int = 5) {
+class ExerciseClassifier(private val requiredStableFrames: Int = DEFAULT_REQUIRED_STABLE_FRAMES) {
+    companion object {
+        /** Shared observation window; session routing must not invent a separate stability cutoff. */
+        const val DEFAULT_REQUIRED_STABLE_FRAMES = 5
+    }
     init { require(requiredStableFrames > 0) }
     private var candidate = ExerciseType.UNKNOWN
     private var candidateFrameCount = 0
