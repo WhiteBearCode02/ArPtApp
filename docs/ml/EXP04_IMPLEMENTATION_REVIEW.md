@@ -2,11 +2,13 @@
 
 작업: 2026-11-12~13 / 기존 `ai-v2` 브랜치 / 자동 commit·push·PR·merge 없음.
 
+> 2026-11-15 actual Golden 실행 시도: 최초 기본 입력 PASS 후 추가 디코딩 검사에서 Pillow 부재로 중단했습니다. 이후 사용자 승인으로 Pillow 13.0.0만 복구/import했으나 **pip check FAIL**로 후속 단계를 중단했습니다. reference·Android native·Golden·camera는 NOT_RUN입니다. [실행 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 로그](EXP04_ENVIRONMENT_REPAIR.md). 아래 빌드/테스트 수치는 11월12~13일의 역사 기록이며 이번 재실행 결과가 아닙니다. contract NOT_VERIFIED와 Landmark Primary는 유지합니다.
+
 ## 결론
 
-7-class 모델별 profile·DEBUG Shadow 연결 기반·private provisioning·실제 Golden 도구를 구현했습니다. **실제 EXP04 실시간 prediction 활성화 아님: contract NOT_VERIFIED, actual Golden / Android native / camera NOT_RUN**입니다. 사용자에게 실제 7종 TEST 이미지가 없어 임의 이미지 다운로드·생성·외부 업로드·reference 결과 생성은 하지 않았습니다.
+7-class 모델별 profile·DEBUG Shadow 연결 기반·private provisioning·실제 Golden 도구를 구현했습니다. **실제 EXP04 실시간 prediction 활성화 아님: contract NOT_VERIFIED, actual Golden / Android native / camera NOT_RUN**입니다. 최초 구현(2026-11-12~13) 당시 실제 7종 TEST 이미지가 없어 임의 이미지 다운로드·생성·외부 업로드·reference 결과 생성은 하지 않았습니다. 2026-11-15 실제 입력 제공 후 Pillow 부재, 복구 후 pip check 실패 순으로 사전 검사가 차단됐습니다.
 
-기본 앱 EXP02, EXP03 비교 빌드·기존 모델/Golden 증거, Landmark Primary와 기존 7종 관절 분석·카운트·TTS·리포트·V2 저장 구조를 유지했습니다. 새 외부 API·유료 서비스·LLM/provider·SDK/의존성 설치·Supabase migration/배포·billing 변경 없음. 기존 서비스의 일반 사용 비용/원격 보안은 이번 로컬 ML 변경 검사로 보장하지 않습니다.
+기본 앱 EXP02, EXP03 비교 빌드·기존 모델/Golden 증거, Landmark Primary와 기존 7종 관절 분석·카운트·TTS·리포트·V2 저장 구조를 유지했습니다. 최초 구현(2026-11-12~13) 범위에서는 새 외부 API·유료 서비스·LLM/provider·SDK/의존성 설치·Supabase migration/배포·billing 변경이 없었습니다. 후속 승인된 Pillow 한정 복구는 위 최신 기록으로 구분합니다. 기존 서비스의 일반 사용 비용/원격 보안은 이번 로컬 ML 변경 검사로 보장하지 않습니다.
 
 ## 모델·offline 근거
 
