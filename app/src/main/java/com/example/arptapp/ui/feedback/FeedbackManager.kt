@@ -12,7 +12,11 @@ class FeedbackManager(context: Context) : TextToSpeech.OnInitListener {
     private val textToSpeech = TextToSpeech(context.applicationContext, this)
     private var isTtsReady = false
     private var lastAnnouncedRep = 0
-    fun resetSession() { lastAnnouncedRep = 0 }
+    fun resetSession() {
+        // A new selected session must not speak queued feedback from the previous exercise.
+        textToSpeech.stop()
+        lastAnnouncedRep = 0
+    }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {

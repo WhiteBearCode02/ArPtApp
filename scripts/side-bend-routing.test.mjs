@@ -6,19 +6,23 @@ const base = 'app/src/main/java/com/example/arptapp/'
 const read = file => readFileSync(base + file, 'utf8')
 const dashboard = read('DashboardActivity.kt')
 
-test('live admission uses landmark stable/candidate and both completed-count owners', () => {
+test('manual live dashboard keeps landmark classification diagnostic-only', () => {
   const update = dashboard.slice(dashboard.indexOf('private fun updateCurrentExerciseType('),
     dashboard.indexOf('private fun updateDetectedExerciseUi('))
-  assert.match(update, /observeStableDetectedExercise\(\s*nextExerciseType, fallbackExerciseClassifier.candidateExercise,/)
-  assert.match(update, /maxOf\(repetitionCount, exerciseCounter.getRepCount\(\)\)/)
-  assert.match(update, /if \(change == SessionExerciseLockChange.CORRECTED\) discardUnconfirmedExerciseState\(\)/)
-  assert.doesNotMatch(update, /yoloShadowSnapshot|\.resetSession\(|\.clear\(/)
+  assert.match(update, /detectedExerciseType = nextExerciseType/)
+  assert.doesNotMatch(update, /observeStableDetectedExercise|observeDetectedExercise|beginSession|resetSession|referenceRepository|exerciseCounter|repAnalysisEngine/)
+  const lock = read('domain/session/SessionExerciseLock.kt')
+  assert.match(lock, /MANUAL_SELECTED\)\s*return SessionExerciseLockChange.NONE/)
+  assert.match(lock, /SessionExerciseLockChange.CORRECTED/,
+    'isolated legacy automatic-session correction remains covered by JVM regression')
 })
 
-test('only admitted zero-rep correction discards old-type pending feedback and analysis', () => {
-  assert.equal((dashboard.match(/discardUnconfirmedExerciseState\(\)/g) ?? []).length, 2,
-    'one declaration and one CORRECTED-only call')
-  const discard = dashboard.slice(dashboard.indexOf('private fun discardUnconfirmedExerciseState('),
+test('new selected session clears old-type pending feedback and analysis exactly once', () => {
+  assert.equal((dashboard.match(/resetSessionMeasurementState\(\)/g) ?? []).length, 2,
+    'one declaration and one selected-session start call, never a classifier callback')
+  const start = dashboard.slice(dashboard.indexOf('private fun startExercise('), dashboard.indexOf('private fun endExercise('))
+  assert.match(start, /resetSessionMeasurementState\(\)/)
+  const discard = dashboard.slice(dashboard.indexOf('private fun resetSessionMeasurementState('),
     dashboard.indexOf('private fun checkCameraPermission('))
   for (const fragment of ['exerciseCounter.resetSession()', 'repAnalysisEngine.reset()',
     'currentRepAngles.clear()', 'currentRepErrorTags.clear()', 'currentMaxSwayX = 0f',
@@ -30,7 +34,7 @@ test('only admitted zero-rep correction discards old-type pending feedback and a
 })
 
 test('dashboard labels share one pure session-derived projection', () => {
-  assert.match(dashboard, /WorkoutExerciseUiFormatter.format\(isExercising, sessionExerciseType, exerciseType\)/)
+  assert.match(dashboard, /WorkoutExerciseUiFormatter.formatManualSession\(isExercising, sessionExerciseType\)/)
   const formatter = read('ui/dashboard/WorkoutExerciseUiFormatter.kt')
   assert.match(formatter, /session.displayName/)
   assert.doesNotMatch(formatter, /resetSession|observeStable|Supabase|SharedPreferences|FileOutputStream|Yolo/)
