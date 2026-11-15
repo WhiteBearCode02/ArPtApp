@@ -2,7 +2,7 @@
 
 최신 확인: 2026-11-15. **NOT_VERIFIED / Android actual Golden NOT_RUN**.
 
-실제 TEST 이미지 7장과 manifest/provenance는 제공됐습니다. 기본 입력 검사 PASS 후 추가 디코딩 사전 검사에서 `PIL` 의존성 부재로 중단했습니다. 실제 reference/native/Golden은 아직 실행하지 않았습니다. [실제 실행·차단 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md).
+실제 TEST 이미지 7장과 manifest/provenance는 제공됐습니다. 최초 기본 입력 검사 PASS 후 별도 디코딩 검사에서 `PIL` 부재로 중단했습니다. 승인 후 지정 venv에 Pillow 13.0.0만 설치/import했으나 **기존 Ultralytics의 누락 의존성으로 pip check FAIL**하여 후속 검증은 중단했습니다. 실제 reference/native/Golden은 아직 실행하지 않았습니다. [실제 실행·차단 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 로그](EXP04_ENVIRONMENT_REPAIR.md).
 
 ## 1. 확인한 것과 아직 확인하지 않은 것
 
@@ -11,7 +11,7 @@
 | 사용자 Colab holdout·PT/LiteRT parity | 제공값 PASS, 이번에 재실행하지 않음. [모델 카드](../../MODEL_CARD.md) |
 | 실제 PC 파일 / LiteRT load·allocate | 9,898,949 bytes·아래 SHA256 일치. 실제 tensor shape/dtype 확인. 이미지 inference 미실행 |
 | Android native smoke | NOT_RUN; 2026-11-15 입력 사전 검사에서 환경 차단 |
-| Android actual-image Golden | NOT_RUN; 실제 7종 입력 제공됨, Pillow 부재로 디코딩 사전 검사 미완료 |
+| Android actual-image Golden | NOT_RUN; 실제 7종 입력 제공됨, Pillow 복구 후에도 pip check 실패로 사전 검사 미완료 |
 | Android camera accuracy/FPS/thermal | NOT_RUN; offline 수치로 대신하지 않음 |
 
 ID `yolo26n_exp04_7class_fp32`, 파일 `airptcoach_yolo26n_exp04_7class_fp32.tflite`.
@@ -59,7 +59,7 @@ local_validation/exp04_golden/
 
 ## 4. PC reference (사전 검사 완료 후 실행)
 
-기존 로컬 venv/공식 `ai_edge_litert.interpreter.Interpreter`, NumPy, Torch, Pillow, OpenCV **4.13.0**을 사용합니다. 새 runtime/패키지는 설치하지 않았습니다. exact source wheel이 없으면 중단하며 자동 다운로드하지 않습니다.
+기존 로컬 venv/공식 `ai_edge_litert.interpreter.Interpreter`, NumPy, Torch, Pillow, OpenCV **4.13.0**을 사용하는 구조입니다. 최초 시도에서는 패키지를 설치하지 않았고, 후속 승인으로 **Pillow 13.0.0만** 추가했습니다. runtime/다른 dependency 변경은 없습니다. 현재 pip check 실패로 reference는 미실행입니다. exact source wheel이 없으면 중단하며 자동 다운로드하지 않습니다.
 
 ```powershell
 local_validation\.venv\Scripts\python.exe scripts/generate-exp04-actual-golden.py --manifest local_validation/exp04_golden/manifest.json --output local_validation/exp04_golden/runs/exp04_actual_01 --check-inputs
@@ -67,7 +67,7 @@ local_validation\.venv\Scripts\python.exe scripts/generate-exp04-actual-golden.p
 local_validation\.venv\Scripts\python.exe scripts/transfer-exp04-actual-golden.py check-bundle --bundle local_validation/exp04_golden/runs/exp04_actual_01
 ```
 
-`--check-inputs`는 모델을 실행하지 않으며 실제 로컬 manifest의 기본 검사는 PASS했습니다. 다만 이 옵션만으로는 이미지 decode/bounds/내용 중복·provenance hash까지 검사하지 않으므로 추가 사전 검사가 필요합니다. 2026-11-15에는 이 추가 검사에서 Pillow가 없어 중단했습니다. 공개 템플릿은 별도로 권리 미확인 상태를 유지합니다. 본 실행은 실제 모델 identity→tensor metadata→실제 inference 후에만 RGB/input.f32/output.f32/reference.json을 새 run에 기록합니다. reference.json은 마지막에 생성합니다. 오류가 발생한 부분 run은 성공 증거가 아니며 새 ID로 다시 실행해야 합니다. 오래된 결과를 삭제/덮어쓰지 않습니다.
+`--check-inputs`는 모델을 실행하지 않으며 실제 로컬 manifest의 최초 기본 검사는 PASS했습니다. 다만 이 옵션만으로는 이미지 decode/bounds/내용 중복·provenance hash까지 검사하지 않으므로 추가 사전 검사가 필요합니다. 2026-11-15 최초 추가 검사는 Pillow 부재로 중단했고, Pillow 복구 후에도 pip check 실패로 공식 검사부터 재시작하지 않았습니다. 공개 템플릿은 별도로 권리 미확인 상태를 유지합니다. 본 실행은 실제 모델 identity→tensor metadata→실제 inference 후에만 RGB/input.f32/output.f32/reference.json을 새 run에 기록합니다. reference.json은 마지막에 생성합니다. 오류가 발생한 부분 run은 성공 증거가 아니며 새 ID로 다시 실행해야 합니다. 오래된 결과를 삭제/덮어쓰지 않습니다.
 
 ## 5. Android 실행 준비 (기기 작업은 별도 동의 후)
 

@@ -2,7 +2,7 @@
 
 기준: 2026-11-12. **준비된 구조, NOT_VERIFIED. 실제 EXP04 camera prediction 비활성.**
 
-2026-11-15 실행 업데이트: 실제 7종 TEST 입력이 제공되어 기본 입력 검사는 PASS했으나, 추가 디코딩 검사에서 `PIL` 부재로 중단했습니다. reference·ADB·설치·provisioning·Android native/Golden·camera는 이번에 실행하지 않았습니다. [검증 차단 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md). 기존 rollout/contract gate는 변경하지 않았습니다.
+2026-11-15 실행 업데이트: 최초 기본 입력 PASS 후 별도 디코딩 검사에서 `PIL` 부재로 중단했습니다. 이후 승인된 지정 venv에 Pillow 13.0.0만 복구/import했으나 기존 의존성 누락으로 **pip check FAIL**하여 이후 단계를 중단했습니다. reference·ADB·APK 설치·provisioning·Android native/Golden·camera는 실행하지 않았습니다. [검증 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 상세](EXP04_ENVIRONMENT_REPAIR.md). 기존 rollout/contract gate는 변경하지 않았습니다.
 
 ## 상태와 모델 선택
 

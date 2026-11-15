@@ -2,7 +2,13 @@
 
 날짜: **2026-11-15**, branch `ai-v2`, 시작 HEAD `a91725e`. 시작 시 working tree clean.
 
-## 결과: 사전 검사 환경 차단으로 중단
+## 최신 후속 시도: Pillow 복구 성공 / pip check FAIL
+
+사용자의 Pillow 한정 설치 승인 후 지정 venv에 **Pillow 13.0.0만 추가**했습니다. import PASS, 기존 dependency 변경/삭제 0개, 보호 대상 31개 파일 SHA256 동일입니다. 그러나 `pip check`가 기존 Ultralytics 8.4.176의 미설치 의존성 10개로 **exit 1**을 반환하여 후속 preflight·이미지 검사·reference·ADB·Android 검증은 재개하지 않았습니다. contract **NOT_VERIFIED**를 유지합니다.
+
+[복구 명령·전후 환경·실제 오류 로그·단계별 결과](EXP04_ENVIRONMENT_REPAIR.md). 아래는 삭제·덮어쓰지 않은 **최초 시도의 역사 기록**이며, Pillow 부재가 현재도 계속된다는 뜻은 아닙니다.
+
+## 최초 시도 결과: 사전 검사 환경 차단으로 중단
 
 기존 `--check-inputs`는 PASS였지만, 요청된 추가 이미지 디코딩 검사에서
 `ModuleNotFoundError: No module named 'PIL'`이 발생했습니다. 사용자 요청의

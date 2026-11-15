@@ -2,7 +2,7 @@
 
 현재 **NOT_RUN**. 이 템플릿은 실행 결과가 아닙니다. actual Golden/Android native가 검토되고 별도 코드 변경으로 contract를 승격하기 전에는 실시간 EXP04 prediction이 차단됩니다.
 
-2026-11-15: 7종 TEST 입력/권리·provenance 선언은 제공됐으나 `PIL` 부재로 추가 디코딩 사전 검사가 완료되지 않았습니다. 기기 연결 조회·설치·전송·native·Golden·camera 검증은 시작하지 않았으며 아래 체크 항목을 실행 완료로 표시하지 않았습니다. [실행 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md).
+2026-11-15: 7종 TEST 입력/권리·provenance 선언은 제공됐으나 최초 `PIL` 부재로 추가 디코딩 검사를 중단했습니다. 승인 후 Pillow 13.0.0만 복구/import했지만 **pip check FAIL**하여 후속 검사는 미실행입니다. 기기 연결 조회·설치·전송·native·Golden·camera 검증은 시작하지 않았으며 아래 체크 항목을 실행 완료로 표시하지 않았습니다. [실행 기록](EXP04_ACTUAL_GOLDEN_VALIDATION.md) · [환경 복구 상세](EXP04_ENVIRONMENT_REPAIR.md).
 
 ## 선행 조건
 
